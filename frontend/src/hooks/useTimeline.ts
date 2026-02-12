@@ -57,7 +57,7 @@ function generateWeeks(start: Date, count: number): WeekInfo[] {
 
     weeks.push({
       weekNumber: weekNum,
-      label: `Tydzień ${weekNum} | ${startLabel}-${endLabel}`,
+      label: `${startLabel}-${endLabel}`,
       days,
     });
 

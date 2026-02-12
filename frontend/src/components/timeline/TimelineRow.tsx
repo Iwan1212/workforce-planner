@@ -6,13 +6,13 @@ import {
   parseISO,
   max as dateMax,
   min as dateMin,
+  isWithinInterval,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineAssignment, MonthUtilization } from "@/api/assignments";
-import type { DayInfo } from "@/hooks/useTimeline";
+import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
 import type { ViewMode } from "@/stores/timelineStore";
 import { TimelineBar } from "./TimelineBar";
-import { UtilizationBadge } from "./UtilizationBadge";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 
 const TEAM_LABELS: Record<string, string> = {
@@ -38,6 +38,7 @@ interface TimelineRowProps {
   assignments: TimelineAssignment[];
   utilization: Record<string, MonthUtilization>;
   months: MonthDef[];
+  weeks: WeekInfo[];
   allDays: DayInfo[];
   viewMode: ViewMode;
   onAssignmentClick: (assignment: TimelineAssignment) => void;
@@ -112,6 +113,42 @@ function computeBarPositionWeekly(
   };
 }
 
+function getUtilColor(pct: number): string {
+  if (pct > 100) return "text-red-600 font-bold";
+  if (pct > 80) return "text-yellow-600";
+  if (pct > 0) return "text-green-600";
+  return "text-muted-foreground";
+}
+
+/** Compute weekly utilization % from assignments. */
+function computeWeeklyUtilization(
+  week: WeekInfo,
+  assignments: TimelineAssignment[],
+  holidayMap: Record<string, string>
+): number {
+  let totalHours = 0;
+  let workingDays = 0;
+
+  for (const day of week.days) {
+    if (day.isWeekend || holidayMap[day.key]) continue;
+    workingDays++;
+
+    for (const a of assignments) {
+      const aStart = parseISO(a.start_date);
+      const aEnd = parseISO(a.end_date);
+      if (
+        isWithinInterval(day.date, { start: aStart, end: aEnd })
+      ) {
+        totalHours += a.daily_hours;
+      }
+    }
+  }
+
+  if (workingDays === 0) return 0;
+  const availableHours = workingDays * 8;
+  return Math.round((totalHours / availableHours) * 100);
+}
+
 export function TimelineRow({
   employeeId,
   name,
@@ -119,6 +156,7 @@ export function TimelineRow({
   assignments,
   utilization,
   months,
+  weeks,
   allDays,
   viewMode,
   holidayMap,
@@ -186,23 +224,25 @@ export function TimelineRow({
 
   const maxRows =
     bars.length > 0 ? Math.max(...bars.map((b) => b.row)) + 1 : 1;
-  const rowHeight = Math.max(38, maxRows * 32 + 6);
+  // Extra space for utilization row at top (16px)
+  const utilRowHeight = 18;
+  const rowHeight = Math.max(38, maxRows * 32 + 6 + utilRowHeight);
 
   const totalWidth = isWeekly
     ? allDays.length * DAY_WIDTH
     : months.length * MONTH_WIDTH;
 
-  const visibleUtils = months
-    .map((m) => utilization[m.key])
-    .filter(Boolean);
-  const avgPct =
-    visibleUtils.length > 0
-      ? Math.round(
-          visibleUtils.reduce((sum, u) => sum + u.percentage, 0) /
-            visibleUtils.length
-        )
-      : 0;
-  const anyOverbooked = visibleUtils.some((u) => u.is_overbooked);
+  // Per-period utilization for monthly view (from API)
+  const monthUtils = months.map((m) => {
+    const u = utilization[m.key];
+    return { key: m.key, pct: u ? Math.round(u.percentage) : 0 };
+  });
+
+  // Per-period utilization for weekly view (computed client-side)
+  const weekUtils = weeks.map((w) => ({
+    key: `w-${w.weekNumber}`,
+    pct: computeWeeklyUtilization(w, assignments, holidayMap),
+  }));
 
   return (
     <div
@@ -223,7 +263,6 @@ export function TimelineRow({
             </Badge>
           )}
         </div>
-        <UtilizationBadge percentage={avgPct} isOverbooked={anyOverbooked} />
       </div>
 
       {/* Timeline area */}
@@ -235,6 +274,35 @@ export function TimelineRow({
           minHeight: rowHeight,
         }}
       >
+        {/* Per-period utilization indicators */}
+        <div className="absolute top-0 left-0 flex" style={{ height: utilRowHeight }}>
+          {isWeekly
+            ? weeks.map((w, i) => {
+                const pct = weekUtils[i].pct;
+                return (
+                  <div
+                    key={w.weekNumber}
+                    className={`flex items-center justify-center text-[10px] ${getUtilColor(pct)}`}
+                    style={{ width: w.days.length * DAY_WIDTH }}
+                  >
+                    {pct}%
+                  </div>
+                );
+              })
+            : months.map((m, i) => {
+                const pct = monthUtils[i].pct;
+                return (
+                  <div
+                    key={m.key}
+                    className={`flex items-center justify-center text-[10px] ${getUtilColor(pct)}`}
+                    style={{ width: MONTH_WIDTH }}
+                  >
+                    {pct}%
+                  </div>
+                );
+              })}
+        </div>
+
         {/* Separators */}
         {isWeekly
           ? allDays.map((day, i) => {
@@ -242,10 +310,10 @@ export function TimelineRow({
               return (
                 <div
                   key={day.key}
-                  className={`absolute top-0 h-full border-r border-dashed border-muted-foreground/20 cursor-pointer ${
+                  className={`absolute h-full border-r border-dashed border-muted-foreground/20 cursor-pointer ${
                     day.isWeekend || isHoliday ? "bg-muted/40" : ""
                   }`}
-                  style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
+                  style={{ left: i * DAY_WIDTH, width: DAY_WIDTH, top: utilRowHeight }}
                   title={holidayMap[day.key]}
                   onClick={() =>
                     onEmptyClick(employeeId, day.key.slice(0, 7))
@@ -256,8 +324,8 @@ export function TimelineRow({
           : months.map((m, i) => (
               <div
                 key={m.key}
-                className="absolute top-0 h-full border-r border-dashed border-muted-foreground/20 cursor-pointer"
-                style={{ left: i * MONTH_WIDTH, width: MONTH_WIDTH }}
+                className="absolute h-full border-r border-dashed border-muted-foreground/20 cursor-pointer"
+                style={{ left: i * MONTH_WIDTH, width: MONTH_WIDTH, top: utilRowHeight }}
                 onClick={() => onEmptyClick(employeeId, m.key)}
               />
             ))}
@@ -267,7 +335,7 @@ export function TimelineRow({
           <div
             key={bar.assignment.id}
             className="absolute"
-            style={{ top: bar.row * 32 + 2 }}
+            style={{ top: bar.row * 32 + 2 + utilRowHeight }}
           >
             <TimelineBar
               assignment={bar.assignment}

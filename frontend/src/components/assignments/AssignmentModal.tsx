@@ -69,9 +69,7 @@ export function AssignmentModal({
   useEffect(() => {
     if (!open) return;
     if (assignment) {
-      setEmployeeId(String(assignment.project_id ? "" : ""));
-      // Find employee_id — it's not on TimelineAssignment directly,
-      // so we'll accept it via defaultEmployeeId for editing too
+      setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
       setProjectId(String(assignment.project_id));
       setStartDate(assignment.start_date);
       setEndDate(assignment.end_date);

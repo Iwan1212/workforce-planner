@@ -256,6 +256,7 @@ export function Timeline() {
                   assignments={emp.assignments}
                   utilization={emp.utilization}
                   months={monthDefs}
+                  weeks={weeks}
                   allDays={allDays}
                   viewMode={viewMode}
                   holidayMap={holidayMap}

@@ -72,8 +72,8 @@ export function TimelineBar({
 
   const label =
     assignment.allocation_type === "percentage"
-      ? `${assignment.allocation_value}%`
-      : `${assignment.allocation_value}h/m`;
+      ? `${assignment.allocation_value}% (${assignment.daily_hours}h/d)`
+      : `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`;
 
   // Compute adjusted position during resize
   let adjustedLeft = left;
