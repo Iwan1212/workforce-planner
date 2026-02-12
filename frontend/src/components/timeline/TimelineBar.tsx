@@ -1,0 +1,150 @@
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { type MouseEvent, useCallback, useRef, useState } from "react";
+import type { TimelineAssignment } from "@/api/assignments";
+
+interface TimelineBarProps {
+  assignment: TimelineAssignment;
+  employeeId: number;
+  left: number;
+  width: number;
+  onClick: () => void;
+  onResizeEnd: (
+    assignmentId: number,
+    edge: "left" | "right",
+    deltaPx: number
+  ) => void;
+  pxPerDay: number;
+  showDailyHours?: boolean;
+}
+
+export function TimelineBar({
+  assignment,
+  employeeId,
+  left,
+  width,
+  onClick,
+  onResizeEnd,
+  pxPerDay,
+  showDailyHours = false,
+}: TimelineBarProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `assignment-${assignment.id}`,
+      data: { assignment, employeeId },
+    });
+
+  const [resizing, setResizing] = useState<"left" | "right" | null>(null);
+  const [resizeDelta, setResizeDelta] = useState(0);
+  const startXRef = useRef(0);
+
+  const handleResizeStart = useCallback(
+    (e: MouseEvent, edge: "left" | "right") => {
+      e.stopPropagation();
+      e.preventDefault();
+      setResizing(edge);
+      setResizeDelta(0);
+      startXRef.current = e.clientX;
+
+      const handleMove = (moveEvent: globalThis.MouseEvent) => {
+        const dx = moveEvent.clientX - startXRef.current;
+        setResizeDelta(dx);
+      };
+
+      const handleUp = (upEvent: globalThis.MouseEvent) => {
+        const dx = upEvent.clientX - startXRef.current;
+        setResizing(null);
+        setResizeDelta(0);
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+
+        // Only trigger if moved at least half a day
+        if (Math.abs(dx) > pxPerDay * 0.5) {
+          onResizeEnd(assignment.id, edge, dx);
+        }
+      };
+
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleUp);
+    },
+    [assignment.id, onResizeEnd, pxPerDay]
+  );
+
+  const label =
+    assignment.allocation_type === "percentage"
+      ? `${assignment.allocation_value}%`
+      : `${assignment.allocation_value}h/m`;
+
+  // Compute adjusted position during resize
+  let adjustedLeft = left;
+  let adjustedWidth = width;
+  if (resizing === "left") {
+    adjustedLeft = left + resizeDelta;
+    adjustedWidth = width - resizeDelta;
+  } else if (resizing === "right") {
+    adjustedWidth = width + resizeDelta;
+  }
+  adjustedWidth = Math.max(adjustedWidth, 20);
+
+  const style: React.CSSProperties = {
+    left: adjustedLeft,
+    width: adjustedWidth,
+    height: 28,
+    backgroundColor: assignment.project_color,
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging || resizing ? 50 : 1,
+  };
+
+  // Show resize tooltip
+  const daysDelta = Math.round(resizeDelta / pxPerDay);
+  const showTooltip = resizing && daysDelta !== 0;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`absolute top-1 flex items-center overflow-hidden rounded text-xs text-white shadow-sm ${
+        resizing ? "" : "cursor-grab transition-opacity hover:opacity-90"
+      }`}
+      style={style}
+      onClick={(e) => {
+        if (!isDragging && !resizing) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
+      title={`${assignment.project_name} (${label}) | ${assignment.daily_hours}h/d`}
+    >
+      {/* Left resize handle */}
+      <div
+        className="absolute left-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
+        onMouseDown={(e) => handleResizeStart(e, "left")}
+      />
+
+      {/* Content - drag handle in the middle */}
+      <span
+        className="flex-1 truncate px-2"
+        {...listeners}
+        {...attributes}
+      >
+        {showDailyHours
+          ? `${assignment.daily_hours}h/d`
+          : `${assignment.project_name} · ${label}`}
+      </span>
+
+      {/* Right resize handle */}
+      <div
+        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
+        onMouseDown={(e) => handleResizeStart(e, "right")}
+      />
+
+      {/* Resize tooltip */}
+      {showTooltip && (
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] text-background">
+          {daysDelta > 0 ? "+" : ""}
+          {daysDelta}d
+        </div>
+      )}
+    </div>
+  );
+}
