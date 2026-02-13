@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { getToken, removeToken, setToken } from "@/api/client";
+import {
+  getToken,
+  removeTokens,
+  setToken,
+  setRefreshToken,
+} from "@/api/client";
 import { getMe, login as loginApi, type UserResponse } from "@/api/auth";
 
 interface AuthState {
@@ -23,6 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await loginApi(email, password);
       setToken(response.access_token);
+      setRefreshToken(response.refresh_token);
       const user = await getMe();
       set({ user, isAuthenticated: true, error: null });
     } catch (err) {
@@ -34,8 +40,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    removeToken();
-    set({ user: null, isAuthenticated: false });
+    removeTokens();
+    set({ user: null, isAuthenticated: false, error: null });
   },
 
   checkAuth: async () => {
@@ -48,8 +54,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await getMe();
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
-      removeToken();
+      removeTokens();
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));
+
+// Listen for forced logout from API client (expired tokens, failed refresh)
+window.addEventListener("auth:logout", () => {
+  useAuthStore.getState().logout();
+});

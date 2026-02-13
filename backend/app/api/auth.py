@@ -7,11 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.dependencies import get_current_user, get_db
-from app.core.security import create_access_token, decode_access_token, hash_password
+from app.core.rate_limit import login_rate_limit
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_access_token,
+    hash_password,
+)
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
+    RefreshRequest,
     ResetPasswordConfirm,
     ResetPasswordRequest,
     TokenResponse,
@@ -24,7 +32,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login", response_model=TokenResponse, dependencies=[Depends(login_rate_limit)]
+)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await authenticate_user(db, body.email, body.password)
     if user is None:
@@ -32,8 +42,33 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nieprawidłowy email lub hasło",
         )
-    token = create_access_token({"sub": str(user.id)})
-    return TokenResponse(access_token=token)
+    access_token = create_access_token({"sub": str(user.id)})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    payload = decode_access_token(body.refresh_token)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nieprawidłowy refresh token",
+        )
+
+    user_id = payload.get("sub")
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Użytkownik nie istnieje lub jest nieaktywny",
+        )
+
+    new_access_token = create_access_token({"sub": str(user.id)})
+    new_refresh_token = create_refresh_token({"sub": str(user.id)})
+    return TokenResponse(access_token=new_access_token, refresh_token=new_refresh_token)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -60,12 +95,15 @@ async def reset_password_request(
         expires_delta=timedelta(minutes=15),
     )
 
-    # In MVP, log the token to console
-    logger.info(
-        "PASSWORD RESET TOKEN for %s: %s",
-        user.email,
-        token,
-    )
+    # In development, log the token to console (no email service in MVP)
+    if settings.ENVIRONMENT == "development":
+        logger.info(
+            "PASSWORD RESET TOKEN for %s: %s",
+            user.email,
+            token,
+        )
+    else:
+        logger.info("Password reset token generated for %s", user.email)
 
     return {"message": "Jeśli konto istnieje, link do resetu został wysłany."}
 

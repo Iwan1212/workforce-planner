@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 
 interface TokenResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
 }
 
@@ -14,7 +15,7 @@ export interface UserResponse {
 
 export async function login(
   email: string,
-  password: string
+  password: string,
 ): Promise<TokenResponse> {
   return apiFetch<TokenResponse>("/api/auth/login", {
     method: "POST",
@@ -27,7 +28,7 @@ export async function getMe(): Promise<UserResponse> {
 }
 
 export async function requestPasswordReset(
-  email: string
+  email: string,
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>("/api/auth/reset-password-request", {
     method: "POST",
