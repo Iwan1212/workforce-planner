@@ -1,6 +1,12 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { type MouseEvent, useCallback, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { StickyNote } from "lucide-react";
 import type { TimelineAssignment } from "@/api/assignments";
@@ -14,7 +20,7 @@ interface TimelineBarProps {
   onResizeEnd: (
     assignmentId: number,
     edge: "left" | "right",
-    deltaPx: number
+    deltaPx: number,
   ) => void;
   pxPerDay: number;
   showDailyHours?: boolean;
@@ -41,8 +47,20 @@ export function TimelineBar({
   const startXRef = useRef(0);
   const justResizedRef = useRef(false);
 
-  const [noteTooltip, setNoteTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [noteTooltip, setNoteTooltip] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const iconRef = useRef<HTMLSpanElement>(null);
+
+  // Track active resize listeners for cleanup on unmount
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
   const hasNote = Boolean(assignment.note && assignment.note.trim());
 
@@ -69,12 +87,17 @@ export function TimelineBar({
         setResizeDelta(dx);
       };
 
+      const cleanup = () => {
+        document.removeEventListener("mousemove", handleMove);
+        document.removeEventListener("mouseup", handleUp);
+        cleanupRef.current = null;
+      };
+
       const handleUp = (upEvent: globalThis.MouseEvent) => {
         const dx = upEvent.clientX - startXRef.current;
         setResizing(null);
         setResizeDelta(0);
-        document.removeEventListener("mousemove", handleMove);
-        document.removeEventListener("mouseup", handleUp);
+        cleanup();
 
         // Only trigger if moved at least half a day
         if (Math.abs(dx) > pxPerDay * 0.5) {
@@ -90,8 +113,9 @@ export function TimelineBar({
 
       document.addEventListener("mousemove", handleMove);
       document.addEventListener("mouseup", handleUp);
+      cleanupRef.current = cleanup;
     },
-    [assignment.id, onResizeEnd, pxPerDay]
+    [assignment.id, onResizeEnd, pxPerDay],
   );
 
   const label =
@@ -145,11 +169,7 @@ export function TimelineBar({
       />
 
       {/* Content - drag handle in the middle */}
-      <span
-        className="flex-1 truncate px-2"
-        {...listeners}
-        {...attributes}
-      >
+      <span className="flex-1 truncate px-2" {...listeners} {...attributes}>
         {showDailyHours
           ? `${assignment.daily_hours}h/d`
           : `${assignment.project_name} · ${label}`}
@@ -180,15 +200,21 @@ export function TimelineBar({
       )}
 
       {/* Note tooltip via portal - renders outside overflow-hidden */}
-      {noteTooltip && hasNote && createPortal(
-        <div
-          className="pointer-events-none fixed z-[9999] max-w-60 rounded bg-foreground px-2 py-1 text-[11px] leading-tight text-background shadow-lg"
-          style={{ left: noteTooltip.x, top: noteTooltip.y - 4, transform: "translate(-50%, -100%)" }}
-        >
-          {assignment.note}
-        </div>,
-        document.body
-      )}
+      {noteTooltip &&
+        hasNote &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[9999] max-w-60 rounded bg-foreground px-2 py-1 text-[11px] leading-tight text-background shadow-lg"
+            style={{
+              left: noteTooltip.x,
+              top: noteTooltip.y - 4,
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            {assignment.note}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
