@@ -139,6 +139,7 @@ export function ProjectList() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(proj)}
+                      aria-label={`Edytuj ${proj.name}`}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -146,6 +147,7 @@ export function ProjectList() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteClick(proj)}
+                      aria-label={`Usuń ${proj.name}`}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

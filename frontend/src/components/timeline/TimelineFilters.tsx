@@ -45,11 +45,12 @@ export function TimelineFilters() {
           <button
             key={mode}
             onClick={() => setViewMode(mode)}
-            className={`px-3 py-1.5 text-sm transition-colors ${
+            className={`px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
               viewMode === mode
                 ? "bg-primary text-primary-foreground"
                 : "hover:bg-muted"
             } ${mode === "monthly" ? "rounded-l-md" : "rounded-r-md"}`}
+            aria-pressed={viewMode === mode}
           >
             {mode === "monthly" ? "Miesięczny" : "Tygodniowy"}
           </button>
@@ -73,11 +74,12 @@ export function TimelineFilters() {
       <div className="flex flex-wrap items-center gap-1">
         <button
           onClick={() => setSelectedTeams([])}
-          className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+          className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
             noneSelected
               ? "bg-primary text-primary-foreground"
               : "hover:bg-muted"
           }`}
+          aria-pressed={noneSelected}
         >
           Wszystkie
         </button>
@@ -85,11 +87,12 @@ export function TimelineFilters() {
           <button
             key={team}
             onClick={() => toggleTeam(team)}
-            className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+            className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
               selectedTeams.includes(team)
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted"
             }`}
+            aria-pressed={selectedTeams.includes(team)}
           >
             {TEAM_LABELS[team] ?? team}
           </button>

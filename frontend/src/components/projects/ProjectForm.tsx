@@ -86,12 +86,14 @@ export function ProjectForm({
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={`h-8 w-8 rounded-full transition-all ${
+                  className={`h-8 w-8 rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     color === c
                       ? "ring-2 ring-ring ring-offset-2"
                       : "hover:scale-110"
                   }`}
                   style={{ backgroundColor: c }}
+                  aria-label={`Kolor ${c}`}
+                  aria-pressed={color === c}
                 />
               ))}
             </div>

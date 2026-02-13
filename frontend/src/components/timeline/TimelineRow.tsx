@@ -46,7 +46,7 @@ interface TimelineRowProps {
   onResizeEnd: (
     assignmentId: number,
     edge: "left" | "right",
-    deltaPx: number
+    deltaPx: number,
   ) => void;
   holidayMap: Record<string, string>;
   isOdd: boolean;
@@ -54,7 +54,7 @@ interface TimelineRowProps {
 
 function computeBarPositionMonthly(
   assignment: TimelineAssignment,
-  months: MonthDef[]
+  months: MonthDef[],
 ): { left: number; width: number } | null {
   if (months.length === 0) return null;
 
@@ -62,17 +62,16 @@ function computeBarPositionMonthly(
   const aEnd = parseISO(assignment.end_date);
 
   const firstMonthStart = startOfMonth(
-    new Date(months[0].year, months[0].month - 1, 1)
+    new Date(months[0].year, months[0].month - 1, 1),
   );
   const lastMonth = months[months.length - 1];
   const lastMonthEnd = endOfMonth(
-    new Date(lastMonth.year, lastMonth.month - 1, 1)
+    new Date(lastMonth.year, lastMonth.month - 1, 1),
   );
 
   if (aEnd < firstMonthStart || aStart > lastMonthEnd) return null;
 
-  const totalDays =
-    differenceInCalendarDays(lastMonthEnd, firstMonthStart) + 1;
+  const totalDays = differenceInCalendarDays(lastMonthEnd, firstMonthStart) + 1;
   const totalWidth = months.length * MONTH_WIDTH;
 
   const visibleStart = dateMax([aStart, firstMonthStart]);
@@ -89,7 +88,7 @@ function computeBarPositionMonthly(
 
 function computeBarPositionWeekly(
   assignment: TimelineAssignment,
-  allDays: DayInfo[]
+  allDays: DayInfo[],
 ): { left: number; width: number } | null {
   if (allDays.length === 0) return null;
 
@@ -124,7 +123,7 @@ function getUtilColor(pct: number): string {
 function computeWeeklyUtilization(
   week: WeekInfo,
   assignments: TimelineAssignment[],
-  holidayMap: Record<string, string>
+  holidayMap: Record<string, string>,
 ): number {
   let totalHours = 0;
   let workingDays = 0;
@@ -136,9 +135,7 @@ function computeWeeklyUtilization(
     for (const a of assignments) {
       const aStart = parseISO(a.start_date);
       const aEnd = parseISO(a.end_date);
-      if (
-        isWithinInterval(day.date, { start: aStart, end: aEnd })
-      ) {
+      if (isWithinInterval(day.date, { start: aStart, end: aEnd })) {
         totalHours += a.daily_hours;
       }
     }
@@ -178,11 +175,11 @@ export function TimelineRow({
     pxPerDay = DAY_WIDTH;
   } else if (months.length > 0) {
     const firstMonthStart = startOfMonth(
-      new Date(months[0].year, months[0].month - 1, 1)
+      new Date(months[0].year, months[0].month - 1, 1),
     );
     const lastMonth = months[months.length - 1];
     const lastMonthEnd = endOfMonth(
-      new Date(lastMonth.year, lastMonth.month - 1, 1)
+      new Date(lastMonth.year, lastMonth.month - 1, 1),
     );
     const totalDays =
       differenceInCalendarDays(lastMonthEnd, firstMonthStart) + 1;
@@ -210,9 +207,7 @@ export function TimelineRow({
     while (
       occupiedRows.some(
         (o) =>
-          o.row === row &&
-          pos.left < o.right &&
-          pos.left + pos.width > o.left
+          o.row === row && pos.left < o.right && pos.left + pos.width > o.left,
       )
     ) {
       row++;
@@ -222,8 +217,7 @@ export function TimelineRow({
     bars.push({ assignment: a, ...pos, row });
   }
 
-  const maxRows =
-    bars.length > 0 ? Math.max(...bars.map((b) => b.row)) + 1 : 1;
+  const maxRows = bars.length > 0 ? Math.max(...bars.map((b) => b.row)) + 1 : 1;
   // Extra space for utilization row at top (16px)
   const utilRowHeight = 18;
   const rowHeight = Math.max(38, maxRows * 32 + 6 + utilRowHeight);
@@ -275,7 +269,10 @@ export function TimelineRow({
         }}
       >
         {/* Per-period utilization indicators */}
-        <div className="absolute top-0 left-0 flex" style={{ height: utilRowHeight }}>
+        <div
+          className="absolute top-0 left-0 flex"
+          style={{ height: utilRowHeight }}
+        >
           {isWeekly
             ? weeks.map((w, i) => {
                 const pct = weekUtils[i].pct;
@@ -310,23 +307,49 @@ export function TimelineRow({
               return (
                 <div
                   key={day.key}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Dodaj assignment ${day.key}`}
                   className={`absolute border-r border-dashed border-muted-foreground/20 cursor-pointer ${
                     day.isWeekend || isHoliday ? "bg-muted/40" : ""
                   }`}
-                  style={{ left: i * DAY_WIDTH, width: DAY_WIDTH, top: utilRowHeight, height: `calc(100% - ${utilRowHeight}px)` }}
+                  style={{
+                    left: i * DAY_WIDTH,
+                    width: DAY_WIDTH,
+                    top: utilRowHeight,
+                    height: `calc(100% - ${utilRowHeight}px)`,
+                  }}
                   title={holidayMap[day.key]}
-                  onClick={() =>
-                    onEmptyClick(employeeId, day.key.slice(0, 7))
-                  }
+                  onClick={() => onEmptyClick(employeeId, day.key.slice(0, 7))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onEmptyClick(employeeId, day.key.slice(0, 7));
+                    }
+                  }}
                 />
               );
             })
           : months.map((m, i) => (
               <div
                 key={m.key}
+                role="button"
+                tabIndex={0}
+                aria-label={`Dodaj assignment ${m.key}`}
                 className="absolute border-r border-dashed border-muted-foreground/20 cursor-pointer"
-                style={{ left: i * MONTH_WIDTH, width: MONTH_WIDTH, top: utilRowHeight, height: `calc(100% - ${utilRowHeight}px)` }}
+                style={{
+                  left: i * MONTH_WIDTH,
+                  width: MONTH_WIDTH,
+                  top: utilRowHeight,
+                  height: `calc(100% - ${utilRowHeight}px)`,
+                }}
                 onClick={() => onEmptyClick(employeeId, m.key)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onEmptyClick(employeeId, m.key);
+                  }
+                }}
               />
             ))}
 

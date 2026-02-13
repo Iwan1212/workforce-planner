@@ -153,9 +153,9 @@ export function AssignmentModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Pracownik</Label>
+            <Label htmlFor="assignment-employee">Pracownik</Label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger>
+              <SelectTrigger id="assignment-employee">
                 <SelectValue placeholder="Wybierz pracownika" />
               </SelectTrigger>
               <SelectContent>
@@ -169,9 +169,9 @@ export function AssignmentModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Projekt</Label>
+            <Label htmlFor="assignment-project">Projekt</Label>
             <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger>
+              <SelectTrigger id="assignment-project">
                 <SelectValue placeholder="Wybierz projekt" />
               </SelectTrigger>
               <SelectContent>
@@ -213,9 +213,9 @@ export function AssignmentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Typ alokacji</Label>
+              <Label htmlFor="assignment-alloc-type">Typ alokacji</Label>
               <Select value={allocationType} onValueChange={setAllocationType}>
-                <SelectTrigger>
+                <SelectTrigger id="assignment-alloc-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -226,7 +226,9 @@ export function AssignmentModal({
             </div>
             <div className="space-y-2">
               <Label>
-                {allocationType === "percentage" ? "Wartość (%)" : "Godziny / msc"}
+                {allocationType === "percentage"
+                  ? "Wartość (%)"
+                  : "Godziny / msc"}
               </Label>
               <Input
                 type="number"
@@ -266,7 +268,9 @@ export function AssignmentModal({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  onClick={() => assignment && deleteMutation.mutate(assignment.id)}
+                  onClick={() =>
+                    assignment && deleteMutation.mutate(assignment.id)
+                  }
                   disabled={isPending}
                 >
                   Tak, usuń

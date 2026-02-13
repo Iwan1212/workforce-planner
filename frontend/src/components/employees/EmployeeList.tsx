@@ -156,6 +156,7 @@ export function EmployeeList() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(emp)}
+                      aria-label={`Edytuj ${emp.last_name} ${emp.first_name}`}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -163,6 +164,7 @@ export function EmployeeList() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteClick(emp)}
+                      aria-label={`Usuń ${emp.last_name} ${emp.first_name}`}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

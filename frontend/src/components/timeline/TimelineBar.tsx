@@ -123,6 +123,18 @@ export function TimelineBar({
       ? `${assignment.allocation_value}% (${assignment.daily_hours}h/d)`
       : `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`;
 
+  // Compute text color based on background luminance for WCAG contrast
+  const textColorClass = (() => {
+    const hex = assignment.project_color.replace("#", "");
+    if (hex.length !== 6) return "text-white";
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    // Relative luminance formula
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.55 ? "text-gray-900" : "text-white";
+  })();
+
   // Compute adjusted position during resize
   let adjustedLeft = left;
   let adjustedWidth = width;
@@ -151,7 +163,7 @@ export function TimelineBar({
   return (
     <div
       ref={setNodeRef}
-      className={`absolute top-1 flex items-center overflow-hidden rounded text-xs text-white shadow-sm ${
+      className={`absolute top-1 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
         resizing ? "" : "cursor-grab transition-opacity hover:opacity-90"
       }`}
       style={style}
