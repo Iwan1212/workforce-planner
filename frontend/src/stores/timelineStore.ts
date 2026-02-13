@@ -41,7 +41,7 @@ function snapToMode(date: Date, mode: ViewMode): Date {
 export const useTimelineStore = create<TimelineState>((set) => ({
   viewMode: "monthly",
   startDate: startOfMonth(new Date()),
-  selectedTeams: ALL_TEAMS,
+  selectedTeams: [],
 
   setViewMode: (mode) =>
     set((state) => ({

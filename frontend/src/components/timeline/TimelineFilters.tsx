@@ -35,7 +35,7 @@ export function TimelineFilters() {
     }
   };
 
-  const allSelected = selectedTeams.length === ALL_TEAMS.length;
+  const noneSelected = selectedTeams.length === 0;
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -72,11 +72,9 @@ export function TimelineFilters() {
       {/* Team filter */}
       <div className="flex flex-wrap items-center gap-1">
         <button
-          onClick={() =>
-            setSelectedTeams(allSelected ? [] : [...ALL_TEAMS])
-          }
+          onClick={() => setSelectedTeams([])}
           className={`rounded-md border px-2 py-1 text-xs transition-colors ${
-            allSelected
+            noneSelected
               ? "bg-primary text-primary-foreground"
               : "hover:bg-muted"
           }`}
@@ -89,7 +87,7 @@ export function TimelineFilters() {
             onClick={() => toggleTeam(team)}
             className={`rounded-md border px-2 py-1 text-xs transition-colors ${
               selectedTeams.includes(team)
-                ? "bg-secondary text-secondary-foreground"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted"
             }`}
           >

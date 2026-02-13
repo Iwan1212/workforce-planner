@@ -37,6 +37,7 @@ export function TimelineBar({
   const [resizing, setResizing] = useState<"left" | "right" | null>(null);
   const [resizeDelta, setResizeDelta] = useState(0);
   const startXRef = useRef(0);
+  const justResizedRef = useRef(false);
 
   const handleResizeStart = useCallback(
     (e: MouseEvent, edge: "left" | "right") => {
@@ -62,6 +63,12 @@ export function TimelineBar({
         if (Math.abs(dx) > pxPerDay * 0.5) {
           onResizeEnd(assignment.id, edge, dx);
         }
+
+        // Prevent click event from opening the modal after resize
+        justResizedRef.current = true;
+        requestAnimationFrame(() => {
+          justResizedRef.current = false;
+        });
       };
 
       document.addEventListener("mousemove", handleMove);
@@ -108,12 +115,16 @@ export function TimelineBar({
       }`}
       style={style}
       onClick={(e) => {
-        if (!isDragging && !resizing) {
+        if (!isDragging && !resizing && !justResizedRef.current) {
           e.stopPropagation();
           onClick();
         }
       }}
-      title={`${assignment.project_name} (${label}) | ${assignment.daily_hours}h/d`}
+      title={
+        assignment.note
+          ? `${assignment.project_name} (${label})\n${assignment.note}`
+          : `${assignment.project_name} (${label})`
+      }
     >
       {/* Left resize handle */}
       <div
