@@ -25,6 +25,7 @@ services:
       DATABASE_URL: "postgresql+asyncpg://workforce:workforce_dev@db:5432/workforce_planner"
       SECRET_KEY: "dev-secret-key-change-in-production"
       CORS_ORIGINS: "http://localhost:5173"
+      RELOAD: "true"
     depends_on:
       db:
         condition: service_healthy

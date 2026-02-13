@@ -9,8 +9,3 @@ cd frontend
 npm install
 npm run build
 cd ..
-
-# Run database migrations and create admin user
-cd backend
-alembic upgrade head
-python scripts/create_admin.py

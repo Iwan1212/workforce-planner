@@ -8,4 +8,8 @@ echo "Creating admin user (if not exists)..."
 python scripts/create_admin.py
 
 echo "Starting server..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+if [ "${RELOAD:-false}" = "true" ]; then
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+else
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8001
+fi
