@@ -39,6 +39,20 @@ class AssignmentUpdate(BaseModel):
     allocation_value: Optional[float] = None
     note: Optional[str] = None
 
+    @field_validator("allocation_type")
+    @classmethod
+    def validate_allocation_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("percentage", "monthly_hours"):
+            raise ValueError("allocation_type must be 'percentage' or 'monthly_hours'")
+        return v
+
+    @field_validator("allocation_value")
+    @classmethod
+    def validate_allocation_value(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v <= 0:
+            raise ValueError("allocation_value must be > 0")
+        return v
+
 
 class AssignmentResponse(BaseModel):
     id: int

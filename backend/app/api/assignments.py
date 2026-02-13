@@ -12,7 +12,11 @@ from app.models.assignment import Assignment
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.user import User
-from app.schemas.assignment import AssignmentCreate, AssignmentResponse, AssignmentUpdate
+from app.schemas.assignment import (
+    AssignmentCreate,
+    AssignmentResponse,
+    AssignmentUpdate,
+)
 from app.services.assignment_service import calculate_daily_hours
 from app.utils.working_days import get_working_days
 
@@ -81,15 +85,25 @@ async def create_assignment(
 
     wd = get_working_days(body.start_date, body.end_date)
     if wd < 1:
-        raise HTTPException(status_code=400, detail="Assignment must contain at least 1 working day")
+        raise HTTPException(
+            status_code=400, detail="Assignment must contain at least 1 working day"
+        )
 
     # Validate employee exists
-    emp = await db.execute(select(Employee).where(Employee.id == body.employee_id, Employee.is_deleted == False))
+    emp = await db.execute(
+        select(Employee).where(
+            Employee.id == body.employee_id, Employee.is_deleted == False
+        )
+    )
     if not emp.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Employee not found")
 
     # Validate project exists
-    proj = await db.execute(select(Project).where(Project.id == body.project_id, Project.is_deleted == False))
+    proj = await db.execute(
+        select(Project).where(
+            Project.id == body.project_id, Project.is_deleted == False
+        )
+    )
     if not proj.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -121,13 +135,21 @@ async def update_assignment(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     if body.employee_id is not None:
-        emp = await db.execute(select(Employee).where(Employee.id == body.employee_id, Employee.is_deleted == False))
+        emp = await db.execute(
+            select(Employee).where(
+                Employee.id == body.employee_id, Employee.is_deleted == False
+            )
+        )
         if not emp.scalar_one_or_none():
             raise HTTPException(status_code=404, detail="Employee not found")
         assignment.employee_id = body.employee_id
 
     if body.project_id is not None:
-        proj = await db.execute(select(Project).where(Project.id == body.project_id, Project.is_deleted == False))
+        proj = await db.execute(
+            select(Project).where(
+                Project.id == body.project_id, Project.is_deleted == False
+            )
+        )
         if not proj.scalar_one_or_none():
             raise HTTPException(status_code=404, detail="Project not found")
         assignment.project_id = body.project_id
@@ -146,6 +168,13 @@ async def update_assignment(
     # Re-validate dates
     if assignment.start_date > assignment.end_date:
         raise HTTPException(status_code=400, detail="start_date must be <= end_date")
+
+    # Validate at least 1 working day (same check as create)
+    wd = get_working_days(assignment.start_date, assignment.end_date)
+    if wd < 1:
+        raise HTTPException(
+            status_code=400, detail="Assignment must contain at least 1 working day"
+        )
 
     await db.commit()
     await db.refresh(assignment)
