@@ -69,62 +69,27 @@ Workforce Planner is a full-stack web application designed for IT companies mana
 
 ### Prerequisites
 
-- **Docker** & **Docker Compose** (for PostgreSQL)
-- **Python 3.9+** with pip
-- **Node.js 18+** with npm
+- **Docker** & **Docker Compose**
 
-### 1. Clone the repository
+### 1. Clone and run
 
 ```bash
 git clone https://github.com/Iwan1212/workforce-planner.git
 cd workforce-planner
-```
-
-### 2. Start the database
-
-```bash
 docker compose up -d
 ```
 
-This starts PostgreSQL 16 on port `5433`.
+This starts all three services:
 
-### 3. Set up the backend
+| Service | URL | Description |
+|---|---|---|
+| **Frontend** | http://localhost:5173 | React dev server with hot reload |
+| **Backend** | http://localhost:8001 | FastAPI with auto-reload |
+| **Database** | localhost:5433 | PostgreSQL 16 |
 
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
+Database migrations and admin user creation happen automatically on backend startup.
 
-Run database migrations and create the admin user:
-
-```bash
-alembic upgrade head
-python scripts/create_admin.py
-```
-
-Optionally, seed demo data (15 employees, 5 projects, 20 assignments):
-
-```bash
-python scripts/seed_demo_data.py
-```
-
-Start the backend server:
-
-```bash
-uvicorn app.main:app --reload --port 8001
-```
-
-### 4. Set up the frontend
-
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-
-### 5. Open the app
+### 2. Open the app
 
 Navigate to **http://localhost:5173** and log in:
 
@@ -132,6 +97,41 @@ Navigate to **http://localhost:5173** and log in:
 |---|---|
 | Email | `admin@workforce.local` |
 | Password | `Admin123!` |
+
+### Manual setup (without Docker)
+
+<details>
+<summary>Click to expand</summary>
+
+**Prerequisites:** Python 3.9+, Node.js 18+, Docker (for PostgreSQL only)
+
+```bash
+# Start database
+docker compose up -d db
+
+# Backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate    # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+python scripts/create_admin.py
+uvicorn app.main:app --reload --port 8001
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Optionally, seed demo data (15 employees, 5 projects, 20 assignments):
+
+```bash
+cd backend
+python scripts/seed_demo_data.py
+```
+
+</details>
 
 ## Project Structure
 

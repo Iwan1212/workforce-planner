@@ -10,6 +10,38 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce -d workforce_planner"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://workforce:workforce_dev@db:5432/workforce_planner"
+      SECRET_KEY: "dev-secret-key-change-in-production"
+      CORS_ORIGINS: "http://localhost:5173"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      API_PROXY_TARGET: "http://backend:8001"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
 
 volumes:
   pgdata:
