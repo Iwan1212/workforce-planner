@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar as cal_mod
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -12,7 +13,10 @@ from app.core.dependencies import get_current_user, get_db
 from app.models.assignment import Assignment
 from app.models.employee import Employee
 from app.models.user import User
-from app.services.assignment_service import calculate_assignment_hours_in_month, calculate_daily_hours
+from app.services.assignment_service import (
+    calculate_assignment_hours_in_month,
+    calculate_daily_hours,
+)
 from app.utils.polish_holidays import get_holiday_name, get_polish_holidays
 from app.utils.working_days import get_working_days_in_month
 
@@ -66,11 +70,13 @@ async def get_timeline(
     for emp in employees:
         # Fetch assignments overlapping with date range
         a_result = await db.execute(
-            select(Assignment).where(
+            select(Assignment)
+            .where(
                 Assignment.employee_id == emp.id,
                 Assignment.start_date <= end_date,
                 Assignment.end_date >= start_date,
-            ).order_by(Assignment.start_date)
+            )
+            .order_by(Assignment.start_date)
         )
         assignments = a_result.scalars().all()
 
@@ -80,51 +86,62 @@ async def get_timeline(
             first_month_year = max(a.start_date, start_date)
             daily = calculate_daily_hours(
                 a.allocation_type.value,
-                float(a.allocation_value),
+                a.allocation_value,
                 first_month_year.year,
                 first_month_year.month,
             )
-            assignment_list.append({
-                "id": a.id,
-                "project_id": a.project_id,
-                "project_name": a.project.name if a.project else "",
-                "project_color": a.project.color if a.project else "#000000",
-                "start_date": a.start_date.isoformat(),
-                "end_date": a.end_date.isoformat(),
-                "allocation_type": a.allocation_type.value,
-                "allocation_value": float(a.allocation_value),
-                "note": a.note,
-                "daily_hours": round(daily, 2),
-            })
+            assignment_list.append(
+                {
+                    "id": a.id,
+                    "project_id": a.project_id,
+                    "project_name": a.project.name if a.project else "",
+                    "project_color": a.project.color if a.project else "#000000",
+                    "start_date": a.start_date.isoformat(),
+                    "end_date": a.end_date.isoformat(),
+                    "allocation_type": a.allocation_type.value,
+                    "allocation_value": float(a.allocation_value),
+                    "note": a.note,
+                    "daily_hours": float(round(daily, 2)),
+                }
+            )
 
         # Calculate utilization per month
         utilization = {}
         for y, m in months:
             key = f"{y}-{m:02d}"
-            avail = working_days_per_month[key] * 8.0
-            total = 0.0
+            avail = Decimal(str(working_days_per_month[key])) * Decimal("8")
+            total = Decimal("0")
             for a in assignments:
                 total += calculate_assignment_hours_in_month(
-                    a.start_date, a.end_date,
+                    a.start_date,
+                    a.end_date,
                     a.allocation_type.value,
-                    float(a.allocation_value),
-                    y, m,
+                    a.allocation_value,
+                    y,
+                    m,
                 )
-            pct = round((total / avail * 100) if avail > 0 else 0, 1)
+            pct = float(
+                round(
+                    (total / avail * Decimal("100")) if avail > 0 else Decimal("0"),
+                    1,
+                )
+            )
             utilization[key] = {
                 "percentage": pct,
-                "hours": round(total, 1),
-                "available_hours": round(avail, 1),
+                "hours": float(round(total, 1)),
+                "available_hours": float(round(avail, 1)),
                 "is_overbooked": pct > 100,
             }
 
-        employee_data.append({
-            "id": emp.id,
-            "name": f"{emp.last_name} {emp.first_name}",
-            "team": emp.team.value if emp.team else None,
-            "assignments": assignment_list,
-            "utilization": utilization,
-        })
+        employee_data.append(
+            {
+                "id": emp.id,
+                "name": f"{emp.last_name} {emp.first_name}",
+                "team": emp.team.value if emp.team else None,
+                "assignments": assignment_list,
+                "utilization": utilization,
+            }
+        )
 
     return {
         "employees": employee_data,
@@ -142,10 +159,7 @@ async def get_holidays(
     _user: User = Depends(get_current_user),
 ):
     holidays = get_polish_holidays(year)
-    return [
-        {"date": d.isoformat(), "name": get_holiday_name(d)}
-        for d in holidays
-    ]
+    return [{"date": d.isoformat(), "name": get_holiday_name(d)} for d in holidays]
 
 
 @router.get("/api/calendar/working-days")
@@ -155,4 +169,5 @@ async def get_working_days_endpoint(
     _user: User = Depends(get_current_user),
 ):
     from app.utils.working_days import get_working_days
+
     return {"working_days": get_working_days(start_date, end_date)}

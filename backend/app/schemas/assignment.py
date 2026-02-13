@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
@@ -12,7 +13,7 @@ class AssignmentCreate(BaseModel):
     start_date: date
     end_date: date
     allocation_type: str  # "percentage" | "monthly_hours"
-    allocation_value: float
+    allocation_value: Decimal
     note: Optional[str] = None
 
     @field_validator("allocation_type")
@@ -24,7 +25,7 @@ class AssignmentCreate(BaseModel):
 
     @field_validator("allocation_value")
     @classmethod
-    def validate_allocation_value(cls, v: float) -> float:
+    def validate_allocation_value(cls, v: Decimal) -> Decimal:
         if v <= 0:
             raise ValueError("allocation_value must be > 0")
         return v
@@ -36,7 +37,7 @@ class AssignmentUpdate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     allocation_type: Optional[str] = None
-    allocation_value: Optional[float] = None
+    allocation_value: Optional[Decimal] = None
     note: Optional[str] = None
 
     @field_validator("allocation_type")
@@ -48,7 +49,7 @@ class AssignmentUpdate(BaseModel):
 
     @field_validator("allocation_value")
     @classmethod
-    def validate_allocation_value(cls, v: Optional[float]) -> Optional[float]:
+    def validate_allocation_value(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v <= 0:
             raise ValueError("allocation_value must be > 0")
         return v

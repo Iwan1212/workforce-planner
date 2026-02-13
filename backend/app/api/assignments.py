@@ -28,7 +28,7 @@ def _build_response(a: Assignment) -> dict:
     today = date.today()
     daily = calculate_daily_hours(
         a.allocation_type.value,
-        float(a.allocation_value),
+        a.allocation_value,
         today.year,
         today.month,
     )
@@ -42,7 +42,7 @@ def _build_response(a: Assignment) -> dict:
         "end_date": a.end_date,
         "allocation_type": a.allocation_type.value,
         "allocation_value": float(a.allocation_value),
-        "daily_hours": round(daily, 2),
+        "daily_hours": float(round(daily, 2)),
         "note": a.note,
         "created_at": a.created_at,
     }
