@@ -140,8 +140,8 @@ async def update_assignment(
         assignment.allocation_type = body.allocation_type
     if body.allocation_value is not None:
         assignment.allocation_value = body.allocation_value
-    if body.note is not None:
-        assignment.note = body.note
+    if "note" in body.model_fields_set:
+        assignment.note = body.note.strip() if body.note else None
 
     # Re-validate dates
     if assignment.start_date > assignment.end_date:

@@ -128,7 +128,7 @@ export function AssignmentModal({
       end_date: endDate,
       allocation_type: allocationType,
       allocation_value: Number(allocationValue),
-      note: note || null,
+      note: note,
     };
 
     if (isEditing && assignment) {

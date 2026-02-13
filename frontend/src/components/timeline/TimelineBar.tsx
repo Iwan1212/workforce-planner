@@ -1,6 +1,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { type MouseEvent, useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { StickyNote } from "lucide-react";
 import type { TimelineAssignment } from "@/api/assignments";
 
 interface TimelineBarProps {
@@ -38,6 +40,21 @@ export function TimelineBar({
   const [resizeDelta, setResizeDelta] = useState(0);
   const startXRef = useRef(0);
   const justResizedRef = useRef(false);
+
+  const [noteTooltip, setNoteTooltip] = useState<{ x: number; y: number } | null>(null);
+  const iconRef = useRef<HTMLSpanElement>(null);
+
+  const hasNote = Boolean(assignment.note && assignment.note.trim());
+
+  const showNoteTooltip = () => {
+    if (!hasNote || !iconRef.current) return;
+    const rect = iconRef.current.getBoundingClientRect();
+    setNoteTooltip({ x: rect.left + rect.width / 2, y: rect.top });
+  };
+
+  const hideNoteTooltip = () => {
+    setNoteTooltip(null);
+  };
 
   const handleResizeStart = useCallback(
     (e: MouseEvent, edge: "left" | "right") => {
@@ -120,11 +137,6 @@ export function TimelineBar({
           onClick();
         }
       }}
-      title={
-        assignment.note
-          ? `${assignment.project_name} (${label})\n${assignment.note}`
-          : `${assignment.project_name} (${label})`
-      }
     >
       {/* Left resize handle */}
       <div
@@ -141,6 +153,16 @@ export function TimelineBar({
         {showDailyHours
           ? `${assignment.daily_hours}h/d`
           : `${assignment.project_name} · ${label}`}
+        {hasNote && (
+          <span
+            ref={iconRef}
+            className="ml-1 inline-flex align-text-bottom"
+            onPointerEnter={showNoteTooltip}
+            onPointerLeave={hideNoteTooltip}
+          >
+            <StickyNote size={12} className="opacity-75" />
+          </span>
+        )}
       </span>
 
       {/* Right resize handle */}
@@ -155,6 +177,17 @@ export function TimelineBar({
           {daysDelta > 0 ? "+" : ""}
           {daysDelta}d
         </div>
+      )}
+
+      {/* Note tooltip via portal - renders outside overflow-hidden */}
+      {noteTooltip && hasNote && createPortal(
+        <div
+          className="pointer-events-none fixed z-[9999] max-w-60 rounded bg-foreground px-2 py-1 text-[11px] leading-tight text-background shadow-lg"
+          style={{ left: noteTooltip.x, top: noteTooltip.y - 4, transform: "translate(-50%, -100%)" }}
+        >
+          {assignment.note}
+        </div>,
+        document.body
       )}
     </div>
   );
