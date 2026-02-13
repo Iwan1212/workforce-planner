@@ -26,10 +26,6 @@ export function EmployeeList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
-  const [deleteInfo, setDeleteInfo] = useState<{
-    has_active_assignments: boolean;
-    active_assignments_count: number;
-  } | null>(null);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees"],
@@ -52,7 +48,11 @@ export function EmployeeList() {
       data,
     }: {
       id: number;
-      data: Partial<{ first_name: string; last_name: string; team: string | null }>;
+      data: Partial<{
+        first_name: string;
+        last_name: string;
+        team: string | null;
+      }>;
     }) => updateEmployee(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -64,19 +64,10 @@ export function EmployeeList() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: ({ id, confirm }: { id: number; confirm: boolean }) =>
-      deleteEmployee(id, confirm),
-    onSuccess: (data) => {
-      if (data.has_active_assignments && !data.deleted) {
-        setDeleteInfo({
-          has_active_assignments: true,
-          active_assignments_count: data.active_assignments_count ?? 0,
-        });
-        return;
-      }
+    mutationFn: (id: number) => deleteEmployee(id, true),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
       setDeleteTarget(null);
-      setDeleteInfo(null);
       toast.success("Pracownik usunięty");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -101,13 +92,11 @@ export function EmployeeList() {
 
   const handleDeleteClick = (emp: Employee) => {
     setDeleteTarget(emp);
-    setDeleteInfo(null);
-    deleteMutation.mutate({ id: emp.id, confirm: false });
   };
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
-    deleteMutation.mutate({ id: deleteTarget.id, confirm: true });
+    deleteMutation.mutate(deleteTarget.id);
   };
 
   return (
@@ -200,45 +189,23 @@ export function EmployeeList() {
       <Dialog
         open={deleteTarget !== null}
         onOpenChange={(o) => {
-          if (!o) {
-            setDeleteTarget(null);
-            setDeleteInfo(null);
-          }
+          if (!o) setDeleteTarget(null);
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Usuń pracownika</DialogTitle>
             <DialogDescription>
-              {deleteInfo?.has_active_assignments ? (
-                <>
-                  Pracownik{" "}
-                  <strong>
-                    {deleteTarget?.last_name} {deleteTarget?.first_name}
-                  </strong>{" "}
-                  ma {deleteInfo.active_assignments_count} aktywnych
-                  assignmentów. Czy na pewno chcesz go usunąć? Przyszłe
-                  assignmenty zostaną usunięte.
-                </>
-              ) : (
-                <>
-                  Czy na pewno chcesz usunąć pracownika{" "}
-                  <strong>
-                    {deleteTarget?.last_name} {deleteTarget?.first_name}
-                  </strong>
-                  ?
-                </>
-              )}
+              Czy na pewno chcesz usunąć pracownika{" "}
+              <strong>
+                {deleteTarget?.last_name} {deleteTarget?.first_name}
+              </strong>
+              ? Przyszłe assignmenty zostaną usunięte, a bieżące skrócone do
+              dzisiaj.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteTarget(null);
-                setDeleteInfo(null);
-              }}
-            >
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Anuluj
             </Button>
             <Button

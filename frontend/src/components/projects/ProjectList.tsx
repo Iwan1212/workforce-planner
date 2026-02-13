@@ -25,10 +25,6 @@ export function ProjectList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
-  const [deleteInfo, setDeleteInfo] = useState<{
-    has_active_assignments: boolean;
-    active_assignments_count: number;
-  } | null>(null);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
@@ -63,19 +59,10 @@ export function ProjectList() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: ({ id, confirm }: { id: number; confirm: boolean }) =>
-      deleteProject(id, confirm),
-    onSuccess: (data) => {
-      if (data.has_active_assignments && !data.deleted) {
-        setDeleteInfo({
-          has_active_assignments: true,
-          active_assignments_count: data.active_assignments_count ?? 0,
-        });
-        return;
-      }
+    mutationFn: (id: number) => deleteProject(id, true),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setDeleteTarget(null);
-      setDeleteInfo(null);
       toast.success("Projekt usunięty");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -96,13 +83,11 @@ export function ProjectList() {
 
   const handleDeleteClick = (proj: Project) => {
     setDeleteTarget(proj);
-    setDeleteInfo(null);
-    deleteMutation.mutate({ id: proj.id, confirm: false });
   };
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
-    deleteMutation.mutate({ id: deleteTarget.id, confirm: true });
+    deleteMutation.mutate(deleteTarget.id);
   };
 
   return (
@@ -123,9 +108,7 @@ export function ProjectList() {
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
       ) : projects.length === 0 ? (
-        <p className="text-muted-foreground">
-          Brak projektów. Dodaj pierwszy.
-        </p>
+        <p className="text-muted-foreground">Brak projektów. Dodaj pierwszy.</p>
       ) : (
         <div className="rounded-md border">
           <table className="w-full">
@@ -189,39 +172,20 @@ export function ProjectList() {
       <Dialog
         open={deleteTarget !== null}
         onOpenChange={(o) => {
-          if (!o) {
-            setDeleteTarget(null);
-            setDeleteInfo(null);
-          }
+          if (!o) setDeleteTarget(null);
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Usuń projekt</DialogTitle>
             <DialogDescription>
-              {deleteInfo?.has_active_assignments ? (
-                <>
-                  Projekt <strong>{deleteTarget?.name}</strong> ma{" "}
-                  {deleteInfo.active_assignments_count} aktywnych assignmentów.
-                  Usunięcie projektu spowoduje usunięcie wszystkich
-                  assignmentów. Kontynuować?
-                </>
-              ) : (
-                <>
-                  Czy na pewno chcesz usunąć projekt{" "}
-                  <strong>{deleteTarget?.name}</strong>?
-                </>
-              )}
+              Czy na pewno chcesz usunąć projekt{" "}
+              <strong>{deleteTarget?.name}</strong>? Przyszłe assignmenty
+              zostaną usunięte, a bieżące skrócone do dzisiaj.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteTarget(null);
-                setDeleteInfo(null);
-              }}
-            >
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Anuluj
             </Button>
             <Button
