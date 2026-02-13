@@ -247,7 +247,12 @@ Response:
       }
     }
   ],
-  "holidays": ["2026-01-01", "2026-01-06", "2026-05-01", "2026-05-03"],
+  "holidays": [
+    {"date": "2026-01-01", "name": "Nowy Rok"},
+    {"date": "2026-01-06", "name": "Trzech Króli"},
+    {"date": "2026-05-01", "name": "Święto Pracy"},
+    {"date": "2026-05-03", "name": "Święto Konstytucji 3 Maja"}
+  ],
   "working_days_per_month": { "2026-01": 21, "2026-02": 20, "2026-03": 22 }
 }
 ```
