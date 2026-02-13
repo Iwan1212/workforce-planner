@@ -10,7 +10,7 @@ services:
     runtime: python
     plan: free
     buildCommand: ./render-build.sh
-    startCommand: cd backend && alembic upgrade head && python scripts/create_admin.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend && alembic upgrade head && python scripts/create_admin.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -18,6 +18,8 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: ENVIRONMENT
+        value: "production"
       - key: CORS_ORIGINS
         value: "https://workforce-planner-pibi.onrender.com"
       - key: PYTHON_VERSION
