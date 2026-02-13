@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Green rectangle (bottom-left) -->
+  <rect x="5" y="55" width="30" height="25" rx="2" fill="#B8D94A" transform="rotate(-10, 20, 67)"/>
+  <!-- Blue rectangle (center, rotated) -->
+  <rect x="25" y="10" width="30" height="55" rx="3" fill="#4A6CF7" transform="rotate(35, 40, 37)"/>
+  <!-- Dark green/gray rectangle (right) -->
+  <rect x="60" y="30" width="30" height="45" rx="2" fill="#5C6B52"/>
+</svg>
