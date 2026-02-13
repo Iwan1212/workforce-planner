@@ -240,7 +240,7 @@ export function TimelineRow({
 
   // Per-period utilization for weekly view (computed client-side)
   const weekUtils = weeks.map((w) => ({
-    key: `w-${w.weekNumber}`,
+    key: `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`,
     pct: computeWeeklyUtilization(w, assignments, holidayMap),
   }));
 
@@ -281,7 +281,7 @@ export function TimelineRow({
                 const pct = weekUtils[i].pct;
                 return (
                   <div
-                    key={w.weekNumber}
+                    key={`${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`}
                     className={`flex items-center justify-center text-[10px] ${getUtilColor(pct)}`}
                     style={{ width: w.days.length * DAY_WIDTH }}
                   >
@@ -310,10 +310,10 @@ export function TimelineRow({
               return (
                 <div
                   key={day.key}
-                  className={`absolute h-full border-r border-dashed border-muted-foreground/20 cursor-pointer ${
+                  className={`absolute border-r border-dashed border-muted-foreground/20 cursor-pointer ${
                     day.isWeekend || isHoliday ? "bg-muted/40" : ""
                   }`}
-                  style={{ left: i * DAY_WIDTH, width: DAY_WIDTH, top: utilRowHeight }}
+                  style={{ left: i * DAY_WIDTH, width: DAY_WIDTH, top: utilRowHeight, height: `calc(100% - ${utilRowHeight}px)` }}
                   title={holidayMap[day.key]}
                   onClick={() =>
                     onEmptyClick(employeeId, day.key.slice(0, 7))
@@ -324,8 +324,8 @@ export function TimelineRow({
           : months.map((m, i) => (
               <div
                 key={m.key}
-                className="absolute h-full border-r border-dashed border-muted-foreground/20 cursor-pointer"
-                style={{ left: i * MONTH_WIDTH, width: MONTH_WIDTH, top: utilRowHeight }}
+                className="absolute border-r border-dashed border-muted-foreground/20 cursor-pointer"
+                style={{ left: i * MONTH_WIDTH, width: MONTH_WIDTH, top: utilRowHeight, height: `calc(100% - ${utilRowHeight}px)` }}
                 onClick={() => onEmptyClick(employeeId, m.key)}
               />
             ))}
