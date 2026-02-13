@@ -5,13 +5,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.assignment import Assignment
-from app.models.employee import Employee
+from app.models.employee import Employee, Team
 from app.models.user import User
 from app.services.assignment_service import (
     calculate_assignment_hours_in_month,
@@ -36,6 +36,13 @@ async def get_timeline(
     emp_query = select(Employee).where(Employee.is_deleted == False)
     if teams:
         team_list = [t.strip() for t in teams.split(",") if t.strip()]
+        valid_teams = {t.value for t in Team}
+        invalid = [t for t in team_list if t not in valid_teams]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid team value(s): {', '.join(invalid)}. Valid: {', '.join(sorted(valid_teams))}",
+            )
         if team_list:
             emp_query = emp_query.where(Employee.team.in_(team_list))
     emp_query = emp_query.order_by(Employee.last_name, Employee.first_name)
