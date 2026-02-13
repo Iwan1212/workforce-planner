@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func as sa_func
+from sqlalchemy import func as sa_func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin
@@ -115,13 +116,18 @@ async def delete_project(
             "message": "Project has active assignments. Pass ?confirm=true to proceed.",
         }
 
-    # Soft delete project, cascade delete all assignments
+    # Soft delete project
     project.is_deleted = True
-    all_assignments = await db.execute(
-        select(Assignment).where(Assignment.project_id == project_id)
-    )
-    for a in all_assignments.scalars().all():
-        await db.delete(a)
+
+    # Handle assignments like employee deletion:
+    # - Future assignments: remove
+    # - Ongoing assignments: trim end date to today
+    # - Historical assignments: preserve
+    for a in active_assignments:
+        if a.start_date >= today:
+            await db.delete(a)
+        else:
+            a.end_date = today
 
     await db.commit()
     return {"deleted": True}
