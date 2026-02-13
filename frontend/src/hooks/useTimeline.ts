@@ -79,7 +79,7 @@ export function useTimeline() {
   const endStr = format(endDate, "yyyy-MM-dd");
 
   const query = useQuery({
-    queryKey: ["timeline", startStr, endStr, selectedTeams],
+    queryKey: ["timeline", startStr, endStr, selectedTeams, viewMode],
     queryFn: () => fetchTimeline(startStr, endStr, selectedTeams),
   });
 
