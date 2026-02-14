@@ -52,11 +52,15 @@ export interface AssignmentCreateData {
 export function fetchTimeline(
   startDate: string,
   endDate: string,
-  teams?: string[]
+  teams?: string[],
+  search?: string
 ): Promise<TimelineData> {
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
   if (teams && teams.length > 0) {
     params.set("teams", teams.join(","));
+  }
+  if (search) {
+    params.set("search", search);
   }
   return apiFetch<TimelineData>(`/api/assignments/timeline?${params}`);
 }

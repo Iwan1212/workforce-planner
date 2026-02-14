@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   addMonths,
@@ -67,8 +68,20 @@ function generateWeeks(start: Date, count: number): WeekInfo[] {
   return weeks;
 }
 
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 export function useTimeline() {
-  const { startDate, selectedTeams, viewMode } = useTimelineStore();
+  const { startDate, selectedTeams, searchQuery, viewMode } =
+    useTimelineStore();
+
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
 
   const endDate =
     viewMode === "monthly"
@@ -79,8 +92,9 @@ export function useTimeline() {
   const endStr = format(endDate, "yyyy-MM-dd");
 
   const query = useQuery({
-    queryKey: ["timeline", startStr, endStr, selectedTeams, viewMode],
-    queryFn: () => fetchTimeline(startStr, endStr, selectedTeams),
+    queryKey: ["timeline", startStr, endStr, selectedTeams, debouncedSearch, viewMode],
+    queryFn: () =>
+      fetchTimeline(startStr, endStr, selectedTeams, debouncedSearch || undefined),
   });
 
   // Generate list of months for monthly header

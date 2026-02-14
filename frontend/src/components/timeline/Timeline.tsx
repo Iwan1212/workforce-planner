@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useTimeline } from "@/hooks/useTimeline";
+import { useTimelineStore } from "@/stores/timelineStore";
 import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
@@ -24,6 +25,7 @@ import {
 export function Timeline() {
   const queryClient = useQueryClient();
   const { data, isLoading, months, weeks, allDays, viewMode } = useTimeline();
+  const searchQuery = useTimelineStore((s) => s.searchQuery);
 
   // Build holiday lookup: date string -> holiday name
   const holidayMap: Record<string, string> = {};
@@ -223,6 +225,12 @@ export function Timeline() {
         <div className="flex h-64 items-center justify-center">
           <p className="text-muted-foreground">
             Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty.
+          </p>
+        </div>
+      ) : data.employees.length === 0 && searchQuery.trim() ? (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">
+            Brak wyników dla &ldquo;{searchQuery}&rdquo;
           </p>
         </div>
       ) : (
