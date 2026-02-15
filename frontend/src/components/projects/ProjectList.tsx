@@ -91,7 +91,7 @@ export function ProjectList() {
   };
 
   return (
-    <div>
+    <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-bold">Projekty</h2>
         <Button
