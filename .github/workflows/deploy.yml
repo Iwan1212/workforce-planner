@@ -1,0 +1,48 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEPLOY_HOST: employee-engagement.staging.mntm.dev
+  DEPLOY_USER: employee-engagement
+  DEPLOY_PATH: ~/workforce-planner
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '__pycache__' \
+            --exclude '.env' \
+            --exclude 'venv' \
+            --exclude '.venv' \
+            --exclude '.pytest_cache' \
+            --exclude '.claude' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'EOF'
+            cd ~/workforce-planner
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+          EOF
