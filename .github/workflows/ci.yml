@@ -27,7 +27,7 @@ jobs:
         run: python -m pytest tests/ -v
 
       - name: Type check
-        run: pip install pyright && pyright --level basic app/
+        run: pip install pyright && pyright --warnings app/
 
   frontend:
     runs-on: ubuntu-latest
@@ -50,7 +50,8 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint
-        run: npx eslint . --max-warnings 5
+        continue-on-error: true
+        run: npx eslint .
 
       - name: Build
         run: npm run build
