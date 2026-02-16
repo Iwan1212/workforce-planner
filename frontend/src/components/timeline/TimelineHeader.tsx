@@ -28,7 +28,7 @@ export function TimelineHeader({
 }: TimelineHeaderProps) {
   if (viewMode === "weekly") {
     return (
-      <div className="border-b bg-muted/30">
+      <div>
         {/* Top row: week labels */}
         <div className="flex">
           {weeks.map((week) => (
@@ -75,7 +75,7 @@ export function TimelineHeader({
 
   // Monthly view
   return (
-    <div className="flex border-b bg-muted/30">
+    <div className="flex">
       {months.map((month) => {
         const wd = workingDaysPerMonth[month.key] ?? 0;
         const hours = wd * 8;

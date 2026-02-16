@@ -14,9 +14,11 @@ interface TimelineState {
   viewMode: ViewMode;
   startDate: Date;
   selectedTeams: string[];
+  searchQuery: string;
   setViewMode: (mode: ViewMode) => void;
   setStartDate: (date: Date) => void;
   setSelectedTeams: (teams: string[]) => void;
+  setSearchQuery: (query: string) => void;
   scrollForward: () => void;
   scrollBack: () => void;
   goToToday: () => void;
@@ -42,6 +44,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   viewMode: "monthly",
   startDate: startOfMonth(new Date()),
   selectedTeams: [],
+  searchQuery: "",
 
   setViewMode: (mode) =>
     set((state) => ({
@@ -51,6 +54,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   setStartDate: (date) =>
     set((state) => ({ startDate: snapToMode(date, state.viewMode) })),
   setSelectedTeams: (teams) => set({ selectedTeams: teams }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
 
   scrollForward: () =>
     set((state) => ({

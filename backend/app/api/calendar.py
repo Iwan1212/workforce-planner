@@ -28,6 +28,7 @@ async def get_timeline(
     start_date: date = Query(...),
     end_date: date = Query(...),
     teams: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -45,6 +46,11 @@ async def get_timeline(
             )
         if team_list:
             emp_query = emp_query.where(Employee.team.in_(team_list))
+    if search and search.strip():
+        q = f"%{search.strip()}%"
+        emp_query = emp_query.where(
+            (Employee.first_name.ilike(q)) | (Employee.last_name.ilike(q))
+        )
     emp_query = emp_query.order_by(Employee.last_name, Employee.first_name)
 
     emp_result = await db.execute(emp_query)

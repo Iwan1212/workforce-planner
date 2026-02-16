@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useTimeline } from "@/hooks/useTimeline";
+import { useTimelineStore } from "@/stores/timelineStore";
 import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
@@ -24,6 +25,7 @@ import {
 export function Timeline() {
   const queryClient = useQueryClient();
   const { data, isLoading, months, weeks, allDays, viewMode } = useTimeline();
+  const searchQuery = useTimelineStore((s) => s.searchQuery);
 
   // Build holiday lookup: date string -> holiday name
   const holidayMap: Record<string, string> = {};
@@ -40,6 +42,15 @@ export function Timeline() {
     null
   );
   const [defaultStartDate, setDefaultStartDate] = useState<string | null>(null);
+
+  // Sync horizontal scroll between header and body
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const handleBodyScroll = useCallback(() => {
+    if (headerScrollRef.current && bodyScrollRef.current) {
+      headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+    }
+  }, []);
 
   // D&D sensor with activation distance to avoid accidental drags
   const sensors = useSensors(
@@ -174,20 +185,49 @@ export function Timeline() {
     month: m.month,
   }));
 
+  const hasEmployees = !isLoading && data && data.employees.length > 0;
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Timeline</h2>
-        <Button onClick={handleNewAssignment}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nowy assignment
-        </Button>
+      {/* Sticky top section — <main> has no padding so sticky top-0 works flush. */}
+      <div className="sticky top-0 z-30 bg-background px-6 pt-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Timeline</h2>
+          <Button onClick={handleNewAssignment}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nowy assignment
+          </Button>
+        </div>
+
+        <TimelineFilters />
+
+        {hasEmployees && (
+          <div className="rounded-t-md border bg-muted shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
+            <div className="flex">
+              <div className="flex w-[250px] flex-shrink-0 items-center border-r bg-muted px-3 py-2">
+                <span className="text-sm font-medium">Pracownik</span>
+              </div>
+              <div
+                ref={headerScrollRef}
+                className="flex-1 overflow-hidden"
+              >
+                <TimelineHeader
+                  viewMode={viewMode}
+                  months={months}
+                  workingDaysPerMonth={data.working_days_per_month}
+                  weeks={weeks}
+                  allDays={allDays}
+                  holidayMap={holidayMap}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <TimelineFilters />
-
+      {/* Body content */}
       {isLoading ? (
-        <div className="rounded-md border">
+        <div className="mx-6 rounded-md border">
           <div className="flex border-b">
             <div className="w-[250px] flex-shrink-0 border-r p-3">
               <div className="h-4 w-20 animate-pulse rounded bg-muted" />
@@ -220,33 +260,25 @@ export function Timeline() {
           ))}
         </div>
       ) : !data || data.employees.length === 0 ? (
-        <div className="flex h-64 items-center justify-center">
+        <div className="mx-6 flex h-64 items-center justify-center">
           <p className="text-muted-foreground">
             Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty.
           </p>
         </div>
+      ) : data.employees.length === 0 && searchQuery.trim() ? (
+        <div className="mx-6 flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">
+            Brak wyników dla &ldquo;{searchQuery}&rdquo;
+          </p>
+        </div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="rounded-md border">
-            <div className="overflow-x-auto">
-              {/* Header */}
-              <div className="flex">
-                <div className="sticky left-0 z-20 flex w-[250px] flex-shrink-0 items-center border-b border-r bg-background px-3 py-2">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Pracownik
-                  </span>
-                </div>
-                <TimelineHeader
-                  viewMode={viewMode}
-                  months={months}
-                  workingDaysPerMonth={data.working_days_per_month}
-                  weeks={weeks}
-                  allDays={allDays}
-                  holidayMap={holidayMap}
-                />
-              </div>
-
-              {/* Rows */}
+          <div className="mx-6 rounded-b-md border-x border-b">
+            <div
+              ref={bodyScrollRef}
+              className="overflow-x-auto"
+              onScroll={handleBodyScroll}
+            >
               {data.employees.map((emp, idx) => (
                 <TimelineRow
                   key={emp.id}
@@ -271,6 +303,7 @@ export function Timeline() {
         </DndContext>
       )}
 
+      <div className="pb-6" />
       <AssignmentModal
         open={modalOpen}
         onClose={() => {
