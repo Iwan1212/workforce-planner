@@ -53,10 +53,12 @@ services:
       - "traefik.http.services.backend.loadbalancer.server.port=8001"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     restart: unless-stopped
     environment:
-      API_PROXY_TARGET: "http://backend:8001"
+      API_PROXY_TARGET: "http://backend:8001/"
     depends_on:
       - backend
     labels:
@@ -64,7 +66,7 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`app.${DOMAIN}`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
 volumes:
   pgdata:
