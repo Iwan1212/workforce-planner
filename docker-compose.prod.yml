@@ -58,7 +58,7 @@ services:
       dockerfile: Dockerfile.prod
     restart: unless-stopped
     environment:
-      API_PROXY_TARGET: "http://backend:8001/"
+      API_PROXY_TARGET: "http://backend:8001"
     depends_on:
       - backend
     labels:
