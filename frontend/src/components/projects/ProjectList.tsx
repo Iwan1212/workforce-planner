@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -25,11 +26,18 @@ export function ProjectList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: fetchProjects,
   });
+
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    const q = searchQuery.toLowerCase();
+    return projects.filter((proj) => proj.name.toLowerCase().includes(q));
+  }, [projects, searchQuery]);
 
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -105,10 +113,33 @@ export function ProjectList() {
         </Button>
       </div>
 
+      <div className="relative mb-4 w-64">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Szukaj projektu..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 pl-8 pr-8 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Wyczyść wyszukiwanie"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
       ) : projects.length === 0 ? (
         <p className="text-muted-foreground">Brak projektów. Dodaj pierwszy.</p>
+      ) : filteredProjects.length === 0 ? (
+        <p className="text-muted-foreground">
+          Brak wyników dla &ldquo;{searchQuery}&rdquo;
+        </p>
       ) : (
         <div className="rounded-md border">
           <table className="w-full">
@@ -123,7 +154,7 @@ export function ProjectList() {
               </tr>
             </thead>
             <tbody>
-              {projects.map((proj) => (
+              {filteredProjects.map((proj) => (
                 <tr key={proj.id} className="border-b last:border-0">
                   <td className="px-4 py-3 text-sm">
                     <span className="flex items-center gap-2">
