@@ -62,7 +62,7 @@ export function AssignmentModal({
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
-    queryFn: fetchProjects,
+    queryFn: () => fetchProjects(),
     enabled: open,
   });
 
