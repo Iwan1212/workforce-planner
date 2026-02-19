@@ -22,9 +22,9 @@ export interface DeleteResponse {
   message?: string;
 }
 
-export function fetchEmployees(team?: string, search?: string): Promise<Employee[]> {
+export function fetchEmployees(teams?: string[], search?: string): Promise<Employee[]> {
   const params = new URLSearchParams();
-  if (team) params.set("team", team);
+  if (teams && teams.length > 0) params.set("teams", teams.join(","));
   if (search) params.set("search", search);
   const qs = params.toString();
   return apiFetch<Employee[]>(`/api/employees${qs ? `?${qs}` : ""}`);

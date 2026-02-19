@@ -30,17 +30,30 @@ export function EmployeeList() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const toggleTeam = (team: string) => {
+    if (selectedTeams.includes(team)) {
+      setSelectedTeams(selectedTeams.filter((t) => t !== team));
+    } else {
+      setSelectedTeams([...selectedTeams, team]);
+    }
+  };
+
+  const noneSelected = selectedTeams.length === 0;
+
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees", selectedTeam, debouncedSearch],
+    queryKey: ["employees", selectedTeams, debouncedSearch],
     queryFn: () =>
-      fetchEmployees(selectedTeam ?? undefined, debouncedSearch || undefined),
+      fetchEmployees(
+        noneSelected ? undefined : selectedTeams,
+        debouncedSearch || undefined,
+      ),
   });
 
   const createMutation = useMutation({
@@ -147,28 +160,26 @@ export function EmployeeList() {
 
         <div className="flex flex-wrap items-center gap-1">
           <button
-            onClick={() => setSelectedTeam(null)}
+            onClick={() => setSelectedTeams([])}
             className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-              selectedTeam === null
+              noneSelected
                 ? "bg-primary text-primary-foreground"
                 : "hover:bg-muted"
             }`}
-            aria-pressed={selectedTeam === null}
+            aria-pressed={noneSelected}
           >
             Wszystkie
           </button>
           {ALL_TEAMS.map((team) => (
             <button
               key={team}
-              onClick={() =>
-                setSelectedTeam(selectedTeam === team ? null : team)
-              }
+              onClick={() => toggleTeam(team)}
               className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-                selectedTeam === team
+                selectedTeams.includes(team)
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted"
               }`}
-              aria-pressed={selectedTeam === team}
+              aria-pressed={selectedTeams.includes(team)}
             >
               {TEAM_LABELS[team] ?? team}
             </button>
@@ -178,10 +189,10 @@ export function EmployeeList() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
-      ) : employees.length === 0 && (debouncedSearch || selectedTeam) ? (
+      ) : employees.length === 0 && (debouncedSearch || !noneSelected) ? (
         <p className="text-muted-foreground">
           Brak wyników{debouncedSearch ? <> dla &ldquo;{searchQuery}&rdquo;</> : null}
-          {selectedTeam ? <> w zespole {TEAM_LABELS[selectedTeam] ?? selectedTeam}</> : null}
+          {!noneSelected ? <> w wybranych zespołach</> : null}
         </p>
       ) : employees.length === 0 ? (
         <p className="text-muted-foreground">

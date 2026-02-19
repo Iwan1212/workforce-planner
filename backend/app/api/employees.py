@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/employees", tags=["employees"])
 
 @router.get("", response_model=list[EmployeeResponse])
 async def list_employees(
-    team: Optional[str] = Query(None),
+    teams: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
     db: AsyncSession = Depends(get_db),
@@ -27,10 +27,13 @@ async def list_employees(
     query = select(Employee)
     if not include_deleted:
         query = query.where(Employee.is_deleted == False)
-    if team:
-        if team not in [t.value for t in Team]:
-            raise HTTPException(status_code=400, detail="Invalid team value")
-        query = query.where(Employee.team == team)
+    if teams:
+        team_list = [t.strip() for t in teams.split(",") if t.strip()]
+        valid_teams = {t.value for t in Team}
+        for t in team_list:
+            if t not in valid_teams:
+                raise HTTPException(status_code=400, detail=f"Invalid team value: {t}")
+        query = query.where(Employee.team.in_(team_list))
     if search:
         pattern = f"%{search}%"
         query = query.where(

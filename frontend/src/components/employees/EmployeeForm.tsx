@@ -39,7 +39,7 @@ const TEAM_LABELS: Record<string, string> = {
   Mobile: "Mobile",
   PM: "PM",
   QA: "QA",
-  UX_UI_Designer: "UX/UI Designer",
+  UX_UI_Designer: "UX/UI",
 };
 
 interface EmployeeFormProps {
