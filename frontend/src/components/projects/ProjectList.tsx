@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -27,17 +27,17 @@ export function ProjectList() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["projects"],
-    queryFn: fetchProjects,
+    queryKey: ["projects", debouncedSearch],
+    queryFn: () => fetchProjects(debouncedSearch || undefined),
   });
-
-  const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
-    const q = searchQuery.toLowerCase();
-    return projects.filter((proj) => proj.name.toLowerCase().includes(q));
-  }, [projects, searchQuery]);
 
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -134,12 +134,12 @@ export function ProjectList() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
-      ) : projects.length === 0 ? (
-        <p className="text-muted-foreground">Brak projektów. Dodaj pierwszy.</p>
-      ) : filteredProjects.length === 0 ? (
+      ) : projects.length === 0 && debouncedSearch ? (
         <p className="text-muted-foreground">
           Brak wyników dla &ldquo;{searchQuery}&rdquo;
         </p>
+      ) : projects.length === 0 ? (
+        <p className="text-muted-foreground">Brak projektów. Dodaj pierwszy.</p>
       ) : (
         <div className="rounded-md border">
           <table className="w-full">
@@ -154,7 +154,7 @@ export function ProjectList() {
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.map((proj) => (
+              {projects.map((proj) => (
                 <tr key={proj.id} className="border-b last:border-0">
                   <td className="px-4 py-3 text-sm">
                     <span className="flex items-center gap-2">

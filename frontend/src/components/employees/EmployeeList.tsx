@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -28,22 +28,17 @@ export function EmployeeList() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => fetchEmployees(),
+    queryKey: ["employees", debouncedSearch],
+    queryFn: () => fetchEmployees(undefined, debouncedSearch || undefined),
   });
-
-  const filteredEmployees = useMemo(() => {
-    if (!searchQuery.trim()) return employees;
-    const q = searchQuery.toLowerCase();
-    return employees.filter(
-      (emp) =>
-        emp.first_name.toLowerCase().includes(q) ||
-        emp.last_name.toLowerCase().includes(q) ||
-        `${emp.last_name} ${emp.first_name}`.toLowerCase().includes(q)
-    );
-  }, [employees, searchQuery]);
 
   const createMutation = useMutation({
     mutationFn: createEmployee,
@@ -148,13 +143,13 @@ export function EmployeeList() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
+      ) : employees.length === 0 && debouncedSearch ? (
+        <p className="text-muted-foreground">
+          Brak wyników dla &ldquo;{searchQuery}&rdquo;
+        </p>
       ) : employees.length === 0 ? (
         <p className="text-muted-foreground">
           Brak pracowników. Dodaj pierwszego.
-        </p>
-      ) : filteredEmployees.length === 0 ? (
-        <p className="text-muted-foreground">
-          Brak wyników dla &ldquo;{searchQuery}&rdquo;
         </p>
       ) : (
         <div className="rounded-md border">
@@ -173,7 +168,7 @@ export function EmployeeList() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.map((emp) => (
+              {employees.map((emp) => (
                 <tr key={emp.id} className="border-b last:border-0">
                   <td className="px-4 py-3 text-sm">
                     {emp.last_name} {emp.first_name}
