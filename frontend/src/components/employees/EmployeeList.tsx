@@ -20,6 +20,7 @@ import {
   updateEmployee,
   type Employee,
 } from "@/api/employees";
+import { ALL_TEAMS } from "@/stores/timelineStore";
 import { EmployeeForm, TEAM_LABELS } from "./EmployeeForm";
 
 export function EmployeeList() {
@@ -29,6 +30,7 @@ export function EmployeeList() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -36,8 +38,9 @@ export function EmployeeList() {
   }, [searchQuery]);
 
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees", debouncedSearch],
-    queryFn: () => fetchEmployees(undefined, debouncedSearch || undefined),
+    queryKey: ["employees", selectedTeam, debouncedSearch],
+    queryFn: () =>
+      fetchEmployees(selectedTeam ?? undefined, debouncedSearch || undefined),
   });
 
   const createMutation = useMutation({
@@ -122,30 +125,63 @@ export function EmployeeList() {
         </Button>
       </div>
 
-      <div className="relative mb-4 w-64">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Szukaj pracownika..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-8 pl-8 pr-8 text-sm"
-        />
-        {searchQuery && (
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Szukaj pracownika..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 pl-8 pr-8 text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Wyczyść wyszukiwanie"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1">
           <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label="Wyczyść wyszukiwanie"
+            onClick={() => setSelectedTeam(null)}
+            className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+              selectedTeam === null
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted"
+            }`}
+            aria-pressed={selectedTeam === null}
           >
-            <X className="h-3.5 w-3.5" />
+            Wszystkie
           </button>
-        )}
+          {ALL_TEAMS.map((team) => (
+            <button
+              key={team}
+              onClick={() =>
+                setSelectedTeam(selectedTeam === team ? null : team)
+              }
+              className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                selectedTeam === team
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+              aria-pressed={selectedTeam === team}
+            >
+              {TEAM_LABELS[team] ?? team}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
-      ) : employees.length === 0 && debouncedSearch ? (
+      ) : employees.length === 0 && (debouncedSearch || selectedTeam) ? (
         <p className="text-muted-foreground">
-          Brak wyników dla &ldquo;{searchQuery}&rdquo;
+          Brak wyników{debouncedSearch ? <> dla &ldquo;{searchQuery}&rdquo;</> : null}
+          {selectedTeam ? <> w zespole {TEAM_LABELS[selectedTeam] ?? selectedTeam}</> : null}
         </p>
       ) : employees.length === 0 ? (
         <p className="text-muted-foreground">

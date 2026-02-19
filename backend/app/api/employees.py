@@ -52,6 +52,19 @@ async def create_employee(
     if body.team and body.team not in [t.value for t in Team]:
         raise HTTPException(status_code=400, detail="Invalid team value")
 
+    existing = await db.execute(
+        select(Employee).where(
+            sa_func.lower(Employee.first_name) == body.first_name.lower(),
+            sa_func.lower(Employee.last_name) == body.last_name.lower(),
+            Employee.is_deleted == False,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Pracownik o tym imieniu i nazwisku już istnieje",
+        )
+
     employee = Employee(
         first_name=body.first_name,
         last_name=body.last_name,
