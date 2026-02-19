@@ -22,9 +22,12 @@ export interface DeleteResponse {
   message?: string;
 }
 
-export function fetchEmployees(team?: string): Promise<Employee[]> {
-  const params = team ? `?team=${team}` : "";
-  return apiFetch<Employee[]>(`/api/employees${params}`);
+export function fetchEmployees(team?: string, search?: string): Promise<Employee[]> {
+  const params = new URLSearchParams();
+  if (team) params.set("team", team);
+  if (search) params.set("search", search);
+  const qs = params.toString();
+  return apiFetch<Employee[]>(`/api/employees${qs ? `?${qs}` : ""}`);
 }
 
 export function createEmployee(data: EmployeeCreateData): Promise<Employee> {

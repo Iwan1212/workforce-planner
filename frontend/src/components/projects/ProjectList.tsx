@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +26,17 @@ export function ProjectList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ["projects"],
-    queryFn: fetchProjects,
+    queryKey: ["projects", debouncedSearch],
+    queryFn: () => fetchProjects(debouncedSearch || undefined),
   });
 
   const createMutation = useMutation({
@@ -105,8 +113,31 @@ export function ProjectList() {
         </Button>
       </div>
 
+      <div className="relative mb-4 w-64">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Szukaj projektu..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 pl-8 pr-8 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Wyczyść wyszukiwanie"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
+      ) : projects.length === 0 && debouncedSearch ? (
+        <p className="text-muted-foreground">
+          Brak wyników dla &ldquo;{searchQuery}&rdquo;
+        </p>
       ) : projects.length === 0 ? (
         <p className="text-muted-foreground">Brak projektów. Dodaj pierwszy.</p>
       ) : (
