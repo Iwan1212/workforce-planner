@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
   updateEmployee,
   type Employee,
 } from "@/api/employees";
+import { ALL_TEAMS } from "@/stores/timelineStore";
 import { EmployeeForm, TEAM_LABELS } from "./EmployeeForm";
 
 export function EmployeeList() {
@@ -26,10 +28,32 @@ export function EmployeeList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const toggleTeam = (team: string) => {
+    if (selectedTeams.includes(team)) {
+      setSelectedTeams(selectedTeams.filter((t) => t !== team));
+    } else {
+      setSelectedTeams([...selectedTeams, team]);
+    }
+  };
+
+  const noneSelected = selectedTeams.length === 0;
 
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => fetchEmployees(),
+    queryKey: ["employees", selectedTeams, debouncedSearch],
+    queryFn: () =>
+      fetchEmployees(
+        noneSelected ? undefined : selectedTeams,
+        debouncedSearch || undefined,
+      ),
   });
 
   const createMutation = useMutation({
@@ -114,8 +138,62 @@ export function EmployeeList() {
         </Button>
       </div>
 
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Szukaj pracownika..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 pl-8 pr-8 text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Wyczyść wyszukiwanie"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1">
+          <button
+            onClick={() => setSelectedTeams([])}
+            className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+              noneSelected
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted"
+            }`}
+            aria-pressed={noneSelected}
+          >
+            Wszystkie
+          </button>
+          {ALL_TEAMS.map((team) => (
+            <button
+              key={team}
+              onClick={() => toggleTeam(team)}
+              className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                selectedTeams.includes(team)
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+              aria-pressed={selectedTeams.includes(team)}
+            >
+              {TEAM_LABELS[team] ?? team}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground">Ładowanie...</p>
+      ) : employees.length === 0 && (debouncedSearch || !noneSelected) ? (
+        <p className="text-muted-foreground">
+          Brak wyników{debouncedSearch ? <> dla &ldquo;{searchQuery}&rdquo;</> : null}
+          {!noneSelected ? <> w wybranych zespołach</> : null}
+        </p>
       ) : employees.length === 0 ? (
         <p className="text-muted-foreground">
           Brak pracowników. Dodaj pierwszego.

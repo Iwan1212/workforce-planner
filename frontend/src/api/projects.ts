@@ -20,8 +20,9 @@ export interface DeleteResponse {
   message?: string;
 }
 
-export function fetchProjects(): Promise<Project[]> {
-  return apiFetch<Project[]>("/api/projects");
+export function fetchProjects(search?: string): Promise<Project[]> {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+  return apiFetch<Project[]>(`/api/projects${qs}`);
 }
 
 export function createProject(data: ProjectCreateData): Promise<Project> {

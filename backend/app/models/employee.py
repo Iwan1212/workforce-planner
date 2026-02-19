@@ -11,13 +11,15 @@ from app.database import Base
 
 
 class Team(str, enum.Enum):
+    BA = "BA"
+    Backend = "Backend"
+    DevOps = "DevOps"
+    Frontend = "Frontend"
+    ML = "ML"
+    Mobile = "Mobile"
     PM = "PM"
     QA = "QA"
-    Frontend = "Frontend"
-    Backend = "Backend"
-    Mobile = "Mobile"
     UX_UI_Designer = "UX_UI_Designer"
-    DevOps = "DevOps"
 
 
 class Employee(Base):
