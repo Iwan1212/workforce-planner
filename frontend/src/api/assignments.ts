@@ -10,6 +10,7 @@ export interface TimelineAssignment {
   allocation_type: string;
   allocation_value: number;
   note: string | null;
+  is_tentative: boolean;
   daily_hours: number;
 }
 
@@ -47,6 +48,7 @@ export interface AssignmentCreateData {
   allocation_type: string;
   allocation_value: number;
   note?: string | null;
+  is_tentative?: boolean;
 }
 
 export function fetchTimeline(

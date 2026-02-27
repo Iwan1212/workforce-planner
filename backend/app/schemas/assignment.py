@@ -15,6 +15,7 @@ class AssignmentCreate(BaseModel):
     allocation_type: str  # "percentage" | "monthly_hours"
     allocation_value: Decimal
     note: Optional[str] = None
+    is_tentative: bool = False
 
     @field_validator("allocation_type")
     @classmethod
@@ -39,6 +40,7 @@ class AssignmentUpdate(BaseModel):
     allocation_type: Optional[str] = None
     allocation_value: Optional[Decimal] = None
     note: Optional[str] = None
+    is_tentative: Optional[bool] = None
 
     @field_validator("allocation_type")
     @classmethod
@@ -67,6 +69,7 @@ class AssignmentResponse(BaseModel):
     allocation_value: float
     daily_hours: float
     note: Optional[str] = None
+    is_tentative: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

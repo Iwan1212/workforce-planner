@@ -52,6 +52,7 @@ export function AssignmentModal({
   const [allocationType, setAllocationType] = useState("percentage");
   const [allocationValue, setAllocationValue] = useState("");
   const [note, setNote] = useState("");
+  const [isTentative, setIsTentative] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: employees = [] } = useQuery({
@@ -76,6 +77,7 @@ export function AssignmentModal({
       setAllocationType(assignment.allocation_type);
       setAllocationValue(String(assignment.allocation_value));
       setNote(assignment.note ?? "");
+      setIsTentative(assignment.is_tentative);
     } else {
       setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
       setProjectId("");
@@ -84,6 +86,7 @@ export function AssignmentModal({
       setAllocationType("percentage");
       setAllocationValue("");
       setNote("");
+      setIsTentative(false);
     }
     setShowDeleteConfirm(false);
   }, [open, assignment, defaultEmployeeId, defaultStartDate]);
@@ -129,6 +132,7 @@ export function AssignmentModal({
       allocation_type: allocationType,
       allocation_value: Number(allocationValue),
       note: note,
+      is_tentative: isTentative,
     };
 
     if (isEditing && assignment) {
@@ -239,6 +243,19 @@ export function AssignmentModal({
                 required
               />
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="assignment-tentative"
+              type="checkbox"
+              checked={isTentative}
+              onChange={(e) => setIsTentative(e.target.checked)}
+              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-primary"
+            />
+            <Label htmlFor="assignment-tentative" className="cursor-pointer font-normal">
+              Tentative — niepotwierdzony assignment
+            </Label>
           </div>
 
           <div className="space-y-2">
