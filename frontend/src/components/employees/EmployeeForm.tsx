@@ -19,23 +19,27 @@ import {
 import type { Employee } from "@/api/employees";
 
 const TEAMS = [
+  "BA",
+  "Backend",
+  "DevOps",
+  "Frontend",
+  "ML",
+  "Mobile",
   "PM",
   "QA",
-  "Frontend",
-  "Backend",
-  "Mobile",
   "UX_UI_Designer",
-  "DevOps",
 ] as const;
 
 const TEAM_LABELS: Record<string, string> = {
+  BA: "BA",
+  Backend: "Backend",
+  DevOps: "DevOps",
+  Frontend: "Frontend",
+  ML: "ML",
+  Mobile: "Mobile",
   PM: "PM",
   QA: "QA",
-  Frontend: "Frontend",
-  Backend: "Backend",
-  Mobile: "Mobile",
-  UX_UI_Designer: "UX/UI Designer",
-  DevOps: "DevOps",
+  UX_UI_Designer: "UX/UI",
 };
 
 interface EmployeeFormProps {

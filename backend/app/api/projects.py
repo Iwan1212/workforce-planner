@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func as sa_func
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 @router.get("", response_model=list[ProjectResponse])
 async def list_projects(
+    search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
@@ -25,6 +27,8 @@ async def list_projects(
     query = select(Project)
     if not include_deleted:
         query = query.where(Project.is_deleted == False)
+    if search:
+        query = query.where(Project.name.ilike(f"%{search}%"))
     query = query.order_by(Project.name)
     result = await db.execute(query)
     return result.scalars().all()

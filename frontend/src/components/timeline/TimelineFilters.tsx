@@ -8,13 +8,15 @@ import {
 } from "@/stores/timelineStore";
 
 const TEAM_LABELS: Record<string, string> = {
+  BA: "BA",
+  Backend: "Backend",
+  DevOps: "DevOps",
+  Frontend: "Frontend",
+  ML: "ML",
+  Mobile: "Mobile",
   PM: "PM",
   QA: "QA",
-  Frontend: "Frontend",
-  Backend: "Backend",
-  Mobile: "Mobile",
   UX_UI_Designer: "UX/UI",
-  DevOps: "DevOps",
 };
 
 export function TimelineFilters() {

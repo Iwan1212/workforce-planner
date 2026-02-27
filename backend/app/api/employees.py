@@ -18,7 +18,8 @@ router = APIRouter(prefix="/api/employees", tags=["employees"])
 
 @router.get("", response_model=list[EmployeeResponse])
 async def list_employees(
-    team: Optional[str] = Query(None),
+    teams: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
@@ -26,10 +27,20 @@ async def list_employees(
     query = select(Employee)
     if not include_deleted:
         query = query.where(Employee.is_deleted == False)
-    if team:
-        if team not in [t.value for t in Team]:
-            raise HTTPException(status_code=400, detail="Invalid team value")
-        query = query.where(Employee.team == team)
+    if teams:
+        team_list = [t.strip() for t in teams.split(",") if t.strip()]
+        valid_teams = {t.value for t in Team}
+        for t in team_list:
+            if t not in valid_teams:
+                raise HTTPException(status_code=400, detail=f"Invalid team value: {t}")
+        query = query.where(Employee.team.in_(team_list))
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(
+            (Employee.first_name.ilike(pattern))
+            | (Employee.last_name.ilike(pattern))
+            | (sa_func.concat(Employee.last_name, " ", Employee.first_name).ilike(pattern))
+        )
     query = query.order_by(Employee.last_name, Employee.first_name)
     result = await db.execute(query)
     return result.scalars().all()
@@ -43,6 +54,19 @@ async def create_employee(
 ):
     if body.team and body.team not in [t.value for t in Team]:
         raise HTTPException(status_code=400, detail="Invalid team value")
+
+    existing = await db.execute(
+        select(Employee).where(
+            sa_func.lower(Employee.first_name) == body.first_name.lower(),
+            sa_func.lower(Employee.last_name) == body.last_name.lower(),
+            Employee.is_deleted == False,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Pracownik o tym imieniu i nazwisku już istnieje",
+        )
 
     employee = Employee(
         first_name=body.first_name,

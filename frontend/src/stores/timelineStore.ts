@@ -25,13 +25,15 @@ interface TimelineState {
 }
 
 const ALL_TEAMS = [
+  "BA",
+  "Backend",
+  "DevOps",
+  "Frontend",
+  "ML",
+  "Mobile",
   "PM",
   "QA",
-  "Frontend",
-  "Backend",
-  "Mobile",
   "UX_UI_Designer",
-  "DevOps",
 ];
 
 function snapToMode(date: Date, mode: ViewMode): Date {
