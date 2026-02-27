@@ -114,6 +114,7 @@ async def get_timeline(
                     "allocation_type": a.allocation_type.value,
                     "allocation_value": float(a.allocation_value),
                     "note": a.note,
+                    "is_tentative": a.is_tentative,
                     "daily_hours": float(round(daily, 2)),
                 }
             )

@@ -44,6 +44,7 @@ def _build_response(a: Assignment) -> dict:
         "allocation_value": float(a.allocation_value),
         "daily_hours": float(round(daily, 2)),
         "note": a.note,
+        "is_tentative": a.is_tentative,
         "created_at": a.created_at,
     }
 
@@ -115,6 +116,7 @@ async def create_assignment(
         allocation_type=body.allocation_type,
         allocation_value=body.allocation_value,
         note=body.note,
+        is_tentative=body.is_tentative,
     )
     db.add(assignment)
     await db.commit()
@@ -164,6 +166,8 @@ async def update_assignment(
         assignment.allocation_value = body.allocation_value
     if "note" in body.model_fields_set:
         assignment.note = body.note.strip() if body.note else None
+    if body.is_tentative is not None:
+        assignment.is_tentative = body.is_tentative
 
     # Re-validate dates
     if assignment.start_date > assignment.end_date:

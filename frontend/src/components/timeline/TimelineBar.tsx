@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { StickyNote } from "lucide-react";
+import { CircleHelp, StickyNote } from "lucide-react";
 import type { TimelineAssignment } from "@/api/assignments";
 
 interface TimelineBarProps {
@@ -125,6 +125,7 @@ export function TimelineBar({
 
   // Compute text color based on background luminance for WCAG contrast
   const textColorClass = (() => {
+    if (assignment.is_tentative) return "";
     const hex = assignment.project_color.replace("#", "");
     if (hex.length !== 6) return "text-white";
     const r = parseInt(hex.slice(0, 2), 16);
@@ -146,15 +147,27 @@ export function TimelineBar({
   }
   adjustedWidth = Math.max(adjustedWidth, 20);
 
-  const style: React.CSSProperties = {
-    left: adjustedLeft,
-    width: adjustedWidth,
-    height: 28,
-    backgroundColor: assignment.project_color,
-    transform: transform ? CSS.Translate.toString(transform) : undefined,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging || resizing ? 50 : 1,
-  };
+  const style: React.CSSProperties = assignment.is_tentative
+    ? {
+        left: adjustedLeft,
+        width: adjustedWidth,
+        height: 28,
+        backgroundColor: "white",
+        border: `2px solid ${assignment.project_color}`,
+        color: assignment.project_color,
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging || resizing ? 50 : 1,
+      }
+    : {
+        left: adjustedLeft,
+        width: adjustedWidth,
+        height: 28,
+        backgroundColor: assignment.project_color,
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging || resizing ? 50 : 1,
+      };
 
   // Show resize tooltip
   const daysDelta = Math.round(resizeDelta / pxPerDay);
@@ -181,14 +194,19 @@ export function TimelineBar({
       />
 
       {/* Content - drag handle in the middle */}
-      <span className="flex-1 truncate px-2" {...listeners} {...attributes}>
-        {showDailyHours
-          ? `${assignment.daily_hours}h/d`
-          : `${assignment.project_name} · ${label}`}
+      <span className="flex min-w-0 flex-1 items-center gap-1 truncate px-2" {...listeners} {...attributes}>
+        <span className="truncate">
+          {showDailyHours
+            ? `${assignment.daily_hours}h/d`
+            : `${assignment.project_name} · ${label}`}
+        </span>
+        {assignment.is_tentative && (
+          <CircleHelp size={12} className="shrink-0 opacity-75" />
+        )}
         {hasNote && (
           <span
             ref={iconRef}
-            className="ml-1 inline-flex align-text-bottom"
+            className="ml-0.5 inline-flex shrink-0 align-text-bottom"
             onPointerEnter={showNoteTooltip}
             onPointerLeave={hideNoteTooltip}
           >
