@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createUser, deleteUser, fetchUsers } from "@/api/users";
+import { createUser, deleteUser, fetchUsers, updateUser, type UserListItem } from "@/api/users";
 import { useAuthStore } from "@/stores/authStore";
 
 export function UserManagement() {
@@ -28,12 +28,20 @@ export function UserManagement() {
   const currentUser = useAuthStore((s) => s.user);
 
   const [addOpen, setAddOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; full_name: string } | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
+  // Add form state
+  const [addEmail, setAddEmail] = useState("");
+  const [addFullName, setAddFullName] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addRole, setAddRole] = useState("user");
+
+  // Edit form state
+  const [editEmail, setEditEmail] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editRole, setEditRole] = useState("user");
+  const [editPassword, setEditPassword] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
@@ -50,6 +58,17 @@ export function UserManagement() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateUser>[1] }) =>
+      updateUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Użytkownik zaktualizowany");
+      setEditTarget(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
@@ -61,17 +80,38 @@ export function UserManagement() {
   });
 
   const handleOpenAdd = () => {
-    setEmail("");
-    setFullName("");
-    setPassword("");
-    setRole("user");
+    setAddEmail("");
+    setAddFullName("");
+    setAddPassword("");
+    setAddRole("user");
     setAddOpen(true);
   };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({ email, full_name: fullName, password, role });
+  const handleOpenEdit = (user: UserListItem) => {
+    setEditEmail(user.email);
+    setEditFullName(user.full_name);
+    setEditRole(user.role);
+    setEditPassword("");
+    setEditTarget(user);
   };
+
+  const handleAdd = (e: FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({ email: addEmail, full_name: addFullName, password: addPassword, role: addRole });
+  };
+
+  const handleEdit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    const data: Parameters<typeof updateUser>[1] = {};
+    if (editEmail !== editTarget.email) data.email = editEmail;
+    if (editFullName !== editTarget.full_name) data.full_name = editFullName;
+    if (editRole !== editTarget.role) data.role = editRole;
+    if (editPassword) data.password = editPassword;
+    updateMutation.mutate({ id: editTarget.id, data });
+  };
+
+  const isSelf = (userId: number) => userId === currentUser?.id;
 
   return (
     <div className="p-6">
@@ -100,7 +140,12 @@ export function UserManagement() {
             <tbody>
               {users.map((user) => (
                 <tr key={user.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{user.full_name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {user.full_name}
+                    {isSelf(user.id) && (
+                      <span className="ml-2 text-xs text-muted-foreground">(ty)</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
                   <td className="px-4 py-3">
                     {user.role === "admin" ? (
@@ -112,17 +157,27 @@ export function UserManagement() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(user.created_at).toLocaleDateString("pl-PL")}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    {user.id !== currentUser?.id && (
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTarget({ id: user.id, full_name: user.full_name })}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleOpenEdit(user)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                    )}
+                      {!isSelf(user.id) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteTarget({ id: user.id, full_name: user.full_name })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -144,44 +199,44 @@ export function UserManagement() {
           <DialogHeader>
             <DialogTitle>Nowy użytkownik</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="user-name">Imię i nazwisko</Label>
+              <Label htmlFor="add-user-name">Imię i nazwisko</Label>
               <Input
-                id="user-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                id="add-user-name"
+                value={addFullName}
+                onChange={(e) => setAddFullName(e.target.value)}
                 placeholder="Jan Kowalski"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-email">Email</Label>
+              <Label htmlFor="add-user-email">Email</Label>
               <Input
-                id="user-email"
+                id="add-user-email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={addEmail}
+                onChange={(e) => setAddEmail(e.target.value)}
                 placeholder="jan@firma.pl"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-password">Hasło</Label>
+              <Label htmlFor="add-user-password">Hasło</Label>
               <Input
-                id="user-password"
+                id="add-user-password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={addPassword}
+                onChange={(e) => setAddPassword(e.target.value)}
                 placeholder="Minimum 8 znaków"
                 minLength={8}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-role">Rola</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger id="user-role">
+              <Label htmlFor="add-user-role">Rola</Label>
+              <Select value={addRole} onValueChange={setAddRole}>
+                <SelectTrigger id="add-user-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -196,6 +251,74 @@ export function UserManagement() {
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Dodawanie..." : "Dodaj"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edytuj użytkownika</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-user-name">Imię i nazwisko</Label>
+              <Input
+                id="edit-user-name"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-user-email">Email</Label>
+              <Input
+                id="edit-user-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-user-role">Rola</Label>
+              <Select
+                value={editRole}
+                onValueChange={setEditRole}
+                disabled={isSelf(editTarget?.id ?? -1)}
+              >
+                <SelectTrigger id="edit-user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Użytkownik</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              {isSelf(editTarget?.id ?? -1) && (
+                <p className="text-xs text-muted-foreground">Nie możesz zmienić własnej roli</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-user-password">Nowe hasło</Label>
+              <Input
+                id="edit-user-password"
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="Pozostaw puste, aby nie zmieniać"
+                minLength={8}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
+                Anuluj
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Zapisywanie..." : "Zapisz"}
               </Button>
             </DialogFooter>
           </form>
