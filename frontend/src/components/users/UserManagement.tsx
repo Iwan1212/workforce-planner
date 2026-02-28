@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,45 @@ import {
 import { createUser, deleteUser, fetchUsers, updateUser, type UserListItem } from "@/api/users";
 import { useAuthStore } from "@/stores/authStore";
 
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  required,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? "text" : "password"}
+        autoComplete="new-password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        minLength={8}
+        className="pr-9"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
 export function UserManagement() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
@@ -35,6 +74,7 @@ export function UserManagement() {
   const [addEmail, setAddEmail] = useState("");
   const [addFullName, setAddFullName] = useState("");
   const [addPassword, setAddPassword] = useState("");
+  const [addPasswordConfirm, setAddPasswordConfirm] = useState("");
   const [addRole, setAddRole] = useState("user");
 
   // Edit form state
@@ -42,6 +82,7 @@ export function UserManagement() {
   const [editFullName, setEditFullName] = useState("");
   const [editRole, setEditRole] = useState("user");
   const [editPassword, setEditPassword] = useState("");
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
@@ -83,6 +124,7 @@ export function UserManagement() {
     setAddEmail("");
     setAddFullName("");
     setAddPassword("");
+    setAddPasswordConfirm("");
     setAddRole("user");
     setAddOpen(true);
   };
@@ -92,17 +134,26 @@ export function UserManagement() {
     setEditFullName(user.full_name);
     setEditRole(user.role);
     setEditPassword("");
+    setEditPasswordConfirm("");
     setEditTarget(user);
   };
 
   const handleAdd = (e: FormEvent) => {
     e.preventDefault();
+    if (addPassword !== addPasswordConfirm) {
+      toast.error("Hasła nie są identyczne");
+      return;
+    }
     createMutation.mutate({ email: addEmail, full_name: addFullName, password: addPassword, role: addRole });
   };
 
   const handleEdit = (e: FormEvent) => {
     e.preventDefault();
     if (!editTarget) return;
+    if (editPassword && editPassword !== editPasswordConfirm) {
+      toast.error("Hasła nie są identyczne");
+      return;
+    }
     const data: Parameters<typeof updateUser>[1] = {};
     if (editEmail !== editTarget.email) data.email = editEmail;
     if (editFullName !== editTarget.full_name) data.full_name = editFullName;
@@ -223,15 +274,26 @@ export function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-user-password">Hasło</Label>
-              <Input
+              <PasswordInput
                 id="add-user-password"
-                type="password"
                 value={addPassword}
-                onChange={(e) => setAddPassword(e.target.value)}
+                onChange={setAddPassword}
                 placeholder="Minimum 8 znaków"
-                minLength={8}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-user-password-confirm">Powtórz hasło</Label>
+              <PasswordInput
+                id="add-user-password-confirm"
+                value={addPasswordConfirm}
+                onChange={setAddPasswordConfirm}
+                placeholder="Powtórz hasło"
+                required
+              />
+              {addPasswordConfirm && addPassword !== addPasswordConfirm && (
+                <p className="text-xs text-destructive">Hasła nie są identyczne</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="add-user-role">Rola</Label>
@@ -249,7 +311,7 @@ export function UserManagement() {
               <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
                 Anuluj
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending || (!!addPasswordConfirm && addPassword !== addPasswordConfirm)}>
                 {createMutation.isPending ? "Dodawanie..." : "Dodaj"}
               </Button>
             </DialogFooter>
@@ -304,20 +366,38 @@ export function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-user-password">Nowe hasło</Label>
-              <Input
+              <PasswordInput
                 id="edit-user-password"
-                type="password"
                 value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
+                onChange={setEditPassword}
                 placeholder="Pozostaw puste, aby nie zmieniać"
-                minLength={8}
               />
             </div>
+            {editPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-password-confirm">Powtórz nowe hasło</Label>
+                <PasswordInput
+                  id="edit-user-password-confirm"
+                  value={editPasswordConfirm}
+                  onChange={setEditPasswordConfirm}
+                  placeholder="Powtórz nowe hasło"
+                />
+                {editPasswordConfirm && editPassword !== editPasswordConfirm && (
+                  <p className="text-xs text-destructive">Hasła nie są identyczne</p>
+                )}
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
                 Anuluj
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  updateMutation.isPending ||
+                  (!!editPassword && !!editPasswordConfirm && editPassword !== editPasswordConfirm)
+                }
+              >
                 {updateMutation.isPending ? "Zapisywanie..." : "Zapisz"}
               </Button>
             </DialogFooter>
