@@ -50,7 +50,7 @@ async def list_employees(
 async def create_employee(
     body: EmployeeCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(require_admin),
+    _user: User = Depends(get_current_user),
 ):
     if body.team and body.team not in [t.value for t in Team]:
         raise HTTPException(status_code=400, detail="Invalid team value")
@@ -84,7 +84,7 @@ async def update_employee(
     employee_id: int,
     body: EmployeeUpdate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(require_admin),
+    _user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
