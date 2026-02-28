@@ -42,7 +42,6 @@ function PasswordInput({
       <Input
         id={id}
         type={show ? "text" : "password"}
-        autoComplete="new-password"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
