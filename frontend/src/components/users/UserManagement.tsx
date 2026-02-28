@@ -372,20 +372,18 @@ export function UserManagement() {
                 placeholder="Pozostaw puste, aby nie zmieniać"
               />
             </div>
-            {editPassword && (
-              <div className="space-y-2">
-                <Label htmlFor="edit-user-password-confirm">Powtórz nowe hasło</Label>
-                <PasswordInput
-                  id="edit-user-password-confirm"
-                  value={editPasswordConfirm}
-                  onChange={setEditPasswordConfirm}
-                  placeholder="Powtórz nowe hasło"
-                />
-                {editPasswordConfirm && editPassword !== editPasswordConfirm && (
-                  <p className="text-xs text-destructive">Hasła nie są identyczne</p>
-                )}
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="edit-user-password-confirm">Powtórz nowe hasło</Label>
+              <PasswordInput
+                id="edit-user-password-confirm"
+                value={editPasswordConfirm}
+                onChange={setEditPasswordConfirm}
+                placeholder="Powtórz nowe hasło"
+              />
+              {editPasswordConfirm && editPassword !== editPasswordConfirm && (
+                <p className="text-xs text-destructive">Hasła nie są identyczne</p>
+              )}
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
                 Anuluj
