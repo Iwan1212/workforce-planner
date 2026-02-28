@@ -1,6 +1,14 @@
+import { useState } from "react";
 import { Calendar, LogOut, Users, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuthStore } from "@/stores/authStore";
 
 interface SidebarProps {
@@ -16,6 +24,7 @@ const NAV_ITEMS = [
 
 export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
   const { user, logout } = useAuthStore();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
@@ -48,12 +57,29 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
           variant="ghost"
           size="sm"
           className="w-full justify-start gap-3"
-          onClick={logout}
+          onClick={() => setConfirmOpen(true)}
         >
           <LogOut className="h-4 w-4" />
           Wyloguj
         </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Wylogowanie</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Czy na pewno chcesz się wylogować?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Anuluj
+            </Button>
+            <Button onClick={logout}>Wyloguj</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
