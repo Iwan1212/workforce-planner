@@ -1,4 +1,4 @@
-import { Calendar, LogOut, Users, FolderKanban } from "lucide-react";
+import { Calendar, LogOut, Settings, Users, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/stores/authStore";
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
 
 export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
   const { user, logout } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
@@ -41,8 +42,22 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
         ))}
       </nav>
       <Separator />
-      <div className="p-3">
-        <div className="mb-2 px-3 text-xs text-muted-foreground truncate">
+      <div className="p-2">
+        {isAdmin && (
+          <a
+            href="/users"
+            onClick={(e) => { e.preventDefault(); onNavigate("/users"); }}
+            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+              currentPath === "/users"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            Zarządzaj użytkownikami
+          </a>
+        )}
+        <div className="mt-1 px-3 py-1 text-xs text-muted-foreground truncate">
           {user?.full_name}
         </div>
         <Button
