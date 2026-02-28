@@ -25,9 +25,10 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       <Separator />
       <nav className="flex-1 space-y-1 p-2">
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => (
-          <button
+          <a
             key={path}
-            onClick={() => onNavigate(path)}
+            href={path}
+            onClick={(e) => { e.preventDefault(); onNavigate(path); }}
             className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
               currentPath === path
                 ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
@@ -36,7 +37,7 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
           >
             <Icon className="h-4 w-4" />
             {label}
-          </button>
+          </a>
         ))}
       </nav>
       <Separator />
