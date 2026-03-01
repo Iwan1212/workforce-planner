@@ -9,14 +9,17 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { path: "/", label: "Timeline", icon: Calendar },
-  { path: "/employees", label: "Pracownicy", icon: Users },
-  { path: "/projects", label: "Projekty", icon: FolderKanban },
+  { path: "/", label: "Timeline", icon: Calendar, viewerAllowed: true },
+  { path: "/employees", label: "Pracownicy", icon: Users, viewerAllowed: false },
+  { path: "/projects", label: "Projekty", icon: FolderKanban, viewerAllowed: false },
 ] as const;
 
 export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const isAdmin = user?.role === "admin";
+  const isViewer = user?.role === "viewer";
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => !isViewer || item.viewerAllowed);
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
@@ -25,7 +28,7 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       </div>
       <Separator />
       <nav className="flex-1 space-y-1 p-2">
-        {NAV_ITEMS.map(({ path, label, icon: Icon }) => (
+        {visibleNavItems.map(({ path, label, icon: Icon }) => (
           <a
             key={path}
             href={path}
