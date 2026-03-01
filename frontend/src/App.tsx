@@ -41,7 +41,13 @@ function App() {
   const isAdmin = user?.role === "admin";
   const isViewer = user?.role === "viewer";
 
-  if (isViewer && (currentPath === "/employees" || currentPath === "/projects")) {
+  const ROUTE_ACCESS: Record<string, boolean> = {
+    "/employees": !isViewer,
+    "/projects": !isViewer,
+    "/users": isAdmin,
+  };
+
+  if (currentPath in ROUTE_ACCESS && !ROUTE_ACCESS[currentPath]) {
     navigate("/");
     return null;
   }
@@ -51,7 +57,7 @@ function App() {
       {currentPath === "/" && <Timeline />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
-      {currentPath === "/users" && isAdmin && <UserManagement />}
+      {currentPath === "/users" && <UserManagement />}
     </Layout>
   );
 }
