@@ -39,6 +39,12 @@ function App() {
   }
 
   const isAdmin = user?.role === "admin";
+  const isViewer = user?.role === "viewer";
+
+  if (isViewer && (currentPath === "/employees" || currentPath === "/projects")) {
+    navigate("/");
+    return null;
+  }
 
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
