@@ -200,6 +200,8 @@ export function UserManagement() {
                   <td className="px-4 py-3">
                     {user.role === "admin" ? (
                       <Badge variant="default">Admin</Badge>
+                    ) : user.role === "viewer" ? (
+                      <Badge variant="outline">Viewer</Badge>
                     ) : (
                       <Badge variant="secondary">Użytkownik</Badge>
                     )}
@@ -303,6 +305,7 @@ export function UserManagement() {
                 <SelectContent>
                   <SelectItem value="user">Użytkownik</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -357,6 +360,7 @@ export function UserManagement() {
                 <SelectContent>
                   <SelectItem value="user">Użytkownik</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
                 </SelectContent>
               </Select>
               {isSelf(editTarget?.id ?? -1) && (

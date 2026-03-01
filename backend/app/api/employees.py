@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db, require_admin
+from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
 from app.models.assignment import Assignment
 from app.models.employee import Employee, Team
 from app.models.user import User
@@ -50,7 +50,7 @@ async def list_employees(
 async def create_employee(
     body: EmployeeCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     if body.team and body.team not in [t.value for t in Team]:
         raise HTTPException(status_code=400, detail="Invalid team value")
@@ -84,7 +84,7 @@ async def update_employee(
     employee_id: int,
     body: EmployeeUpdate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()

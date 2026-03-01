@@ -45,7 +45,7 @@ async def create_user(
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Nieprawidłowa rola. Dozwolone wartości: admin, user",
+            detail="Nieprawidłowa rola. Dozwolone wartości: admin, user, viewer",
         )
 
     user = User(
@@ -99,7 +99,7 @@ async def update_user(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Nieprawidłowa rola. Dozwolone wartości: admin, user",
+                detail="Nieprawidłowa rola. Dozwolone wartości: admin, user, viewer",
             )
 
     if body.password is not None:

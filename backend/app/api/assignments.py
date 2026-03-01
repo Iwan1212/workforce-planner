@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, require_editor
 from app.models.assignment import Assignment
 from app.models.employee import Employee
 from app.models.project import Project
@@ -78,7 +78,7 @@ async def list_assignments(
 async def create_assignment(
     body: AssignmentCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     # Validate dates
     if body.start_date > body.end_date:
@@ -129,7 +129,7 @@ async def update_assignment(
     assignment_id: int,
     body: AssignmentUpdate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
@@ -189,7 +189,7 @@ async def update_assignment(
 async def delete_assignment(
     assignment_id: int,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()

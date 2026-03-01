@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useTimeline } from "@/hooks/useTimeline";
 import { useTimelineStore } from "@/stores/timelineStore";
+import { useAuthStore } from "@/stores/authStore";
 import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
@@ -26,6 +27,8 @@ export function Timeline() {
   const queryClient = useQueryClient();
   const { data, isLoading, months, weeks, allDays, viewMode } = useTimeline();
   const searchQuery = useTimelineStore((s) => s.searchQuery);
+  const currentUser = useAuthStore((s) => s.user);
+  const isViewer = currentUser?.role === "viewer";
 
   // Build holiday lookup: date string -> holiday name
   const holidayMap: Record<string, string> = {};
@@ -193,10 +196,12 @@ export function Timeline() {
       <div className="sticky top-0 z-30 bg-background px-6 pt-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Timeline</h2>
-          <Button onClick={handleNewAssignment}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nowy assignment
-          </Button>
+          {!isViewer && (
+            <Button onClick={handleNewAssignment}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nowy assignment
+            </Button>
+          )}
         </div>
 
         <TimelineFilters />
@@ -292,9 +297,10 @@ export function Timeline() {
                   allDays={allDays}
                   viewMode={viewMode}
                   holidayMap={holidayMap}
-                  onAssignmentClick={(a) => handleAssignmentClick(a, emp.id)}
-                  onEmptyClick={handleEmptyClick}
-                  onResizeEnd={handleResizeEnd}
+                  onAssignmentClick={isViewer ? () => {} : (a) => handleAssignmentClick(a, emp.id)}
+                  onEmptyClick={isViewer ? () => {} : handleEmptyClick}
+                  onResizeEnd={isViewer ? () => {} : handleResizeEnd}
+                  readOnly={isViewer}
                   isOdd={idx % 2 === 1}
                 />
               ))}

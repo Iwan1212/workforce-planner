@@ -8,7 +8,7 @@ from sqlalchemy import func as sa_func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db, require_admin
+from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
 from app.models.assignment import Assignment
 from app.models.project import Project
 from app.models.user import User
@@ -38,7 +38,7 @@ async def list_projects(
 async def create_project(
     body: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     # Check unique name (case-insensitive)
     existing = await db.execute(
@@ -62,7 +62,7 @@ async def update_project(
     project_id: int,
     body: ProjectUpdate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    _user: User = Depends(require_editor),
 ):
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()

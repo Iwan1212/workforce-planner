@@ -52,6 +52,7 @@ interface TimelineRowProps {
   ) => void;
   holidayMap: Record<string, string>;
   isOdd: boolean;
+  readOnly?: boolean;
 }
 
 function computeBarPositionMonthly(
@@ -163,6 +164,7 @@ export function TimelineRow({
   onEmptyClick,
   onResizeEnd,
   isOdd,
+  readOnly = false,
 }: TimelineRowProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `employee-${employeeId}`,
@@ -309,10 +311,10 @@ export function TimelineRow({
               return (
                 <div
                   key={day.key}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Dodaj assignment ${day.key}`}
-                  className={`absolute border-r border-dashed border-muted-foreground/20 cursor-pointer ${
+                  role={readOnly ? undefined : "button"}
+                  tabIndex={readOnly ? undefined : 0}
+                  aria-label={readOnly ? undefined : `Dodaj assignment ${day.key}`}
+                  className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"} ${
                     day.isWeekend || isHoliday ? "bg-muted/40" : ""
                   }`}
                   style={{
@@ -322,8 +324,8 @@ export function TimelineRow({
                     height: `calc(100% - ${utilRowHeight}px)`,
                   }}
                   title={holidayMap[day.key]}
-                  onClick={() => onEmptyClick(employeeId, day.key.slice(0, 7))}
-                  onKeyDown={(e) => {
+                  onClick={readOnly ? undefined : () => onEmptyClick(employeeId, day.key.slice(0, 7))}
+                  onKeyDown={readOnly ? undefined : (e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       onEmptyClick(employeeId, day.key.slice(0, 7));
@@ -335,18 +337,18 @@ export function TimelineRow({
           : months.map((m, i) => (
               <div
                 key={m.key}
-                role="button"
-                tabIndex={0}
-                aria-label={`Dodaj assignment ${m.key}`}
-                className="absolute border-r border-dashed border-muted-foreground/20 cursor-pointer"
+                role={readOnly ? undefined : "button"}
+                tabIndex={readOnly ? undefined : 0}
+                aria-label={readOnly ? undefined : `Dodaj assignment ${m.key}`}
+                className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"}`}
                 style={{
                   left: i * MONTH_WIDTH,
                   width: MONTH_WIDTH,
                   top: utilRowHeight,
                   height: `calc(100% - ${utilRowHeight}px)`,
                 }}
-                onClick={() => onEmptyClick(employeeId, m.key)}
-                onKeyDown={(e) => {
+                onClick={readOnly ? undefined : () => onEmptyClick(employeeId, m.key)}
+                onKeyDown={readOnly ? undefined : (e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     onEmptyClick(employeeId, m.key);
@@ -371,6 +373,7 @@ export function TimelineRow({
               onResizeEnd={onResizeEnd}
               pxPerDay={pxPerDay}
               showDailyHours={isWeekly}
+              readOnly={readOnly}
             />
           </div>
         ))}

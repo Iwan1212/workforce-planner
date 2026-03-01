@@ -24,6 +24,7 @@ interface TimelineBarProps {
   ) => void;
   pxPerDay: number;
   showDailyHours?: boolean;
+  readOnly?: boolean;
 }
 
 export function TimelineBar({
@@ -35,11 +36,13 @@ export function TimelineBar({
   onResizeEnd,
   pxPerDay,
   showDailyHours = false,
+  readOnly = false,
 }: TimelineBarProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `assignment-${assignment.id}`,
       data: { assignment, employeeId },
+      disabled: readOnly,
     });
 
   const [resizing, setResizing] = useState<"left" | "right" | null>(null);
@@ -177,21 +180,23 @@ export function TimelineBar({
     <div
       ref={setNodeRef}
       className={`absolute top-1 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
-        resizing ? "" : "cursor-grab transition-opacity hover:opacity-90"
+        readOnly ? "cursor-default" : resizing ? "" : "cursor-grab transition-opacity hover:opacity-90"
       }`}
       style={style}
       onClick={(e) => {
-        if (!isDragging && !resizing && !justResizedRef.current) {
+        if (!readOnly && !isDragging && !resizing && !justResizedRef.current) {
           e.stopPropagation();
           onClick();
         }
       }}
     >
       {/* Left resize handle */}
-      <div
-        className="absolute left-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
-        onMouseDown={(e) => handleResizeStart(e, "left")}
-      />
+      {!readOnly && (
+        <div
+          className="absolute left-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
+          onMouseDown={(e) => handleResizeStart(e, "left")}
+        />
+      )}
 
       {/* Content - drag handle in the middle */}
       <span className="flex min-w-0 flex-1 items-center gap-1 truncate px-2" {...listeners} {...attributes}>
@@ -216,10 +221,12 @@ export function TimelineBar({
       </span>
 
       {/* Right resize handle */}
-      <div
-        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
-        onMouseDown={(e) => handleResizeStart(e, "right")}
-      />
+      {!readOnly && (
+        <div
+          className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
+          onMouseDown={(e) => handleResizeStart(e, "right")}
+        />
+      )}
 
       {/* Resize tooltip */}
       {showTooltip && (
