@@ -5,9 +5,10 @@ import { Layout } from "@/components/layout/Layout";
 import { EmployeeList } from "@/components/employees/EmployeeList";
 import { ProjectList } from "@/components/projects/ProjectList";
 import { Timeline } from "@/components/timeline/Timeline";
+import { UserManagement } from "@/components/users/UserManagement";
 
 function App() {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   useEffect(() => {
@@ -37,11 +38,14 @@ function App() {
     return <LoginForm />;
   }
 
+  const isAdmin = user?.role === "admin";
+
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
       {currentPath === "/" && <Timeline />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
+      {currentPath === "/users" && isAdmin && <UserManagement />}
     </Layout>
   );
 }

@@ -11,6 +11,7 @@ from app.api.assignments import router as assignments_router
 from app.api.calendar import router as calendar_router
 from app.api.employees import router as employees_router
 from app.api.projects import router as projects_router
+from app.api.users import router as users_router
 from app.config import settings
 from app.database import engine
 
@@ -37,6 +38,7 @@ app.include_router(employees_router)
 app.include_router(projects_router)
 app.include_router(assignments_router)
 app.include_router(calendar_router)
+app.include_router(users_router)
 
 
 @app.get("/api/health")
