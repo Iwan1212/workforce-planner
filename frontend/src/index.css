@@ -124,3 +124,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Sonner toast colors */
+[data-sonner-toast][data-type="success"] {
+  background: oklch(0.962 0.044 156.743) !important;
+  color: oklch(0.295 0.104 156.743) !important;
+  border-color: oklch(0.82 0.1 156.743) !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: oklch(0.295 0.104 156.743) !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: oklch(0.962 0.032 27.325) !important;
+  color: oklch(0.35 0.157 27.325) !important;
+  border-color: oklch(0.82 0.09 27.325) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: oklch(0.35 0.157 27.325) !important;
+}

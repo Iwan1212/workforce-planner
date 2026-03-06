@@ -8,11 +8,22 @@ import { Timeline } from "@/components/timeline/Timeline";
 
 function App() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
-  const [currentPath, setCurrentPath] = useState("/");
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = (path: string) => {
+    window.history.pushState({}, "", path);
+    setCurrentPath(path);
+  };
 
   if (isLoading) {
     return (
@@ -27,7 +38,7 @@ function App() {
   }
 
   return (
-    <Layout currentPath={currentPath} onNavigate={setCurrentPath}>
+    <Layout currentPath={currentPath} onNavigate={navigate}>
       {currentPath === "/" && <Timeline />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
