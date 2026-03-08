@@ -166,8 +166,8 @@ export function UserManagement() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Użytkownicy</h2>
-        <Button onClick={handleOpenAdd} size="sm">
+        <h2 className="text-2xl font-bold">Użytkownicy</h2>
+        <Button onClick={handleOpenAdd}>
           <Plus className="mr-2 h-4 w-4" />
           Dodaj użytkownika
         </Button>

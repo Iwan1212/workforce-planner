@@ -183,7 +183,7 @@ export function AssignmentModal({
                   <SelectItem key={proj.id} value={String(proj.id)}>
                     <span className="flex items-center gap-2">
                       <span
-                        className="inline-block h-3 w-3 rounded-full"
+                        className="inline-block h-3 w-3 rounded-full ring-1 ring-border"
                         style={{ backgroundColor: proj.color }}
                       />
                       {proj.name}

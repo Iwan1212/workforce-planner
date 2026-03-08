@@ -27,4 +27,5 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    theme: Mapped[str] = mapped_column(String(20), nullable=False, default="light")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

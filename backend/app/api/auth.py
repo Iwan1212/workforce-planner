@@ -22,6 +22,7 @@ from app.schemas.auth import (
     RefreshRequest,
     ResetPasswordConfirm,
     ResetPasswordRequest,
+    ThemeUpdate,
     TokenResponse,
     UserResponse,
 )
@@ -73,6 +74,24 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(get_current_user)):
+    return user
+
+
+@router.patch("/me/theme", response_model=UserResponse)
+async def update_theme(
+    body: ThemeUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the authenticated user's theme preference."""
+    if body.theme not in ("light", "dark"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Dozwolone wartości: 'light', 'dark'",
+        )
+    user.theme = body.theme
+    await db.commit()
+    await db.refresh(user)
     return user
 
 

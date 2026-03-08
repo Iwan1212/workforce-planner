@@ -23,8 +23,13 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     role: str
+    theme: str = "light"
 
     model_config = {"from_attributes": True}
+
+
+class ThemeUpdate(BaseModel):
+    theme: str
 
 
 class ResetPasswordRequest(BaseModel):
