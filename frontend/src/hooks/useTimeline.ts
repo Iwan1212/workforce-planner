@@ -12,8 +12,8 @@ import { pl } from "date-fns/locale";
 import { fetchTimeline } from "@/api/assignments";
 import { useTimelineStore } from "@/stores/timelineStore";
 
-const MONTHS_VISIBLE = 5;
-const WEEKS_VISIBLE = 4;
+const MONTHS_VISIBLE = 7;
+const WEEKS_VISIBLE = 6;
 
 export interface DayInfo {
   date: Date;
