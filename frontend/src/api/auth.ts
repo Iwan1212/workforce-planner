@@ -11,6 +11,7 @@ export interface UserResponse {
   email: string;
   full_name: string;
   role: string;
+  theme: "light" | "dark";
 }
 
 export async function login(
@@ -25,6 +26,13 @@ export async function login(
 
 export async function getMe(): Promise<UserResponse> {
   return apiFetch<UserResponse>("/api/auth/me");
+}
+
+export async function updateTheme(theme: "light" | "dark"): Promise<UserResponse> {
+  return apiFetch<UserResponse>("/api/auth/me/theme", {
+    method: "PATCH",
+    body: JSON.stringify({ theme }),
+  });
 }
 
 export async function requestPasswordReset(

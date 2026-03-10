@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, LogOut, Settings, Users, FolderKanban } from "lucide-react";
+import { Calendar, LogOut, Settings, UserCog, Users, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -55,6 +55,18 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       </nav>
       <Separator />
       <div className="p-2">
+        <a
+          href="/settings"
+          onClick={(e) => { e.preventDefault(); onNavigate("/settings"); }}
+          className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+            currentPath === "/settings"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          }`}
+        >
+          <Settings className="h-4 w-4" />
+          Ustawienia
+        </a>
         {isAdmin && (
           <a
             href="/users"
@@ -65,7 +77,7 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
                 : "text-sidebar-foreground hover:bg-sidebar-accent/50"
             }`}
           >
-            <Settings className="h-4 w-4" />
+            <UserCog className="h-4 w-4" />
             Zarządzaj użytkownikami
           </a>
         )}

@@ -6,6 +6,7 @@ import { EmployeeList } from "@/components/employees/EmployeeList";
 import { ProjectList } from "@/components/projects/ProjectList";
 import { Timeline } from "@/components/timeline/Timeline";
 import { UserManagement } from "@/components/users/UserManagement";
+import { SettingsPage } from "@/components/settings/SettingsPage";
 
 function App() {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
@@ -20,6 +21,15 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  // Apply dark class based on user theme preference
+  useEffect(() => {
+    if (user?.theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [user?.theme]);
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
@@ -58,6 +68,7 @@ function App() {
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
       {currentPath === "/users" && <UserManagement />}
+      {currentPath === "/settings" && <SettingsPage onNavigate={navigate} />}
     </Layout>
   );
 }
