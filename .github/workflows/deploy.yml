@@ -46,3 +46,12 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
           EOF
+
+      - name: Check backend logs
+        if: always()
+        run: |
+          sleep 10
+          ssh -i ~/.ssh/deploy_key ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'EOF'
+            cd ~/workforce-planner
+            docker compose -f docker-compose.prod.yml logs backend --tail 50
+          EOF
