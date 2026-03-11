@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class AssignmentCreate(BaseModel):
@@ -31,6 +31,12 @@ class AssignmentCreate(BaseModel):
             raise ValueError("allocation_value must be > 0")
         return v
 
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "AssignmentCreate":
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be greater than or equal to start_date")
+        return self
+
 
 class AssignmentUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -55,6 +61,13 @@ class AssignmentUpdate(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("allocation_value must be > 0")
         return v
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "AssignmentUpdate":
+        if self.start_date is not None and self.end_date is not None:
+            if self.end_date < self.start_date:
+                raise ValueError("end_date must be greater than or equal to start_date")
+        return self
 
 
 class AssignmentResponse(BaseModel):

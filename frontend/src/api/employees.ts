@@ -58,3 +58,18 @@ export function deleteEmployee(
     method: "DELETE",
   });
 }
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: { row: number; detail: string }[];
+}
+
+export function importEmployeesCsv(file: File): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<ImportResult>("/api/employees/import-csv", {
+    method: "POST",
+    body: formData,
+  });
+}
