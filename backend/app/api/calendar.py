@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import calendar as cal_mod
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -170,10 +170,7 @@ async def get_timeline(
             wd = working_days_per_month[key]
             avail = Decimal(str(wd)) * Decimal("8")
 
-            # Count vacation working days in this month
             vacation_days = _count_vacation_working_days(emp_vacations, y, m)
-            vacation_hours = Decimal(str(vacation_days)) * Decimal("8")
-            effective_avail = avail - vacation_hours
 
             total = Decimal("0")
             for a in assignments:
@@ -185,18 +182,25 @@ async def get_timeline(
                     y,
                     m,
                 )
+
+            # Subtract assignment hours that fall on vacation days
+            vacation_overlap = _compute_vacation_overlap_hours(
+                emp_vacations, assignments, y, m, holiday_dates,
+            )
+            effective_total = max(total - vacation_overlap, Decimal("0"))
+
             pct = float(
                 round(
-                    (total / effective_avail * Decimal("100"))
-                    if effective_avail > 0
+                    (effective_total / avail * Decimal("100"))
+                    if avail > 0
                     else Decimal("0"),
                     1,
                 )
             )
             utilization[key] = {
                 "percentage": pct,
-                "hours": float(round(total, 1)),
-                "available_hours": float(round(effective_avail, 1)),
+                "hours": float(round(effective_total, 1)),
+                "available_hours": float(round(avail, 1)),
                 "vacation_days": vacation_days,
                 "is_overbooked": pct > 100,
             }
@@ -221,6 +225,43 @@ async def get_timeline(
         "working_days_per_month": working_days_per_month,
         "vacation_sync_status": sync_status,
     }
+
+
+def _compute_vacation_overlap_hours(
+    vacations: list,
+    assignments: list,
+    year: int,
+    month: int,
+    holiday_dates: set,
+) -> Decimal:
+    """Compute total assignment hours that fall on vacation working days in a month."""
+    if not vacations or not assignments:
+        return Decimal("0")
+
+    month_start = date(year, month, 1)
+    month_end = date(year, month, cal_mod.monthrange(year, month)[1])
+    total = Decimal("0")
+
+    for v in vacations:
+        overlap_start = max(v.start_date, month_start)
+        overlap_end = min(v.end_date, month_end)
+        if overlap_start > overlap_end:
+            continue
+
+        d = overlap_start
+        while d <= overlap_end:
+            if d.weekday() < 5 and d not in holiday_dates:
+                for a in assignments:
+                    if a.start_date <= d <= a.end_date:
+                        total += calculate_daily_hours(
+                            a.allocation_type.value,
+                            a.allocation_value,
+                            year,
+                            month,
+                        )
+            d += timedelta(days=1)
+
+    return total
 
 
 def _count_vacation_working_days(vacations: list, year: int, month: int) -> int:
