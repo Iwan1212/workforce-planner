@@ -14,6 +14,7 @@ from app.database import Base
 class AllocationType(str, enum.Enum):
     percentage = "percentage"
     monthly_hours = "monthly_hours"
+    total_hours = "total_hours"
 
 
 class Assignment(Base):
