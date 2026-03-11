@@ -8,7 +8,7 @@ import {
   format,
 } from "date-fns";
 import type { TimelineEmployee } from "@/api/assignments";
-import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
+import type { DayInfo } from "@/hooks/useTimeline";
 import type { ViewMode } from "@/stores/timelineStore";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 
@@ -16,7 +16,6 @@ interface TimelineSummaryRowProps {
   employees: TimelineEmployee[];
   viewMode: ViewMode;
   months: { key: string; year: number; month: number }[];
-  weeks: WeekInfo[];
   allDays: DayInfo[];
   holidayMap: Record<string, string>;
 }
@@ -31,7 +30,6 @@ export function TimelineSummaryRow({
   employees,
   viewMode,
   months,
-  weeks,
   allDays,
   holidayMap,
 }: TimelineSummaryRowProps) {
