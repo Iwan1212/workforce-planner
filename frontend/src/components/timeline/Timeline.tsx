@@ -89,13 +89,13 @@ export function Timeline() {
   const isViewer = currentUser?.role === "viewer";
   const isAdmin = currentUser?.role === "admin";
 
-  // Build holiday lookup: date string -> holiday name
-  const holidayMap: Record<string, string> = {};
-  if (data?.holidays) {
-    for (const h of data.holidays) {
-      holidayMap[h.date] = h.name;
+  const holidayMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (data?.holidays) {
+      for (const h of data.holidays) map[h.date] = h.name;
     }
-  }
+    return map;
+  }, [data?.holidays]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] =
@@ -263,23 +263,13 @@ export function Timeline() {
     if (!utilizationFilter) return employees;
     const { dateFrom, dateTo, minPct, maxPct } = utilizationFilter;
     if (minPct === null && maxPct === null) return employees;
-    const hMap: Record<string, string> = {};
-    if (data?.holidays) {
-      for (const h of data.holidays) hMap[h.date] = h.name;
-    }
     return employees.filter((emp) => {
-      const pct = calcUtilizationInRange(emp.assignments, emp.vacations ?? [], hMap, dateFrom, dateTo, startDate, endDate);
+      const pct = calcUtilizationInRange(emp.assignments, emp.vacations ?? [], holidayMap, dateFrom, dateTo, startDate, endDate);
       if (minPct !== null && pct < minPct) return false;
       if (maxPct !== null && pct > maxPct) return false;
       return true;
     });
-  }, [data, utilizationFilter, startDate, endDate]);
-
-  const monthDefs = months.map((m) => ({
-    key: m.key,
-    year: m.year,
-    month: m.month,
-  }));
+  }, [data, utilizationFilter, startDate, endDate, holidayMap]);
 
   const hasEmployees = !isLoading && data && data.employees.length > 0;
 
@@ -380,13 +370,9 @@ export function Timeline() {
       ) : !data || data.employees.length === 0 ? (
         <div className="mx-6 flex h-64 items-center justify-center">
           <p className="text-muted-foreground">
-            Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty.
-          </p>
-        </div>
-      ) : data.employees.length === 0 && searchQuery.trim() ? (
-        <div className="mx-6 flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">
-            Brak wyników dla &ldquo;{searchQuery}&rdquo;
+            {searchQuery.trim()
+              ? <>Brak wyników dla &ldquo;{searchQuery}&rdquo;</>
+              : "Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty."}
           </p>
         </div>
       ) : (
@@ -406,15 +392,15 @@ export function Timeline() {
                   assignments={emp.assignments}
                   vacations={emp.vacations}
                   utilization={emp.utilization}
-                  months={monthDefs}
+                  months={months}
                   weeks={weeks}
                   allDays={allDays}
                   viewMode={viewMode}
                   holidayMap={holidayMap}
-                  onAssignmentClick={isViewer ? () => {} : (a) => handleAssignmentClick(a, emp.id)}
+                  onAssignmentClick={(a) => handleAssignmentClick(a, emp.id)}
                   onVacationClick={handleVacationClick}
-                  onEmptyClick={isViewer ? () => {} : handleEmptyClick}
-                  onResizeEnd={isViewer ? () => {} : handleResizeEnd}
+                  onEmptyClick={handleEmptyClick}
+                  onResizeEnd={handleResizeEnd}
                   readOnly={isViewer}
                   isOdd={idx % 2 === 1}
                 />

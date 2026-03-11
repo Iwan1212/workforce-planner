@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "./useDebouncedValue";
 import {
   addMonths,
   addDays,
@@ -69,15 +69,6 @@ function generateWeeks(start: Date, count: number): WeekInfo[] {
   return weeks;
 }
 
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
-
 export function useTimeline() {
   const { startDate, selectedTeams, searchQuery, viewMode, utilizationFilter } =
     useTimelineStore();
@@ -119,7 +110,7 @@ export function useTimeline() {
       months.push({
         year: current.getFullYear(),
         month: current.getMonth() + 1,
-        label: format(current, "LLLL yyyy", {}),
+        label: format(current, "LLLL yyyy", { locale: pl }),
         key: format(current, "yyyy-MM"),
       });
       current = addMonths(current, 1);

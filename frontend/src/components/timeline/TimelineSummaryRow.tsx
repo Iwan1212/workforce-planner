@@ -10,6 +10,7 @@ import {
 import type { TimelineEmployee } from "@/api/assignments";
 import type { DayInfo } from "@/hooks/useTimeline";
 import type { ViewMode } from "@/stores/timelineStore";
+import { getUtilColor } from "@/lib/constants";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 
 interface TimelineSummaryRowProps {
@@ -116,13 +117,6 @@ export function TimelineSummaryRow({
     return map;
   }, [viewMode, months, employees, holidayMap]);
 
-  const getColor = (pct: number) => {
-    if (pct > 100) return "text-red-600 font-semibold";
-    if (pct > 80) return "text-yellow-600";
-    if (pct > 0) return "text-foreground";
-    return "text-muted-foreground";
-  };
-
   const isWeekly = viewMode === "weekly";
   const totalWidth = isWeekly
     ? allDays.length * DAY_WIDTH
@@ -155,7 +149,7 @@ export function TimelineSummaryRow({
                     <span className="text-[9px] text-muted-foreground">—</span>
                   ) : (
                     <>
-                      <span className={`text-[9px] ${getColor(summary?.ftePct ?? 0)}`}>
+                      <span className={`text-[9px] ${getUtilColor(summary?.ftePct ?? 0)}`}>
                         {summary?.ftePct ?? 0}%
                       </span>
                     </>
@@ -171,7 +165,7 @@ export function TimelineSummaryRow({
                   className="flex items-center justify-center border-r"
                   style={{ width: MONTH_WIDTH, minHeight: 28 }}
                 >
-                  <span className={`text-xs ${getColor(summary?.ftePct ?? 0)}`}>
+                  <span className={`text-xs ${getUtilColor(summary?.ftePct ?? 0)}`}>
                     {summary?.totalHours ?? 0}h / {summary?.ftePct ?? 0}%
                   </span>
                 </div>

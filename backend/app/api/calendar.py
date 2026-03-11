@@ -19,8 +19,8 @@ from app.services.assignment_service import (
     calculate_daily_hours,
 )
 from app.services.vacation_sync_service import (
-    _add_months,
     get_calamari_config,
+    get_default_sync_range,
     get_last_sync_timestamp,
     sync_vacations,
 )
@@ -100,23 +100,29 @@ async def get_timeline(
         if v.employee_id is not None:
             vacations_by_employee.setdefault(v.employee_id, []).append(v)
 
+    # Batch-fetch all assignments in range (avoids N+1 queries)
+    emp_ids = [emp.id for emp in employees]
+    assignments_by_employee: dict[int, list] = {eid: [] for eid in emp_ids}
+    if emp_ids:
+        a_result = await db.execute(
+            select(Assignment)
+            .where(
+                Assignment.employee_id.in_(emp_ids),
+                Assignment.start_date <= end_date,
+                Assignment.end_date >= start_date,
+            )
+            .order_by(Assignment.start_date)
+        )
+        for a in a_result.scalars().all():
+            assignments_by_employee[a.employee_id].append(a)
+
     # Get vacation sync status
     sync_status = await _get_vacation_sync_status(db)
 
     # Build employee data
     employee_data = []
     for emp in employees:
-        # Fetch assignments overlapping with date range
-        a_result = await db.execute(
-            select(Assignment)
-            .where(
-                Assignment.employee_id == emp.id,
-                Assignment.start_date <= end_date,
-                Assignment.end_date >= start_date,
-            )
-            .order_by(Assignment.start_date)
-        )
-        assignments = a_result.scalars().all()
+        assignments = assignments_by_employee[emp.id]
 
         assignment_list = []
         for a in assignments:
@@ -282,10 +288,7 @@ async def trigger_vacation_sync(
     _user: User = Depends(require_admin),
 ):
     """Manually trigger vacation sync (admin only)."""
-    today = date.today()
-    start = _add_months(today, -1)
-    end = _add_months(today, 6)
-
+    start, end = get_default_sync_range()
     count = await sync_vacations(db, start, end)
     return {"status": "ok", "synced": count}
 

@@ -68,7 +68,7 @@ function App() {
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
       {currentPath === "/users" && <UserManagement />}
-      {currentPath === "/settings" && <SettingsPage onNavigate={navigate} />}
+      {currentPath === "/settings" && <SettingsPage />}
     </Layout>
   );
 }

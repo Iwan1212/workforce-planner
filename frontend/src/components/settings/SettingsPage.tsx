@@ -14,11 +14,7 @@ import {
   triggerVacationSync,
 } from "@/api/settings";
 
-interface SettingsPageProps {
-  onNavigate: (path: string) => void;
-}
-
-export function SettingsPage({ onNavigate: _onNavigate }: SettingsPageProps) {
+export function SettingsPage() {
   const { user, setUser } = useAuthStore();
   const currentTheme = user?.theme ?? "light";
   const isAdmin = user?.role === "admin";
