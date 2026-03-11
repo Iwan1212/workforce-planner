@@ -31,6 +31,8 @@ def _build_response(a: Assignment) -> dict:
         a.allocation_value,
         today.year,
         today.month,
+        start_date=a.start_date,
+        end_date=a.end_date,
     )
     return {
         "id": a.id,
