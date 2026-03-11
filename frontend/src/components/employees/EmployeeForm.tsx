@@ -17,30 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Employee } from "@/api/employees";
-
-const TEAMS = [
-  "BA",
-  "Backend",
-  "DevOps",
-  "Frontend",
-  "ML",
-  "Mobile",
-  "PM",
-  "QA",
-  "UX_UI_Designer",
-] as const;
-
-const TEAM_LABELS: Record<string, string> = {
-  BA: "BA",
-  Backend: "Backend",
-  DevOps: "DevOps",
-  Frontend: "Frontend",
-  ML: "ML",
-  Mobile: "Mobile",
-  PM: "PM",
-  QA: "QA",
-  UX_UI_Designer: "UX/UI",
-};
+import { ALL_ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
 
 interface EmployeeFormProps {
   open: boolean;
@@ -140,7 +117,7 @@ export function EmployeeForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— Brak —</SelectItem>
-                {TEAMS.map((t) => (
+                {ALL_TEAMS.map((t) => (
                   <SelectItem key={t} value={t}>
                     {TEAM_LABELS[t]}
                   </SelectItem>
@@ -161,5 +138,3 @@ export function EmployeeForm({
     </Dialog>
   );
 }
-
-export { TEAM_LABELS };

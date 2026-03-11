@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,8 @@ import {
   updateEmployee,
   type Employee,
 } from "@/api/employees";
-import { ALL_TEAMS } from "@/stores/timelineStore";
-import { EmployeeForm, TEAM_LABELS } from "./EmployeeForm";
+import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
+import { EmployeeForm } from "./EmployeeForm";
 
 export function EmployeeList() {
   const queryClient = useQueryClient();
@@ -29,13 +30,8 @@ export function EmployeeList() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const toggleTeam = (team: string) => {
     if (selectedTeams.includes(team)) {

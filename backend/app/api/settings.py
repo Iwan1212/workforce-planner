@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -12,7 +12,8 @@ from app.models.app_settings import AppSettings
 from app.models.user import User
 from app.models.vacation import Vacation
 from app.services.vacation_sync_service import (
-    _add_months,
+    get_calamari_config as get_calamari_config_from_db,
+    get_default_sync_range,
     get_last_sync_timestamp,
     sync_vacations,
 )
@@ -21,9 +22,9 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 class CalamariConfigResponse(BaseModel):
-    subdomain: str | None = None
+    subdomain: Optional[str] = None
     is_configured: bool = False
-    last_synced_at: str | None = None
+    last_synced_at: Optional[str] = None
 
 
 class CalamariConfigUpdate(BaseModel):
@@ -37,17 +38,11 @@ async def get_calamari_config(
     _user: User = Depends(require_admin),
 ):
     """Get Calamari integration status. Does not expose the API key."""
-    result = await db.execute(
-        select(AppSettings).where(
-            AppSettings.key.in_(["calamari_api_key", "calamari_subdomain"])
-        )
-    )
-    settings = {s.key: s.value for s in result.scalars().all()}
-
-    is_configured = bool(settings.get("calamari_api_key"))
+    api_key, subdomain = await get_calamari_config_from_db(db)
+    is_configured = bool(api_key)
 
     return CalamariConfigResponse(
-        subdomain=settings.get("calamari_subdomain"),
+        subdomain=subdomain,
         is_configured=is_configured,
         last_synced_at=await get_last_sync_timestamp(db) if is_configured else None,
     )
@@ -77,9 +72,7 @@ async def update_calamari_config(
     await db.commit()
 
     # Trigger immediate sync
-    today = date.today()
-    start = _add_months(today, -1)
-    end = _add_months(today, 6)
+    start, end = get_default_sync_range()
     try:
         count = await sync_vacations(db, start, end)
         return {"status": "ok", "message": f"Configuration saved. Synced {count} vacations."}

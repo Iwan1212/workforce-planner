@@ -28,13 +28,19 @@ async def get_last_sync_timestamp(db: AsyncSession) -> str | None:
     return row[0].isoformat() if row and row[0] else None
 
 
-def _add_months(d: date, months: int) -> date:
+def add_months(d: date, months: int) -> date:
     """Add (or subtract) months to a date, clamping day to valid range."""
     month = d.month - 1 + months
     year = d.year + month // 12
     month = month % 12 + 1
     day = min(d.day, calendar.monthrange(year, month)[1])
     return date(year, month, day)
+
+
+def get_default_sync_range() -> tuple[date, date]:
+    """Return the default date range for vacation sync: -1 month to +6 months from today."""
+    today = date.today()
+    return add_months(today, -1), add_months(today, 6)
 
 
 async def get_calamari_config(db: AsyncSession) -> tuple[str | None, str | None]:
@@ -136,9 +142,7 @@ async def periodic_vacation_sync(stop_event: asyncio.Event) -> None:
             async with async_session_factory() as db:
                 api_key, _ = await get_calamari_config(db)
                 if api_key:
-                    today = date.today()
-                    start = _add_months(today, -1)
-                    end = _add_months(today, 6)
+                    start, end = get_default_sync_range()
                     await sync_vacations(db, start, end)
                 else:
                     logger.debug("Calamari not configured, skipping periodic sync")

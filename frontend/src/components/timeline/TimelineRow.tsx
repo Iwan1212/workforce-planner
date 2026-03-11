@@ -12,20 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import type { TimelineAssignment, MonthUtilization, VacationInfo } from "@/api/assignments";
 import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
 import type { ViewMode } from "@/stores/timelineStore";
+import { TEAM_LABELS, LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
 import { TimelineBar } from "./TimelineBar";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
-
-const TEAM_LABELS: Record<string, string> = {
-  BA: "BA",
-  Backend: "Backend",
-  DevOps: "DevOps",
-  Frontend: "Frontend",
-  ML: "ML",
-  Mobile: "Mobile",
-  PM: "PM",
-  QA: "QA",
-  UX_UI_Designer: "UX/UI",
-};
 
 interface MonthDef {
   key: string;
@@ -122,12 +111,6 @@ function computeBarPositionWeekly(
   };
 }
 
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-  urlop: "Urlop",
-  chorobowe: "Chorobowe",
-  inne: "Nieobecność",
-};
-
 /** Find the first non-overlapping row for a bar and register it. */
 function assignRow(
   pos: { left: number; width: number },
@@ -144,13 +127,6 @@ function assignRow(
   }
   occupiedRows.push({ left: pos.left, right, row });
   return row;
-}
-
-function getUtilColor(pct: number): string {
-  if (pct > 100) return "text-red-600 font-bold";
-  if (pct > 80) return "text-yellow-600";
-  if (pct > 0) return "text-green-600";
-  return "text-muted-foreground";
 }
 
 /** Compute weekly utilization % from assignments, accounting for vacations. */

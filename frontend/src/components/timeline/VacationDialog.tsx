@@ -8,12 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { VacationInfo } from "@/api/assignments";
-
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-  urlop: "Urlop",
-  chorobowe: "Chorobowe",
-  inne: "Nieobecność",
-};
+import { LEAVE_TYPE_LABELS } from "@/lib/constants";
 
 function formatDatePL(iso: string): string {
   return parseISO(iso).toLocaleDateString("pl-PL");

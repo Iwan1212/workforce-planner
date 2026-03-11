@@ -8,18 +8,7 @@ import {
   type ViewMode,
   type UtilizationFilter,
 } from "@/stores/timelineStore";
-
-const TEAM_LABELS: Record<string, string> = {
-  BA: "BA",
-  Backend: "Backend",
-  DevOps: "DevOps",
-  Frontend: "Frontend",
-  ML: "ML",
-  Mobile: "Mobile",
-  PM: "PM",
-  QA: "QA",
-  UX_UI_Designer: "UX/UI",
-};
+import { TEAM_LABELS } from "@/lib/constants";
 
 export function TimelineFilters() {
   const {
