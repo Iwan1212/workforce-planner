@@ -8,8 +8,6 @@ import {
   subWeeks,
 } from "date-fns";
 
-import { ALL_TEAMS } from "@/lib/constants";
-
 export type ViewMode = "monthly" | "weekly";
 
 export interface UtilizationFilter {
@@ -78,5 +76,3 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   goToToday: () =>
     set((state) => ({ startDate: snapToMode(new Date(), state.viewMode) })),
 }));
-
-export { ALL_TEAMS } from "@/lib/constants";

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Employee } from "@/api/employees";
-import { ALL_ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
+import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
 
 interface EmployeeFormProps {
   open: boolean;
