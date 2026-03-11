@@ -10,6 +10,7 @@ class EmployeeCreate(BaseModel):
     first_name: str
     last_name: str
     team: Optional[str] = None
+    email: Optional[str] = None
 
     @field_validator("first_name", "last_name")
     @classmethod
@@ -23,6 +24,7 @@ class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     team: Optional[str] = None
+    email: Optional[str] = None
 
     @field_validator("first_name", "last_name")
     @classmethod
@@ -37,6 +39,7 @@ class EmployeeResponse(BaseModel):
     first_name: str
     last_name: str
     team: Optional[str] = None
+    email: Optional[str] = None
     is_deleted: bool
     created_at: datetime
 

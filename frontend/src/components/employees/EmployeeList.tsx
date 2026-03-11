@@ -76,6 +76,7 @@ export function EmployeeList() {
         first_name: string;
         last_name: string;
         team: string | null;
+        email: string | null;
       }>;
     }) => updateEmployee(id, data),
     onSuccess: () => {
@@ -101,6 +102,7 @@ export function EmployeeList() {
     first_name: string;
     last_name: string;
     team: string | null;
+    email?: string | null;
   }) => {
     if (editingEmployee) {
       updateMutation.mutate({ id: editingEmployee.id, data });
@@ -207,6 +209,9 @@ export function EmployeeList() {
                   Nazwisko i imię
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
+                  Email
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
                   Zespół
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium">
@@ -219,6 +224,9 @@ export function EmployeeList() {
                 <tr key={emp.id} className="border-b last:border-0">
                   <td className="px-4 py-3 text-sm">
                     {emp.last_name} {emp.first_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {emp.email || "—"}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {emp.team ? (

@@ -7,7 +7,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { addDays, parseISO, format, getDay } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,10 @@ import { AssignmentModal } from "@/components/assignments/AssignmentModal";
 import {
   updateAssignment,
   type TimelineAssignment,
+  type VacationInfo,
 } from "@/api/assignments";
+import { triggerVacationSync } from "@/api/settings";
+import { VacationDialog } from "./VacationDialog";
 
 interface VacationRange {
   start_date: string;
@@ -84,6 +87,7 @@ export function Timeline() {
   const utilizationFilter = useTimelineStore((s) => s.utilizationFilter);
   const currentUser = useAuthStore((s) => s.user);
   const isViewer = currentUser?.role === "viewer";
+  const isAdmin = currentUser?.role === "admin";
 
   // Build holiday lookup: date string -> holiday name
   const holidayMap: Record<string, string> = {};
@@ -100,6 +104,8 @@ export function Timeline() {
     null
   );
   const [defaultStartDate, setDefaultStartDate] = useState<string | null>(null);
+  const [vacationModalOpen, setVacationModalOpen] = useState(false);
+  const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(null);
 
   // Sync horizontal scroll between header and body
   const headerScrollRef = useRef<HTMLDivElement>(null);
@@ -114,6 +120,16 @@ export function Timeline() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  // Vacation sync mutation
+  const syncVacationsMutation = useMutation({
+    mutationFn: triggerVacationSync,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      toast.success(`Zsynchronizowano ${result.synced} urlopów`);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   // Mutation for D&D and resize
   const patchMutation = useMutation({
@@ -230,6 +246,11 @@ export function Timeline() {
     setModalOpen(true);
   };
 
+  const handleVacationClick = (vacation: VacationInfo) => {
+    setSelectedVacation(vacation);
+    setVacationModalOpen(true);
+  };
+
   const handleNewAssignment = () => {
     setEditingAssignment(null);
     setDefaultEmployeeId(null);
@@ -268,12 +289,32 @@ export function Timeline() {
       <div className="sticky top-0 z-30 bg-background px-6 pt-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Timeline</h2>
-          {!isViewer && (
-            <Button onClick={handleNewAssignment}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nowy assignment
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAdmin && data?.vacation_sync_status?.is_configured && (
+              <div className="flex items-center gap-2">
+                {data.vacation_sync_status.last_synced_at && (
+                  <span className="text-xs text-muted-foreground">
+                    Sync: {new Date(data.vacation_sync_status.last_synced_at).toLocaleString("pl-PL")}
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => syncVacationsMutation.mutate()}
+                  disabled={syncVacationsMutation.isPending}
+                >
+                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncVacationsMutation.isPending ? "animate-spin" : ""}`} />
+                  Sync urlopów
+                </Button>
+              </div>
+            )}
+            {!isViewer && (
+              <Button onClick={handleNewAssignment}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nowy assignment
+              </Button>
+            )}
+          </div>
         </div>
 
         <TimelineFilters />
@@ -363,6 +404,7 @@ export function Timeline() {
                   name={emp.name}
                   team={emp.team}
                   assignments={emp.assignments}
+                  vacations={emp.vacations}
                   utilization={emp.utilization}
                   months={monthDefs}
                   weeks={weeks}
@@ -370,6 +412,7 @@ export function Timeline() {
                   viewMode={viewMode}
                   holidayMap={holidayMap}
                   onAssignmentClick={isViewer ? () => {} : (a) => handleAssignmentClick(a, emp.id)}
+                  onVacationClick={handleVacationClick}
                   onEmptyClick={isViewer ? () => {} : handleEmptyClick}
                   onResizeEnd={isViewer ? () => {} : handleResizeEnd}
                   readOnly={isViewer}
@@ -382,6 +425,14 @@ export function Timeline() {
       )}
 
       <div className="pb-6" />
+      <VacationDialog
+        open={vacationModalOpen}
+        onClose={() => {
+          setVacationModalOpen(false);
+          setSelectedVacation(null);
+        }}
+        vacation={selectedVacation}
+      />
       <AssignmentModal
         open={modalOpen}
         onClose={() => {

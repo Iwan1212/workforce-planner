@@ -72,6 +72,7 @@ async def create_employee(
         first_name=body.first_name,
         last_name=body.last_name,
         team=body.team,
+        email=body.email,
     )
     db.add(employee)
     await db.commit()
@@ -99,6 +100,8 @@ async def update_employee(
         if body.team and body.team not in [t.value for t in Team]:
             raise HTTPException(status_code=400, detail="Invalid team value")
         employee.team = body.team if body.team else None
+    if body.email is not None:
+        employee.email = body.email if body.email else None
 
     await db.commit()
     await db.refresh(employee)

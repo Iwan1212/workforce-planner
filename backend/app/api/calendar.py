@@ -9,16 +9,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, require_admin
 from app.models.assignment import Assignment
 from app.models.employee import Employee, Team
 from app.models.user import User
+from app.models.vacation import Vacation
 from app.services.assignment_service import (
     calculate_assignment_hours_in_month,
     calculate_daily_hours,
 )
+from app.services.vacation_sync_service import (
+    _add_months,
+    get_calamari_config,
+    get_last_sync_timestamp,
+    sync_vacations,
+)
 from app.utils.polish_holidays import get_holiday_name, get_polish_holidays
-from app.utils.working_days import get_working_days_in_month
+from app.utils.working_days import get_working_days, get_working_days_in_month
 
 router = APIRouter(tags=["calendar"])
 
@@ -78,6 +85,24 @@ async def get_timeline(
         key = f"{y}-{m:02d}"
         working_days_per_month[key] = get_working_days_in_month(y, m)
 
+    # Fetch all vacations in range
+    vac_result = await db.execute(
+        select(Vacation).where(
+            Vacation.start_date <= end_date,
+            Vacation.end_date >= start_date,
+        )
+    )
+    all_vacations = vac_result.scalars().all()
+
+    # Group vacations by employee_id
+    vacations_by_employee: dict[int, list] = {}
+    for v in all_vacations:
+        if v.employee_id is not None:
+            vacations_by_employee.setdefault(v.employee_id, []).append(v)
+
+    # Get vacation sync status
+    sync_status = await _get_vacation_sync_status(db)
+
     # Build employee data
     employee_data = []
     for emp in employees:
@@ -119,11 +144,31 @@ async def get_timeline(
                 }
             )
 
-        # Calculate utilization per month
+        # Employee vacations
+        emp_vacations = vacations_by_employee.get(emp.id, [])
+        vacation_list = [
+            {
+                "start_date": v.start_date.isoformat(),
+                "end_date": v.end_date.isoformat(),
+                "leave_type": v.leave_type,
+                "employee_email": v.employee_email,
+                "synced_at": v.synced_at.isoformat() if v.synced_at else None,
+            }
+            for v in emp_vacations
+        ]
+
+        # Calculate utilization per month (accounting for vacation days)
         utilization = {}
         for y, m in months:
             key = f"{y}-{m:02d}"
-            avail = Decimal(str(working_days_per_month[key])) * Decimal("8")
+            wd = working_days_per_month[key]
+            avail = Decimal(str(wd)) * Decimal("8")
+
+            # Count vacation working days in this month
+            vacation_days = _count_vacation_working_days(emp_vacations, y, m)
+            vacation_hours = Decimal(str(vacation_days)) * Decimal("8")
+            effective_avail = avail - vacation_hours
+
             total = Decimal("0")
             for a in assignments:
                 total += calculate_assignment_hours_in_month(
@@ -136,14 +181,17 @@ async def get_timeline(
                 )
             pct = float(
                 round(
-                    (total / avail * Decimal("100")) if avail > 0 else Decimal("0"),
+                    (total / effective_avail * Decimal("100"))
+                    if effective_avail > 0
+                    else Decimal("0"),
                     1,
                 )
             )
             utilization[key] = {
                 "percentage": pct,
                 "hours": float(round(total, 1)),
-                "available_hours": float(round(avail, 1)),
+                "available_hours": float(round(effective_avail, 1)),
+                "vacation_days": vacation_days,
                 "is_overbooked": pct > 100,
             }
 
@@ -153,6 +201,7 @@ async def get_timeline(
                 "name": f"{emp.last_name} {emp.first_name}",
                 "team": emp.team.value if emp.team else None,
                 "assignments": assignment_list,
+                "vacations": vacation_list,
                 "utilization": utilization,
             }
         )
@@ -164,7 +213,81 @@ async def get_timeline(
             for d in holidays_in_range
         ],
         "working_days_per_month": working_days_per_month,
+        "vacation_sync_status": sync_status,
     }
+
+
+def _count_vacation_working_days(vacations: list, year: int, month: int) -> int:
+    """Count working days covered by vacations in a specific month."""
+    if not vacations:
+        return 0
+
+    month_start = date(year, month, 1)
+    month_end = date(year, month, cal_mod.monthrange(year, month)[1])
+    total = 0
+
+    for v in vacations:
+        overlap_start = max(v.start_date, month_start)
+        overlap_end = min(v.end_date, month_end)
+        if overlap_start > overlap_end:
+            continue
+        total += get_working_days(overlap_start, overlap_end)
+
+    return total
+
+
+async def _get_vacation_sync_status(db: AsyncSession) -> dict:
+    """Get vacation sync status for the timeline response."""
+    api_key, _ = await get_calamari_config(db)
+    is_configured = bool(api_key)
+
+    return {
+        "last_synced_at": await get_last_sync_timestamp(db) if is_configured else None,
+        "is_configured": is_configured,
+    }
+
+
+@router.get("/api/calendar/vacations")
+async def get_vacations(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Return cached vacations for a date range."""
+    result = await db.execute(
+        select(Vacation).where(
+            Vacation.start_date <= end_date,
+            Vacation.end_date >= start_date,
+        )
+    )
+    vacations = result.scalars().all()
+    return [
+        {
+            "id": v.id,
+            "employee_id": v.employee_id,
+            "employee_email": v.employee_email,
+            "start_date": v.start_date.isoformat(),
+            "end_date": v.end_date.isoformat(),
+            "leave_type": v.leave_type,
+            "synced_at": v.synced_at.isoformat() if v.synced_at else None,
+        }
+        for v in vacations
+    ]
+
+
+@router.post("/api/calendar/vacations/sync")
+async def trigger_vacation_sync(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_admin),
+):
+    """Manually trigger vacation sync (admin only)."""
+    today = date.today()
+    start = _add_months(today, -1)
+    end = _add_months(today, 6)
+
+    count = await sync_vacations(db, start, end)
+    return {"status": "ok", "synced": count}
 
 
 @router.get("/api/calendar/holidays/{year}")
@@ -182,6 +305,4 @@ async def get_working_days_endpoint(
     end_date: date = Query(...),
     _user: User = Depends(get_current_user),
 ):
-    from app.utils.working_days import get_working_days
-
     return {"working_days": get_working_days(start_date, end_date)}

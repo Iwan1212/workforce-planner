@@ -29,5 +29,6 @@ class Employee(Base):
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     team: Mapped[Optional[Team]] = mapped_column(Enum(Team), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
