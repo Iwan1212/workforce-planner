@@ -10,15 +10,24 @@ import {
 
 export type ViewMode = "monthly" | "weekly";
 
+export interface UtilizationFilter {
+  dateFrom: string | null; // "yyyy-MM-dd"
+  dateTo: string | null;
+  minPct: number | null;
+  maxPct: number | null;
+}
+
 interface TimelineState {
   viewMode: ViewMode;
   startDate: Date;
   selectedTeams: string[];
   searchQuery: string;
+  utilizationFilter: UtilizationFilter | null;
   setViewMode: (mode: ViewMode) => void;
   setStartDate: (date: Date) => void;
   setSelectedTeams: (teams: string[]) => void;
   setSearchQuery: (query: string) => void;
+  setUtilizationFilter: (filter: UtilizationFilter | null) => void;
   scrollForward: () => void;
   scrollBack: () => void;
   goToToday: () => void;
@@ -57,6 +66,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     set((state) => ({ startDate: snapToMode(date, state.viewMode) })),
   setSelectedTeams: (teams) => set({ selectedTeams: teams }),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  utilizationFilter: null,
+  setUtilizationFilter: (filter) => set({ utilizationFilter: filter }),
 
   scrollForward: () =>
     set((state) => ({

@@ -7,6 +7,7 @@ import {
   format,
   getISOWeek,
   getDay,
+  parseISO,
 } from "date-fns";
 import { pl } from "date-fns/locale";
 import { fetchTimeline } from "@/api/assignments";
@@ -78,7 +79,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 export function useTimeline() {
-  const { startDate, selectedTeams, searchQuery, viewMode } =
+  const { startDate, selectedTeams, searchQuery, viewMode, utilizationFilter } =
     useTimelineStore();
 
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
@@ -88,8 +89,20 @@ export function useTimeline() {
       ? addMonths(startDate, MONTHS_VISIBLE)
       : addWeeks(startDate, WEEKS_VISIBLE);
 
-  const startStr = format(startDate, "yyyy-MM-dd");
-  const endStr = format(endDate, "yyyy-MM-dd");
+  // Extend API query range to cover utilization filter dates if they exceed visible range
+  let queryStart = startDate;
+  let queryEnd = endDate;
+  if (utilizationFilter?.dateFrom) {
+    const f = parseISO(utilizationFilter.dateFrom);
+    if (f < queryStart) queryStart = f;
+  }
+  if (utilizationFilter?.dateTo) {
+    const t = parseISO(utilizationFilter.dateTo);
+    if (t > queryEnd) queryEnd = t;
+  }
+
+  const startStr = format(queryStart, "yyyy-MM-dd");
+  const endStr = format(queryEnd, "yyyy-MM-dd");
 
   const query = useQuery({
     queryKey: ["timeline", startStr, endStr, selectedTeams, debouncedSearch, viewMode],
