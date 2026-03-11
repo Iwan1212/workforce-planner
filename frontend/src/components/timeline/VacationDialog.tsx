@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, parseISO } from "date-fns";
+import { addDays, format, getDay, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,17 +14,32 @@ function formatDatePL(iso: string): string {
   return parseISO(iso).toLocaleDateString("pl-PL");
 }
 
+function countWorkingDays(startIso: string, endIso: string, holidayMap: Record<string, string>): number {
+  let count = 0;
+  let current = parseISO(startIso);
+  const end = parseISO(endIso);
+  while (current <= end) {
+    const dow = getDay(current);
+    const key = format(current, "yyyy-MM-dd");
+    if (dow !== 0 && dow !== 6 && !holidayMap[key]) {
+      count++;
+    }
+    current = addDays(current, 1);
+  }
+  return count;
+}
+
 interface VacationDialogProps {
   open: boolean;
   onClose: () => void;
   vacation: VacationInfo | null;
+  holidayMap: Record<string, string>;
 }
 
-export function VacationDialog({ open, onClose, vacation }: VacationDialogProps) {
+export function VacationDialog({ open, onClose, vacation, holidayMap }: VacationDialogProps) {
   if (!vacation) return null;
 
-  const days =
-    differenceInCalendarDays(parseISO(vacation.end_date), parseISO(vacation.start_date)) + 1;
+  const days = countWorkingDays(vacation.start_date, vacation.end_date, holidayMap);
   const label = LEAVE_TYPE_LABELS[vacation.leave_type] ?? vacation.leave_type;
 
   return (
