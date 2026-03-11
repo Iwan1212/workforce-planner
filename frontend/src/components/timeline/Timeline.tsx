@@ -418,6 +418,7 @@ export function Timeline() {
           setSelectedVacation(null);
         }}
         vacation={selectedVacation}
+        holidayMap={holidayMap}
       />
       <AssignmentModal
         open={modalOpen}
