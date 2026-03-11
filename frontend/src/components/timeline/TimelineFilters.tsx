@@ -3,12 +3,11 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, X, Percent }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ALL_TEAMS,
   useTimelineStore,
   type ViewMode,
   type UtilizationFilter,
 } from "@/stores/timelineStore";
-import { TEAM_LABELS } from "@/lib/constants";
+import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
 
 export function TimelineFilters() {
   const {
