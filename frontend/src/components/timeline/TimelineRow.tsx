@@ -164,9 +164,8 @@ function computeWeeklyUtilization(
     }
   }
 
-  const effectiveWorkingDays = workingDays - vacationDays;
-  if (effectiveWorkingDays === 0) return 0;
-  const availableHours = effectiveWorkingDays * 8;
+  if (workingDays === 0) return 0;
+  const availableHours = workingDays * 8;
   return Math.round((totalHours / availableHours) * 100);
 }
 

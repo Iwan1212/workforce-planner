@@ -75,9 +75,8 @@ function calcUtilizationInRange(
     current = addDays(current, 1);
   }
 
-  const effectiveWorkingDays = workingDays - vacationDays;
-  if (effectiveWorkingDays === 0) return 0;
-  return Math.round((totalHours / (effectiveWorkingDays * 8)) * 100);
+  if (workingDays === 0) return 0;
+  return Math.round((totalHours / (workingDays * 8)) * 100);
 }
 
 export function Timeline() {
