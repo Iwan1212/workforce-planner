@@ -23,8 +23,14 @@ import {
   type TimelineAssignment,
 } from "@/api/assignments";
 
+interface VacationRange {
+  start_date: string;
+  end_date: string;
+}
+
 function calcUtilizationInRange(
   assignments: TimelineAssignment[],
+  vacations: VacationRange[],
   holidayMap: Record<string, string>,
   dateFrom: string | null,
   dateTo: string | null,
@@ -36,6 +42,7 @@ function calcUtilizationInRange(
 
   let totalHours = 0;
   let workingDays = 0;
+  let vacationDays = 0;
 
   let current = rangeStart;
   while (current <= rangeEnd) {
@@ -43,19 +50,31 @@ function calcUtilizationInRange(
     const dateKey = format(current, "yyyy-MM-dd");
     if (dow !== 0 && dow !== 6 && !holidayMap[dateKey]) {
       workingDays++;
-      for (const a of assignments) {
-        const aStart = parseISO(a.start_date);
-        const aEnd = parseISO(a.end_date);
-        if (current >= aStart && current <= aEnd) {
-          totalHours += a.daily_hours;
+
+      const isOnVacation = vacations.some((v) => {
+        const vStart = parseISO(v.start_date);
+        const vEnd = parseISO(v.end_date);
+        return current >= vStart && current <= vEnd;
+      });
+
+      if (isOnVacation) {
+        vacationDays++;
+      } else {
+        for (const a of assignments) {
+          const aStart = parseISO(a.start_date);
+          const aEnd = parseISO(a.end_date);
+          if (current >= aStart && current <= aEnd) {
+            totalHours += a.daily_hours;
+          }
         }
       }
     }
     current = addDays(current, 1);
   }
 
-  if (workingDays === 0) return 0;
-  return Math.round((totalHours / (workingDays * 8)) * 100);
+  const effectiveWorkingDays = workingDays - vacationDays;
+  if (effectiveWorkingDays === 0) return 0;
+  return Math.round((totalHours / (effectiveWorkingDays * 8)) * 100);
 }
 
 export function Timeline() {
@@ -228,7 +247,7 @@ export function Timeline() {
       for (const h of data.holidays) hMap[h.date] = h.name;
     }
     return employees.filter((emp) => {
-      const pct = calcUtilizationInRange(emp.assignments, hMap, dateFrom, dateTo, startDate, endDate);
+      const pct = calcUtilizationInRange(emp.assignments, emp.vacations ?? [], hMap, dateFrom, dateTo, startDate, endDate);
       if (minPct !== null && pct < minPct) return false;
       if (maxPct !== null && pct > maxPct) return false;
       return true;
