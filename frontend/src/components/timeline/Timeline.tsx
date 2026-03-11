@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -6,7 +6,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { addDays, parseISO, format } from "date-fns";
+import { addDays, parseISO, format, getDay } from "date-fns";
 import { Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,10 +23,65 @@ import {
   type TimelineAssignment,
 } from "@/api/assignments";
 
+interface VacationRange {
+  start_date: string;
+  end_date: string;
+}
+
+function calcUtilizationInRange(
+  assignments: TimelineAssignment[],
+  vacations: VacationRange[],
+  holidayMap: Record<string, string>,
+  dateFrom: string | null,
+  dateTo: string | null,
+  visibleStart: Date,
+  visibleEnd: Date,
+): number {
+  const rangeStart = dateFrom ? parseISO(dateFrom) : visibleStart;
+  const rangeEnd = dateTo ? parseISO(dateTo) : visibleEnd;
+
+  let totalHours = 0;
+  let workingDays = 0;
+  let vacationDays = 0;
+
+  let current = rangeStart;
+  while (current <= rangeEnd) {
+    const dow = getDay(current); // 0=Sun, 6=Sat
+    const dateKey = format(current, "yyyy-MM-dd");
+    if (dow !== 0 && dow !== 6 && !holidayMap[dateKey]) {
+      workingDays++;
+
+      const isOnVacation = vacations.some((v) => {
+        const vStart = parseISO(v.start_date);
+        const vEnd = parseISO(v.end_date);
+        return current >= vStart && current <= vEnd;
+      });
+
+      if (isOnVacation) {
+        vacationDays++;
+      } else {
+        for (const a of assignments) {
+          const aStart = parseISO(a.start_date);
+          const aEnd = parseISO(a.end_date);
+          if (current >= aStart && current <= aEnd) {
+            totalHours += a.daily_hours;
+          }
+        }
+      }
+    }
+    current = addDays(current, 1);
+  }
+
+  const effectiveWorkingDays = workingDays - vacationDays;
+  if (effectiveWorkingDays === 0) return 0;
+  return Math.round((totalHours / (effectiveWorkingDays * 8)) * 100);
+}
+
 export function Timeline() {
   const queryClient = useQueryClient();
-  const { data, isLoading, months, weeks, allDays, viewMode } = useTimeline();
+  const { data, isLoading, months, weeks, allDays, viewMode, startDate, endDate } = useTimeline();
   const searchQuery = useTimelineStore((s) => s.searchQuery);
+  const utilizationFilter = useTimelineStore((s) => s.utilizationFilter);
   const currentUser = useAuthStore((s) => s.user);
   const isViewer = currentUser?.role === "viewer";
 
@@ -182,6 +237,23 @@ export function Timeline() {
     setModalOpen(true);
   };
 
+  const displayedEmployees = useMemo(() => {
+    const employees = data?.employees ?? [];
+    if (!utilizationFilter) return employees;
+    const { dateFrom, dateTo, minPct, maxPct } = utilizationFilter;
+    if (minPct === null && maxPct === null) return employees;
+    const hMap: Record<string, string> = {};
+    if (data?.holidays) {
+      for (const h of data.holidays) hMap[h.date] = h.name;
+    }
+    return employees.filter((emp) => {
+      const pct = calcUtilizationInRange(emp.assignments, emp.vacations ?? [], hMap, dateFrom, dateTo, startDate, endDate);
+      if (minPct !== null && pct < minPct) return false;
+      if (maxPct !== null && pct > maxPct) return false;
+      return true;
+    });
+  }, [data, utilizationFilter, startDate, endDate]);
+
   const monthDefs = months.map((m) => ({
     key: m.key,
     year: m.year,
@@ -284,7 +356,7 @@ export function Timeline() {
               className="overflow-x-auto"
               onScroll={handleBodyScroll}
             >
-              {data.employees.map((emp, idx) => (
+              {displayedEmployees.map((emp, idx) => (
                 <TimelineRow
                   key={emp.id}
                   employeeId={emp.id}
