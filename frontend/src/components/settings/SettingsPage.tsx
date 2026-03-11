@@ -1,8 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
-import { Sun, Moon } from "lucide-react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Sun, Moon, RefreshCw, Link, Unlink } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { updateTheme } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  fetchCalamariConfig,
+  updateCalamariConfig,
+  deleteCalamariConfig,
+  triggerVacationSync,
+} from "@/api/settings";
 
 interface SettingsPageProps {
   onNavigate: (path: string) => void;
@@ -11,6 +21,7 @@ interface SettingsPageProps {
 export function SettingsPage({ onNavigate: _onNavigate }: SettingsPageProps) {
   const { user, setUser } = useAuthStore();
   const currentTheme = user?.theme ?? "light";
+  const isAdmin = user?.role === "admin";
 
   const mutation = useMutation({
     mutationFn: (theme: "light" | "dark") => updateTheme(theme),
@@ -52,7 +63,147 @@ export function SettingsPage({ onNavigate: _onNavigate }: SettingsPageProps) {
           />
         </div>
       </section>
+
+      {isAdmin && (
+        <section className="mt-10 max-w-2xl">
+          <CalamariSection />
+        </section>
+      )}
     </div>
+  );
+}
+
+function CalamariSection() {
+  const queryClient = useQueryClient();
+  const [subdomain, setSubdomain] = useState("");
+  const [apiKey, setApiKey] = useState("");
+
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["calamari-config"],
+    queryFn: fetchCalamariConfig,
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: () => updateCalamariConfig({ api_key: apiKey, subdomain }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["calamari-config"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      setApiKey("");
+      toast.success(result.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: deleteCalamariConfig,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["calamari-config"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      setSubdomain("");
+      setApiKey("");
+      toast.success(result.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: triggerVacationSync,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["calamari-config"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      toast.success(`Zsynchronizowano ${result.synced} urlopów`);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const isConfigured = config?.is_configured ?? false;
+  const isPending = connectMutation.isPending || disconnectMutation.isPending;
+
+  return (
+    <>
+      <p className="mb-1 text-sm font-semibold text-foreground">Integracja Calamari</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Podłącz Calamari HR, aby automatycznie pobierać zatwierdzone urlopy pracowników
+      </p>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Ładowanie...</p>
+      ) : isConfigured ? (
+        <div className="space-y-4 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-600">Połączono</p>
+              <p className="text-xs text-muted-foreground">
+                Subdomena: {config?.subdomain ?? "—"}
+              </p>
+              {config?.last_synced_at && (
+                <p className="text-xs text-muted-foreground">
+                  Ostatnia synchronizacja: {new Date(config.last_synced_at).toLocaleString("pl-PL")}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+              >
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+                Synchronizuj teraz
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => disconnectMutation.mutate()}
+                disabled={isPending}
+              >
+                <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                Rozłącz
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4 rounded-lg border p-4">
+          <div className="space-y-2">
+            <Label htmlFor="calamari-subdomain">Subdomena</Label>
+            <Input
+              id="calamari-subdomain"
+              placeholder="np. momentum"
+              value={subdomain}
+              onChange={(e) => {
+              // Extract subdomain if user pastes full URL like https://foo.calamari.io/...
+              let val = e.target.value.trim();
+              const match = val.match(/^https?:\/\/([^.]+)\.calamari\.io/);
+              if (match) val = match[1];
+              setSubdomain(val);
+            }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Twoja subdomena Calamari (z adresu <strong>subdomena</strong>.calamari.io)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="calamari-apikey">API Key</Label>
+            <Input
+              id="calamari-apikey"
+              type="password"
+              placeholder="Klucz API z Calamari"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={() => connectMutation.mutate()}
+            disabled={!subdomain.trim() || !apiKey.trim() || isPending}
+          >
+            <Link className="mr-2 h-4 w-4" />
+            {connectMutation.isPending ? "Łączenie..." : "Połącz"}
+          </Button>
+        </div>
+      )}
+    </>
   );
 }
 

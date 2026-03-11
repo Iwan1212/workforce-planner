@@ -5,6 +5,7 @@ export interface Employee {
   first_name: string;
   last_name: string;
   team: string | null;
+  email: string | null;
   is_deleted: boolean;
   created_at: string;
 }
@@ -13,6 +14,7 @@ export interface EmployeeCreateData {
   first_name: string;
   last_name: string;
   team: string | null;
+  email?: string | null;
 }
 
 export interface DeleteResponse {

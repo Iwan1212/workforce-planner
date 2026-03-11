@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,14 +13,30 @@ from app.api.assignments import router as assignments_router
 from app.api.calendar import router as calendar_router
 from app.api.employees import router as employees_router
 from app.api.projects import router as projects_router
+from app.api.settings import router as settings_router
 from app.api.users import router as users_router
 from app.config import settings
 from app.database import engine
+from app.services.vacation_sync_service import periodic_vacation_sync
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Start background vacation sync
+    stop_event = asyncio.Event()
+    sync_task = asyncio.create_task(periodic_vacation_sync(stop_event))
+
     yield
+
+    # Graceful shutdown
+    stop_event.set()
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
     await engine.dispose()
 
 
@@ -38,6 +56,7 @@ app.include_router(employees_router)
 app.include_router(projects_router)
 app.include_router(assignments_router)
 app.include_router(calendar_router)
+app.include_router(settings_router)
 app.include_router(users_router)
 
 

@@ -9,7 +9,7 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import type { TimelineAssignment, MonthUtilization } from "@/api/assignments";
+import type { TimelineAssignment, MonthUtilization, VacationInfo } from "@/api/assignments";
 import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
 import type { ViewMode } from "@/stores/timelineStore";
 import { TimelineBar } from "./TimelineBar";
@@ -38,12 +38,14 @@ interface TimelineRowProps {
   name: string;
   team: string | null;
   assignments: TimelineAssignment[];
+  vacations?: VacationInfo[];
   utilization: Record<string, MonthUtilization>;
   months: MonthDef[];
   weeks: WeekInfo[];
   allDays: DayInfo[];
   viewMode: ViewMode;
   onAssignmentClick: (assignment: TimelineAssignment) => void;
+  onVacationClick: (vacation: VacationInfo) => void;
   onEmptyClick: (employeeId: number, monthKey: string) => void;
   onResizeEnd: (
     assignmentId: number,
@@ -55,14 +57,19 @@ interface TimelineRowProps {
   readOnly?: boolean;
 }
 
+interface DateRange {
+  start_date: string;
+  end_date: string;
+}
+
 function computeBarPositionMonthly(
-  assignment: TimelineAssignment,
+  item: DateRange,
   months: MonthDef[],
 ): { left: number; width: number } | null {
   if (months.length === 0) return null;
 
-  const aStart = parseISO(assignment.start_date);
-  const aEnd = parseISO(assignment.end_date);
+  const aStart = parseISO(item.start_date);
+  const aEnd = parseISO(item.end_date);
 
   const firstMonthStart = startOfMonth(
     new Date(months[0].year, months[0].month - 1, 1),
@@ -83,20 +90,20 @@ function computeBarPositionMonthly(
   const leftDays = differenceInCalendarDays(visibleStart, firstMonthStart);
   const spanDays = differenceInCalendarDays(visibleEnd, visibleStart) + 1;
 
-  const left = (leftDays / totalDays) * totalWidth;
-  const width = (spanDays / totalDays) * totalWidth;
-
-  return { left, width };
+  return {
+    left: (leftDays / totalDays) * totalWidth,
+    width: (spanDays / totalDays) * totalWidth,
+  };
 }
 
 function computeBarPositionWeekly(
-  assignment: TimelineAssignment,
+  item: DateRange,
   allDays: DayInfo[],
 ): { left: number; width: number } | null {
   if (allDays.length === 0) return null;
 
-  const aStart = parseISO(assignment.start_date);
-  const aEnd = parseISO(assignment.end_date);
+  const aStart = parseISO(item.start_date);
+  const aEnd = parseISO(item.end_date);
 
   const firstDay = allDays[0].date;
   const lastDay = allDays[allDays.length - 1].date;
@@ -115,6 +122,30 @@ function computeBarPositionWeekly(
   };
 }
 
+const LEAVE_TYPE_LABELS: Record<string, string> = {
+  urlop: "Urlop",
+  chorobowe: "Chorobowe",
+  inne: "Nieobecność",
+};
+
+/** Find the first non-overlapping row for a bar and register it. */
+function assignRow(
+  pos: { left: number; width: number },
+  occupiedRows: { left: number; right: number; row: number }[],
+): number {
+  let row = 0;
+  const right = pos.left + pos.width;
+  while (
+    occupiedRows.some(
+      (o) => o.row === row && pos.left < o.right && right > o.left,
+    )
+  ) {
+    row++;
+  }
+  occupiedRows.push({ left: pos.left, right, row });
+  return row;
+}
+
 function getUtilColor(pct: number): string {
   if (pct > 100) return "text-red-600 font-bold";
   if (pct > 80) return "text-yellow-600";
@@ -122,18 +153,31 @@ function getUtilColor(pct: number): string {
   return "text-muted-foreground";
 }
 
-/** Compute weekly utilization % from assignments. */
+/** Compute weekly utilization % from assignments, accounting for vacations. */
 function computeWeeklyUtilization(
   week: WeekInfo,
   assignments: TimelineAssignment[],
+  vacations: VacationInfo[],
   holidayMap: Record<string, string>,
 ): number {
   let totalHours = 0;
   let workingDays = 0;
+  let vacationDays = 0;
 
   for (const day of week.days) {
     if (day.isWeekend || holidayMap[day.key]) continue;
     workingDays++;
+
+    const isOnVacation = vacations.some((v) => {
+      const vStart = parseISO(v.start_date);
+      const vEnd = parseISO(v.end_date);
+      return isWithinInterval(day.date, { start: vStart, end: vEnd });
+    });
+
+    if (isOnVacation) {
+      vacationDays++;
+      continue;
+    }
 
     for (const a of assignments) {
       const aStart = parseISO(a.start_date);
@@ -144,8 +188,9 @@ function computeWeeklyUtilization(
     }
   }
 
-  if (workingDays === 0) return 0;
-  const availableHours = workingDays * 8;
+  const effectiveWorkingDays = workingDays - vacationDays;
+  if (effectiveWorkingDays === 0) return 0;
+  const availableHours = effectiveWorkingDays * 8;
   return Math.round((totalHours / availableHours) * 100);
 }
 
@@ -154,6 +199,7 @@ export function TimelineRow({
   name,
   team,
   assignments,
+  vacations = [],
   utilization,
   months,
   weeks,
@@ -161,6 +207,7 @@ export function TimelineRow({
   viewMode,
   holidayMap,
   onAssignmentClick,
+  onVacationClick,
   onEmptyClick,
   onResizeEnd,
   isOdd,
@@ -191,37 +238,26 @@ export function TimelineRow({
     pxPerDay = totalDays > 0 ? totalWidth / totalDays : 1;
   }
 
-  // Compute overlapping assignments to stack them
-  const bars: {
-    assignment: TimelineAssignment;
-    left: number;
-    width: number;
-    row: number;
-  }[] = [];
-
+  // Compute overlapping assignments + vacations to stack them
   const occupiedRows: { left: number; right: number; row: number }[] = [];
 
-  for (const a of assignments) {
-    const pos = isWeekly
-      ? computeBarPositionWeekly(a, allDays)
-      : computeBarPositionMonthly(a, months);
-    if (!pos) continue;
+  const computePos = (item: DateRange) =>
+    isWeekly
+      ? computeBarPositionWeekly(item, allDays)
+      : computeBarPositionMonthly(item, months);
 
-    let row = 0;
-    while (
-      occupiedRows.some(
-        (o) =>
-          o.row === row && pos.left < o.right && pos.left + pos.width > o.left,
-      )
-    ) {
-      row++;
-    }
+  const bars = assignments.flatMap((assignment) => {
+    const pos = computePos(assignment);
+    return pos ? [{ assignment, ...pos, row: assignRow(pos, occupiedRows) }] : [];
+  });
 
-    occupiedRows.push({ left: pos.left, right: pos.left + pos.width, row });
-    bars.push({ assignment: a, ...pos, row });
-  }
+  const vacationBars = vacations.flatMap((vacation) => {
+    const pos = computePos(vacation);
+    return pos ? [{ vacation, ...pos, row: assignRow(pos, occupiedRows) }] : [];
+  });
 
-  const maxRows = bars.length > 0 ? Math.max(...bars.map((b) => b.row)) + 1 : 1;
+  const allBars = [...bars, ...vacationBars];
+  const maxRows = allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
   // Extra space for utilization row at top (16px)
   const utilRowHeight = 18;
   const rowHeight = Math.max(38, maxRows * 32 + 6 + utilRowHeight);
@@ -239,7 +275,7 @@ export function TimelineRow({
   // Per-period utilization for weekly view (computed client-side)
   const weekUtils = weeks.map((w) => ({
     key: `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`,
-    pct: computeWeeklyUtilization(w, assignments, holidayMap),
+    pct: computeWeeklyUtilization(w, assignments, vacations, holidayMap),
   }));
 
   return (
@@ -377,6 +413,42 @@ export function TimelineRow({
             />
           </div>
         ))}
+
+        {/* Vacation bars */}
+        {vacationBars.map((vbar, i) => {
+          const label = LEAVE_TYPE_LABELS[vbar.vacation.leave_type] ?? vbar.vacation.leave_type;
+          return (
+            <div
+              key={`vac-${i}`}
+              role="button"
+              tabIndex={0}
+              className="absolute top-1 flex cursor-pointer items-center overflow-hidden rounded bg-slate-400/80 text-xs text-white shadow-sm select-none dark:bg-slate-500/80"
+              style={{
+                top: vbar.row * 32 + 2 + utilRowHeight,
+                left: vbar.left,
+                width: Math.max(vbar.width, 20),
+                height: 28,
+              }}
+              title={label}
+              onClick={() => onVacationClick(vbar.vacation)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onVacationClick(vbar.vacation);
+                }
+              }}
+            >
+              {/* Striped accent on left edge */}
+              <div
+                className="h-full w-1.5 flex-shrink-0"
+                style={{
+                  backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)",
+                }}
+              />
+              <span className="truncate px-1.5 font-medium">{label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

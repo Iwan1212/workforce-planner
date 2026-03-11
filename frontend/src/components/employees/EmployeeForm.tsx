@@ -49,6 +49,7 @@ interface EmployeeFormProps {
     first_name: string;
     last_name: string;
     team: string | null;
+    email?: string | null;
   }) => void;
   employee?: Employee | null;
   isSubmitting?: boolean;
@@ -64,16 +65,19 @@ export function EmployeeForm({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [team, setTeam] = useState<string>("none");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (employee) {
       setFirstName(employee.first_name);
       setLastName(employee.last_name);
       setTeam(employee.team ?? "none");
+      setEmail(employee.email ?? "");
     } else {
       setFirstName("");
       setLastName("");
       setTeam("none");
+      setEmail("");
     }
   }, [employee, open]);
 
@@ -84,6 +88,7 @@ export function EmployeeForm({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       team: team === "none" ? null : team,
+      email: email.trim() || null,
     });
   };
 
@@ -113,6 +118,19 @@ export function EmployeeForm({
               onChange={(e) => setLastName(e.target.value)}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="jan.kowalski@firma.pl"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Email do synchronizacji urlopów z Calamari
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Zespół</Label>
