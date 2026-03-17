@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HexColorPicker } from "react-colorful";
 import { Pencil, Plus } from "lucide-react";
-import type { Project } from "@/api/projects";
+import type { ProjectFormProps } from "@/types/project";
 
 const COLOR_PALETTE = [
   "#EF4444",
@@ -47,14 +47,6 @@ function normalizeHexInput(value: string): string {
   let v = value.startsWith("#") ? value : `#${value}`;
   v = "#" + v.slice(1).replace(/[^0-9A-Fa-f]/g, "");
   return v.slice(0, 7).toUpperCase();
-}
-
-interface ProjectFormProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: { name: string; color: string }) => void;
-  project?: Project | null;
-  isSubmitting?: boolean;
 }
 
 export function ProjectForm({
@@ -141,15 +133,16 @@ export function ProjectForm({
                       ? "border-2 border-dashed border-foreground text-foreground"
                       : "border-2 border-dashed border-muted-foreground/50 text-muted-foreground/50 hover:border-foreground hover:text-foreground hover:scale-110"
                 }`}
-                style={
-                  isCustomColor
-                    ? { backgroundColor: color }
-                    : undefined
-                }
+                style={isCustomColor ? { backgroundColor: color } : undefined}
                 aria-label="Kolor niestandardowy"
               >
                 {isCustomColor ? (
-                  <Pencil className="h-3.5 w-3.5" style={{ color: getLuminance(color) > 0.55 ? "#1a1a1a" : "#ffffff" }} />
+                  <Pencil
+                    className="h-3.5 w-3.5"
+                    style={{
+                      color: getLuminance(color) > 0.55 ? "#1a1a1a" : "#ffffff",
+                    }}
+                  />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}

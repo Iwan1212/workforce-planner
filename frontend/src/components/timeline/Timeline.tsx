@@ -18,18 +18,11 @@ import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
 import { AssignmentModal } from "@/components/assignments/AssignmentModal";
-import {
-  updateAssignment,
-  type TimelineAssignment,
-  type VacationInfo,
-} from "@/api/assignments";
+import { updateAssignment } from "@/api/assignments";
+import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
 import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
-
-interface VacationRange {
-  start_date: string;
-  end_date: string;
-}
+import type { VacationRange } from "@/types/timeline";
 
 function calcUtilizationInRange(
   assignments: TimelineAssignment[],

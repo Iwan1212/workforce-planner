@@ -5,18 +5,8 @@ import {
   setToken,
   setRefreshToken,
 } from "@/api/client";
-import { getMe, login as loginApi, type UserResponse } from "@/api/auth";
-
-interface AuthState {
-  user: UserResponse | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  checkAuth: () => Promise<void>;
-  setUser: (user: UserResponse) => void;
-}
+import { getMe, login as loginApi } from "@/api/auth";
+import type { AuthState } from "@/types/auth";
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,

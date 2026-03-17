@@ -10,12 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { importEmployeesCsv, type ImportResult } from "@/api/employees";
-
-interface ImportCsvDialogProps {
-  open: boolean;
-  onClose: () => void;
-}
+import { importEmployeesCsv } from "@/api/employees";
+import type { ImportCsvDialogProps, ImportResult } from "@/types/employee";
 
 function parseCsvPreview(text: string): string[][] {
   const lines = text.split("\n").filter((l) => l.trim());

@@ -16,21 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Employee } from "@/api/employees";
 import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
-
-interface EmployeeFormProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: {
-    first_name: string;
-    last_name: string;
-    team: string | null;
-    email?: string | null;
-  }) => void;
-  employee?: Employee | null;
-  isSubmitting?: boolean;
-}
+import type { EmployeeFormProps } from "@/types/employee";
 
 export function EmployeeForm({
   open,

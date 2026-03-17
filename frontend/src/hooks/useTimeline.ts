@@ -12,24 +12,10 @@ import {
 import { pl } from "date-fns/locale";
 import { fetchTimeline } from "@/api/assignments";
 import { useTimelineStore } from "@/stores/timelineStore";
+import type { DayInfo, WeekInfo } from "@/types/timeline";
 
 const MONTHS_VISIBLE = 7;
 const WEEKS_VISIBLE = 6;
-
-export interface DayInfo {
-  date: Date;
-  key: string; // "yyyy-MM-dd"
-  dayOfWeek: number; // 1=Mon, ..., 7=Sun (ISO)
-  label: string; // "Pn", "Wt", etc.
-  isWeekend: boolean;
-}
-
-export interface WeekInfo {
-  weekNumber: number;
-  label: string;
-  days: DayInfo[];
-}
-
 const DAY_LABELS = ["Nd", "Pn", "Wt", "Śr", "Czw", "Pt", "Sb"];
 
 function generateWeeks(start: Date, count: number): WeekInfo[] {

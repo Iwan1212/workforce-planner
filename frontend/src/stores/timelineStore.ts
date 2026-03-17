@@ -7,31 +7,7 @@ import {
   addWeeks,
   subWeeks,
 } from "date-fns";
-
-export type ViewMode = "monthly" | "weekly";
-
-export interface UtilizationFilter {
-  dateFrom: string | null; // "yyyy-MM-dd"
-  dateTo: string | null;
-  minPct: number | null;
-  maxPct: number | null;
-}
-
-interface TimelineState {
-  viewMode: ViewMode;
-  startDate: Date;
-  selectedTeams: string[];
-  searchQuery: string;
-  utilizationFilter: UtilizationFilter | null;
-  setViewMode: (mode: ViewMode) => void;
-  setStartDate: (date: Date) => void;
-  setSelectedTeams: (teams: string[]) => void;
-  setSearchQuery: (query: string) => void;
-  setUtilizationFilter: (filter: UtilizationFilter | null) => void;
-  scrollForward: () => void;
-  scrollBack: () => void;
-  goToToday: () => void;
-}
+import type { ViewMode, TimelineState } from "@/types/timeline";
 
 function snapToMode(date: Date, mode: ViewMode): Date {
   return mode === "weekly"

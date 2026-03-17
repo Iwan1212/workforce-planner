@@ -6,14 +6,8 @@ import type {
   TimelineEmployee,
   TimelineAssignment,
   MonthUtilization,
-} from "@/api/assignments";
-
-interface EmployeeUtilizationPanelProps {
-  employee: TimelineEmployee;
-  months: { key: string; year: number; month: number }[];
-  onClose: () => void;
-  onEditAssignment: (assignment: TimelineAssignment) => void;
-}
+} from "@/types/assignment";
+import type { EmployeeUtilizationPanelProps } from "@/types/timeline";
 
 const MONTH_NAMES = [
   "",
@@ -44,9 +38,7 @@ function getStatusBadge(pct: number) {
     );
   if (pct > 0)
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 text-[10px]">
-        Niski
-      </Badge>
+      <Badge className="bg-yellow-100 text-yellow-800 text-[10px]">Niski</Badge>
     );
   return (
     <Badge variant="secondary" className="text-[10px]">

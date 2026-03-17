@@ -1,24 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   createProject,
   deleteProject,
   fetchProjects,
   updateProject,
-  type Project,
 } from "@/api/projects";
+import type { Project } from "@/types/project";
 import { ProjectForm } from "./ProjectForm";
 
 export function ProjectList() {
@@ -27,12 +22,7 @@ export function ProjectList() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects", debouncedSearch],
@@ -100,36 +90,28 @@ export function ProjectList() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Projekty</h2>
-        <Button
-          onClick={() => {
-            setEditingProject(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Dodaj projekt
-        </Button>
-      </div>
+      <PageHeader
+        title="Projekty"
+        action={
+          <Button
+            onClick={() => {
+              setEditingProject(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Dodaj projekt
+          </Button>
+        }
+      />
 
-      <div className="relative mb-4 w-64">
-        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <div className="mb-4">
+        <SearchInput
+          className="w-64"
           placeholder="Szukaj projektu..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-8 pl-8 pr-8 text-sm"
+          onChange={setSearchQuery}
         />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label="Wyczyść wyszukiwanie"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
 
       {isLoading ? (
@@ -201,36 +183,27 @@ export function ProjectList() {
         isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
 
-      {/* Delete confirmation dialog */}
-      <Dialog
+      <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuń projekt</DialogTitle>
-            <DialogDescription>
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Usuń projekt"
+        description={
+          deleteTarget ? (
+            <>
               Czy na pewno chcesz usunąć projekt{" "}
-              <strong>{deleteTarget?.name}</strong>? Przyszłe assignmenty
-              zostaną usunięte, a bieżące skrócone do dzisiaj.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={deleteMutation.isPending}
-            >
-              Usuń
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <strong>{deleteTarget.name}</strong>? Przyszłe assignmenty zostaną
+              usunięte, a bieżące skrócone do dzisiaj.
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+        isPending={deleteMutation.isPending}
+        contentClassName="max-w-md"
+      />
     </div>
   );
 }

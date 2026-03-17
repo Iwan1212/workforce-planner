@@ -1,27 +1,22 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TeamFilterChips } from "@/components/common/TeamFilterChips";
 import {
   createEmployee,
   deleteEmployee,
   fetchEmployees,
   updateEmployee,
-  type Employee,
 } from "@/api/employees";
-import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
+import type { Employee } from "@/types/employee";
+import { TEAM_LABELS } from "@/lib/constants";
 import { EmployeeForm } from "./EmployeeForm";
 
 export function EmployeeList() {
@@ -42,6 +37,7 @@ export function EmployeeList() {
   };
 
   const noneSelected = selectedTeams.length === 0;
+  const selectAllTeams = () => setSelectedTeams([]);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees", selectedTeams, debouncedSearch],
@@ -123,66 +119,33 @@ export function EmployeeList() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Pracownicy</h2>
-        <Button
-          onClick={() => {
-            setEditingEmployee(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Dodaj pracownika
-        </Button>
-      </div>
+      <PageHeader
+        title="Pracownicy"
+        action={
+          <Button
+            onClick={() => {
+              setEditingEmployee(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Dodaj pracownika
+          </Button>
+        }
+      />
 
       <div className="mb-4 flex items-center gap-3">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Szukaj pracownika..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-8 pr-8 text-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Wyczyść wyszukiwanie"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            onClick={() => setSelectedTeams([])}
-            className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-              noneSelected
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
-            aria-pressed={noneSelected}
-          >
-            Wszystkie
-          </button>
-          {ALL_TEAMS.map((team) => (
-            <button
-              key={team}
-              onClick={() => toggleTeam(team)}
-              className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-                selectedTeams.includes(team)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-              aria-pressed={selectedTeams.includes(team)}
-            >
-              {TEAM_LABELS[team] ?? team}
-            </button>
-          ))}
-        </div>
+        <SearchInput
+          className="w-64"
+          placeholder="Szukaj pracownika..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+        <TeamFilterChips
+          selectedTeams={selectedTeams}
+          onToggleTeam={toggleTeam}
+          onSelectAll={selectAllTeams}
+        />
       </div>
 
       {isLoading ? (
@@ -269,39 +232,30 @@ export function EmployeeList() {
         isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
 
-      {/* Delete confirmation dialog */}
-      <Dialog
+      <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuń pracownika</DialogTitle>
-            <DialogDescription>
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Usuń pracownika"
+        description={
+          deleteTarget ? (
+            <>
               Czy na pewno chcesz usunąć pracownika{" "}
               <strong>
-                {deleteTarget?.last_name} {deleteTarget?.first_name}
+                {deleteTarget.last_name} {deleteTarget.first_name}
               </strong>
               ? Przyszłe assignmenty zostaną usunięte, a bieżące skrócone do
               dzisiaj.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={deleteMutation.isPending}
-            >
-              Usuń
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+        isPending={deleteMutation.isPending}
+        contentClassName="max-w-md"
+      />
     </div>
   );
 }
