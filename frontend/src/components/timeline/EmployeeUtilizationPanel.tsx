@@ -2,11 +2,7 @@ import { useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type {
-  TimelineEmployee,
-  TimelineAssignment,
-  MonthUtilization,
-} from "@/types/assignment";
+import type { TimelineAssignment, MonthUtilization } from "@/types/assignment";
 import type { EmployeeUtilizationPanelProps } from "@/types/timeline";
 
 const MONTH_NAMES = [
