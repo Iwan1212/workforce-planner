@@ -4,12 +4,16 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { addDays, format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 import { CircleHelp, StickyNote } from "lucide-react";
 import type { TimelineBarProps } from "@/types/timeline";
+import { getContrastTextClass } from "@/lib/utils";
 
 export function TimelineBar({
   assignment,
@@ -31,6 +35,10 @@ export function TimelineBar({
 
   const [resizing, setResizing] = useState<"left" | "right" | null>(null);
   const [resizeDelta, setResizeDelta] = useState(0);
+  const [resizeTooltipPos, setResizeTooltipPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const startXRef = useRef(0);
   const justResizedRef = useRef(false);
 
@@ -67,11 +75,16 @@ export function TimelineBar({
       e.preventDefault();
       setResizing(edge);
       setResizeDelta(0);
+      setResizeTooltipPos({ x: e.clientX, y: e.clientY });
       startXRef.current = e.clientX;
 
       const handleMove = (moveEvent: globalThis.MouseEvent) => {
         const dx = moveEvent.clientX - startXRef.current;
         setResizeDelta(dx);
+        setResizeTooltipPos({
+          x: moveEvent.clientX,
+          y: moveEvent.clientY,
+        });
       };
 
       const cleanup = () => {
@@ -84,6 +97,7 @@ export function TimelineBar({
         const dx = upEvent.clientX - startXRef.current;
         setResizing(null);
         setResizeDelta(0);
+        setResizeTooltipPos(null);
         cleanup();
 
         // Only trigger if moved at least half a day
@@ -110,18 +124,9 @@ export function TimelineBar({
       ? `${assignment.allocation_value}% (${assignment.daily_hours}h/d)`
       : `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`;
 
-  // Compute text color based on background luminance for WCAG contrast
-  const textColorClass = (() => {
-    if (assignment.is_tentative) return "";
-    const hex = assignment.project_color.replace("#", "");
-    if (hex.length !== 6) return "text-white";
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    // Relative luminance formula
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.55 ? "text-gray-900" : "text-white";
-  })();
+  const textColorClass = assignment.is_tentative
+    ? ""
+    : getContrastTextClass(assignment.project_color);
 
   // Compute adjusted position during resize
   let adjustedLeft = left;
@@ -156,15 +161,27 @@ export function TimelineBar({
         zIndex: isDragging || resizing ? 50 : 1,
       };
 
-  // Show resize tooltip
   const daysDelta = Math.round(resizeDelta / pxPerDay);
-  const showTooltip = resizing && daysDelta !== 0;
+  const resizeTooltipDate = useMemo(() => {
+    if (!resizing) return null;
+    if (resizing === "left") {
+      const start = parseISO(assignment.start_date);
+      return format(addDays(start, daysDelta), "d.MM.yyyy", { locale: pl });
+    }
+    const end = parseISO(assignment.end_date);
+    return format(addDays(end, daysDelta), "d.MM.yyyy", { locale: pl });
+  }, [resizing, assignment.start_date, assignment.end_date, daysDelta]);
+  const showTooltip = resizing !== null;
 
   return (
     <div
       ref={setNodeRef}
       className={`absolute top-1 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
-        readOnly ? "cursor-default" : resizing ? "" : "cursor-grab transition-opacity hover:opacity-90"
+        readOnly
+          ? "cursor-default"
+          : resizing
+            ? ""
+            : "cursor-grab transition-opacity hover:opacity-90"
       }`}
       style={style}
       onClick={(e) => {
@@ -183,7 +200,11 @@ export function TimelineBar({
       )}
 
       {/* Content - drag handle in the middle */}
-      <span className="flex min-w-0 flex-1 items-center gap-1 truncate px-2" {...listeners} {...attributes}>
+      <span
+        className="flex min-w-0 flex-1 items-center gap-1 truncate px-2"
+        {...listeners}
+        {...attributes}
+      >
         <span className="truncate">
           {showDailyHours
             ? `${assignment.daily_hours}h/d`
@@ -212,13 +233,23 @@ export function TimelineBar({
         />
       )}
 
-      {/* Resize tooltip */}
-      {showTooltip && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] text-background">
-          {daysDelta > 0 ? "+" : ""}
-          {daysDelta}d
-        </div>
-      )}
+      {showTooltip &&
+        resizeTooltipDate &&
+        resizeTooltipPos &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[9999] whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background shadow-lg"
+            style={{
+              left: resizeTooltipPos.x,
+              top: resizeTooltipPos.y - 8,
+              transform: "translate(-50%, -100%)",
+            }}
+          >
+            {resizing === "left" ? "Od: " : "Do: "}
+            {resizeTooltipDate}
+          </div>,
+          document.body,
+        )}
 
       {/* Note tooltip via portal - renders outside overflow-hidden */}
       {noteTooltip &&

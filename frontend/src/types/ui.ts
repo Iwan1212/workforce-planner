@@ -49,6 +49,7 @@ export interface DataTableProps<T> {
   getRowKey: (row: T) => string | number;
   renderActions: (row: T) => ReactNode;
   isLoading?: boolean;
+  skeletonRowCount?: number;
   emptyContent?: ReactNode;
   className?: string;
 }

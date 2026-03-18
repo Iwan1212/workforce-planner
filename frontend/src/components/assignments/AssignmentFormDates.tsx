@@ -25,6 +25,7 @@ export function AssignmentFormDates({
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}
+          min={startDate || undefined}
           required
         />
       </div>
