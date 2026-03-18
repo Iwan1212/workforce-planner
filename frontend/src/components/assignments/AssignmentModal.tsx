@@ -240,7 +240,7 @@ export function AssignmentModal({
               <Input
                 type="number"
                 min="1"
-                step="1"
+                step={allocationType === "total_hours" ? "any" : "1"}
                 value={allocationValue}
                 onChange={(e) => setAllocationValue(e.target.value)}
                 required

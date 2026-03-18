@@ -129,7 +129,7 @@ workforce-planner/
 User: id, email, password_hash, full_name, role(admin|user), is_active, failed_login_attempts, locked_until, created_at
 Employee: id, first_name, last_name, team(enum: nullable), is_deleted, created_at
 Project: id, name(unique), color, is_deleted, created_at
-Assignment: id, employee_id(FK), project_id(FK), start_date, end_date, allocation_type(enum: percentage|monthly_hours), allocation_value(Decimal), note, created_at, updated_at
+Assignment: id, employee_id(FK), project_id(FK), start_date, end_date, allocation_type(enum: percentage|monthly_hours|total_hours), allocation_value(Decimal), note, created_at, updated_at
 ```
 
 ## Kluczowe reguły biznesowe

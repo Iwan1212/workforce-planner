@@ -37,10 +37,9 @@ def calculate_daily_hours(
         allocation_type == AllocationType.total_hours.value
         or allocation_type == AllocationType.total_hours
     ):
-        if start_date and end_date:
-            total_wd = get_working_days(start_date, end_date)
-        else:
-            total_wd = get_working_days_in_month(year, month)
+        if not start_date or not end_date:
+            raise ValueError("start_date and end_date are required for total_hours")
+        total_wd = get_working_days(start_date, end_date)
         return (value / Decimal(str(total_wd))) if total_wd > 0 else Decimal("0")
 
     # monthly_hours
