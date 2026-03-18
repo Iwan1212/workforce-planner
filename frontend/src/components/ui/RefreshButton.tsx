@@ -1,11 +1,7 @@
 import { RefreshCw } from "lucide-react";
-import { Button, type ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-export interface RefreshButtonProps extends Omit<ButtonProps, "children"> {
-  label: string;
-  isPending?: boolean;
-}
+import type { RefreshButtonProps } from "@/types/ui";
 
 export function RefreshButton({
   label,

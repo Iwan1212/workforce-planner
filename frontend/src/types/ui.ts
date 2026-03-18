@@ -1,4 +1,11 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import type { Button } from "@/components/ui/button";
+
+export interface RefreshButtonProps
+  extends Omit<ComponentProps<typeof Button>, "children"> {
+  label: string;
+  isPending?: boolean;
+}
 
 export interface SearchInputProps {
   value: string;
