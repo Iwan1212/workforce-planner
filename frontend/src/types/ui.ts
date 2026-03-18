@@ -35,3 +35,20 @@ export interface TeamFilterChipsProps {
   onSelectAll: () => void;
   className?: string;
 }
+
+export interface DataTableColumn<T> {
+  id: string;
+  header: string;
+  align?: "left" | "right";
+  cell: (row: T) => ReactNode;
+}
+
+export interface DataTableProps<T> {
+  data: T[];
+  columns: DataTableColumn<T>[];
+  getRowKey: (row: T) => string | number;
+  renderActions: (row: T) => ReactNode;
+  isLoading?: boolean;
+  emptyContent?: ReactNode;
+  className?: string;
+}

@@ -19,3 +19,15 @@ export interface UserUpdateData {
   role?: string;
   password?: string;
 }
+
+export type UserFormMode = "add" | "edit";
+
+export interface UserFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  mode: UserFormMode;
+  user?: UserListItem | null;
+  onSubmit: (data: UserCreateData | UserUpdateData) => void;
+  isSubmitting: boolean;
+  currentUserId?: number | null;
+}
