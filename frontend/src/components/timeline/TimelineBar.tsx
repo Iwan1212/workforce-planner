@@ -9,23 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { CircleHelp, StickyNote } from "lucide-react";
-import type { TimelineAssignment } from "@/api/assignments";
-
-interface TimelineBarProps {
-  assignment: TimelineAssignment;
-  employeeId: number;
-  left: number;
-  width: number;
-  onClick: () => void;
-  onResizeEnd: (
-    assignmentId: number,
-    edge: "left" | "right",
-    deltaPx: number,
-  ) => void;
-  pxPerDay: number;
-  showDailyHours?: boolean;
-  readOnly?: boolean;
-}
+import type { TimelineBarProps } from "@/types/timeline";
 
 export function TimelineBar({
   assignment,

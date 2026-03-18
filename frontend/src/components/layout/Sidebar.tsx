@@ -2,19 +2,9 @@ import { useState } from "react";
 import { Calendar, LogOut, Settings, UserCog, Users, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuthStore } from "@/stores/authStore";
-
-interface SidebarProps {
-  currentPath: string;
-  onNavigate: (path: string) => void;
-}
+import type { SidebarProps } from "@/types/layout";
 
 const NAV_ITEMS = [
   { path: "/", label: "Timeline", icon: Calendar, viewerAllowed: true },
@@ -95,22 +85,14 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
         </Button>
       </div>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Wylogowanie</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Czy na pewno chcesz się wylogować?
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Anuluj
-            </Button>
-            <Button onClick={logout}>Wyloguj</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Wylogowanie"
+        description="Czy na pewno chcesz się wylogować?"
+        confirmLabel="Wyloguj"
+        onConfirm={logout}
+      />
     </aside>
   );
 }

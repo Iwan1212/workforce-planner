@@ -1,19 +1,4 @@
-import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
-import type { ViewMode } from "@/stores/timelineStore";
-
-interface MonthInfo {
-  label: string;
-  key: string;
-}
-
-interface TimelineHeaderProps {
-  viewMode: ViewMode;
-  months: MonthInfo[];
-  workingDaysPerMonth: Record<string, number>;
-  weeks: WeekInfo[];
-  allDays: DayInfo[];
-  holidayMap: Record<string, string>;
-}
+import type { TimelineHeaderProps } from "@/types/timeline";
 
 const MONTH_WIDTH = 200;
 const DAY_WIDTH = 40;

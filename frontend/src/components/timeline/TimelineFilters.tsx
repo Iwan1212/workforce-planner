@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, X, Percent } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  useTimelineStore,
-  type ViewMode,
-  type UtilizationFilter,
-} from "@/stores/timelineStore";
-import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { TeamFilterChips } from "@/components/common/TeamFilterChips";
+import { useTimelineStore } from "@/stores/timelineStore";
+import type { ViewMode, UtilizationFilter } from "@/types/timeline";
 
 export function TimelineFilters() {
   const {
@@ -38,7 +36,7 @@ export function TimelineFilters() {
     }
   };
 
-  const noneSelected = selectedTeams.length === 0;
+  const selectAllTeams = () => setSelectedTeams([]);
 
   const isFilterActive =
     utilizationFilter !== null &&
@@ -117,52 +115,18 @@ export function TimelineFilters() {
 
       {/* Row 2: Search + Team filter + Utilization filter button */}
       <div className="flex items-center gap-3">
-        <div className="relative w-56">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Szukaj pracownika..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-8 pr-8 text-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Wyczyść wyszukiwanie"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          className="w-56"
+          placeholder="Szukaj pracownika..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
 
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            onClick={() => setSelectedTeams([])}
-            className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-              noneSelected
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
-            aria-pressed={noneSelected}
-          >
-            Wszystkie
-          </button>
-          {ALL_TEAMS.map((team) => (
-            <button
-              key={team}
-              onClick={() => toggleTeam(team)}
-              className={`rounded-md border px-2 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-                selectedTeams.includes(team)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-              aria-pressed={selectedTeams.includes(team)}
-            >
-              {TEAM_LABELS[team] ?? team}
-            </button>
-          ))}
-        </div>
+        <TeamFilterChips
+          selectedTeams={selectedTeams}
+          onToggleTeam={toggleTeam}
+          onSelectAll={selectAllTeams}
+        />
 
         {/* Divider */}
         <div className="h-5 w-px bg-border" />

@@ -1,18 +1,5 @@
 import { apiFetch } from "./client";
-
-interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
-
-export interface UserResponse {
-  id: number;
-  email: string;
-  full_name: string;
-  role: string;
-  theme: "light" | "dark";
-}
+import type { TokenResponse, UserResponse } from "@/types/auth";
 
 export async function login(
   email: string,

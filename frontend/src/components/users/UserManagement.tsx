@@ -1,11 +1,14 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Dialog,
   DialogContent,
@@ -20,46 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createUser, deleteUser, fetchUsers, updateUser, type UserListItem } from "@/api/users";
+import { createUser, deleteUser, fetchUsers, updateUser } from "@/api/users";
+import type { UserListItem } from "@/types/user";
 import { useAuthStore } from "@/stores/authStore";
-
-function PasswordInput({
-  id,
-  value,
-  onChange,
-  placeholder,
-  required,
-}: {
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  required?: boolean;
-}) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <Input
-        id={id}
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        minLength={8}
-        className="pr-9"
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        onClick={() => setShow((s) => !s)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-      >
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
-    </div>
-  );
-}
 
 export function UserManagement() {
   const queryClient = useQueryClient();
@@ -165,13 +131,15 @@ export function UserManagement() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Użytkownicy</h2>
-        <Button onClick={handleOpenAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Dodaj użytkownika
-        </Button>
-      </div>
+      <PageHeader
+        title="Użytkownicy"
+        action={
+          <Button onClick={handleOpenAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            Dodaj użytkownika
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Ładowanie...</p>
@@ -278,9 +246,10 @@ export function UserManagement() {
               <PasswordInput
                 id="add-user-password"
                 value={addPassword}
-                onChange={setAddPassword}
+                onChange={(e) => setAddPassword(e.target.value)}
                 placeholder="Minimum 8 znaków"
                 required
+                minLength={8}
               />
             </div>
             <div className="space-y-2">
@@ -288,9 +257,10 @@ export function UserManagement() {
               <PasswordInput
                 id="add-user-password-confirm"
                 value={addPasswordConfirm}
-                onChange={setAddPasswordConfirm}
+                onChange={(e) => setAddPasswordConfirm(e.target.value)}
                 placeholder="Powtórz hasło"
                 required
+                minLength={8}
               />
               {addPasswordConfirm && addPassword !== addPasswordConfirm && (
                 <p className="text-xs text-destructive">Hasła nie są identyczne</p>
@@ -372,7 +342,7 @@ export function UserManagement() {
               <PasswordInput
                 id="edit-user-password"
                 value={editPassword}
-                onChange={setEditPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
                 placeholder="Pozostaw puste, aby nie zmieniać"
               />
             </div>
@@ -381,7 +351,7 @@ export function UserManagement() {
               <PasswordInput
                 id="edit-user-password-confirm"
                 value={editPasswordConfirm}
-                onChange={setEditPasswordConfirm}
+                onChange={(e) => setEditPasswordConfirm(e.target.value)}
                 placeholder="Powtórz nowe hasło"
               />
               {editPasswordConfirm && editPassword !== editPasswordConfirm && (
@@ -406,31 +376,27 @@ export function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Usuń użytkownika</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Czy na pewno chcesz trwale usunąć użytkownika{" "}
-            <span className="font-medium text-foreground">{deleteTarget?.full_name}</span>?
-            Osoba ta zostanie wylogowana i straci dostęp do aplikacji.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-            >
-              {deleteMutation.isPending ? "Usuwanie..." : "Usuń"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Usuń użytkownika"
+        description={
+          deleteTarget ? (
+            <>
+              Czy na pewno chcesz trwale usunąć użytkownika{" "}
+              <span className="font-medium text-foreground">{deleteTarget.full_name}</span>?
+              Osoba ta zostanie wylogowana i straci dostęp do aplikacji.
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Usuń"
+        pendingLabel="Usuwanie..."
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

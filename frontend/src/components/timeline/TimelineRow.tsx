@@ -9,47 +9,17 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import type { TimelineAssignment, MonthUtilization, VacationInfo } from "@/api/assignments";
-import type { DayInfo, WeekInfo } from "@/hooks/useTimeline";
-import type { ViewMode } from "@/stores/timelineStore";
+import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
+import type {
+  TimelineRowProps,
+  MonthDef,
+  DateRange,
+  DayInfo,
+  WeekInfo,
+} from "@/types/timeline";
 import { TEAM_LABELS, LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
 import { TimelineBar } from "./TimelineBar";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
-
-interface MonthDef {
-  key: string;
-  year: number;
-  month: number;
-}
-
-interface TimelineRowProps {
-  employeeId: number;
-  name: string;
-  team: string | null;
-  assignments: TimelineAssignment[];
-  vacations?: VacationInfo[];
-  utilization: Record<string, MonthUtilization>;
-  months: MonthDef[];
-  weeks: WeekInfo[];
-  allDays: DayInfo[];
-  viewMode: ViewMode;
-  onAssignmentClick: (assignment: TimelineAssignment) => void;
-  onVacationClick: (vacation: VacationInfo) => void;
-  onEmptyClick: (employeeId: number, monthKey: string) => void;
-  onResizeEnd: (
-    assignmentId: number,
-    edge: "left" | "right",
-    deltaPx: number,
-  ) => void;
-  holidayMap: Record<string, string>;
-  isOdd: boolean;
-  readOnly?: boolean;
-}
-
-interface DateRange {
-  start_date: string;
-  end_date: string;
-}
 
 function computeBarPositionMonthly(
   item: DateRange,
@@ -223,7 +193,9 @@ export function TimelineRow({
 
   const bars = assignments.flatMap((assignment) => {
     const pos = computePos(assignment);
-    return pos ? [{ assignment, ...pos, row: assignRow(pos, occupiedRows) }] : [];
+    return pos
+      ? [{ assignment, ...pos, row: assignRow(pos, occupiedRows) }]
+      : [];
   });
 
   const vacationBars = vacations.flatMap((vacation) => {
@@ -232,7 +204,8 @@ export function TimelineRow({
   });
 
   const allBars = [...bars, ...vacationBars];
-  const maxRows = allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
+  const maxRows =
+    allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
   // Extra space for utilization row at top (16px)
   const utilRowHeight = 18;
   const rowHeight = Math.max(38, maxRows * 32 + 6 + utilRowHeight);
@@ -324,7 +297,9 @@ export function TimelineRow({
                   key={day.key}
                   role={readOnly ? undefined : "button"}
                   tabIndex={readOnly ? undefined : 0}
-                  aria-label={readOnly ? undefined : `Dodaj assignment ${day.key}`}
+                  aria-label={
+                    readOnly ? undefined : `Dodaj assignment ${day.key}`
+                  }
                   className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"} ${
                     day.isWeekend || isHoliday ? "bg-muted/40" : ""
                   }`}
@@ -335,13 +310,21 @@ export function TimelineRow({
                     height: `calc(100% - ${utilRowHeight}px)`,
                   }}
                   title={holidayMap[day.key]}
-                  onClick={readOnly ? undefined : () => onEmptyClick(employeeId, day.key.slice(0, 7))}
-                  onKeyDown={readOnly ? undefined : (e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onEmptyClick(employeeId, day.key.slice(0, 7));
-                    }
-                  }}
+                  onClick={
+                    readOnly
+                      ? undefined
+                      : () => onEmptyClick(employeeId, day.key.slice(0, 7))
+                  }
+                  onKeyDown={
+                    readOnly
+                      ? undefined
+                      : (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onEmptyClick(employeeId, day.key.slice(0, 7));
+                          }
+                        }
+                  }
                 />
               );
             })
@@ -358,13 +341,19 @@ export function TimelineRow({
                   top: utilRowHeight,
                   height: `calc(100% - ${utilRowHeight}px)`,
                 }}
-                onClick={readOnly ? undefined : () => onEmptyClick(employeeId, m.key)}
-                onKeyDown={readOnly ? undefined : (e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onEmptyClick(employeeId, m.key);
-                  }
-                }}
+                onClick={
+                  readOnly ? undefined : () => onEmptyClick(employeeId, m.key)
+                }
+                onKeyDown={
+                  readOnly
+                    ? undefined
+                    : (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onEmptyClick(employeeId, m.key);
+                        }
+                      }
+                }
               />
             ))}
 
@@ -391,7 +380,9 @@ export function TimelineRow({
 
         {/* Vacation bars */}
         {vacationBars.map((vbar, i) => {
-          const label = LEAVE_TYPE_LABELS[vbar.vacation.leave_type] ?? vbar.vacation.leave_type;
+          const label =
+            LEAVE_TYPE_LABELS[vbar.vacation.leave_type] ??
+            vbar.vacation.leave_type;
           return (
             <div
               key={`vac-${i}`}
@@ -417,7 +408,8 @@ export function TimelineRow({
               <div
                 className="h-full w-1.5 flex-shrink-0"
                 style={{
-                  backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)",
+                  backgroundImage:
+                    "repeating-linear-gradient(135deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)",
                 }}
               />
               <span className="truncate px-1.5 font-medium">{label}</span>

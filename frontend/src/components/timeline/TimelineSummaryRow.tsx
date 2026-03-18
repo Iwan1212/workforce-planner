@@ -7,25 +7,9 @@ import {
   eachDayOfInterval,
   format,
 } from "date-fns";
-import type { TimelineEmployee } from "@/api/assignments";
-import type { DayInfo } from "@/hooks/useTimeline";
-import type { ViewMode } from "@/stores/timelineStore";
+import type { TimelineSummaryRowProps, DaySummary } from "@/types/timeline";
 import { getUtilColor } from "@/lib/constants";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
-
-interface TimelineSummaryRowProps {
-  employees: TimelineEmployee[];
-  viewMode: ViewMode;
-  months: { key: string; year: number; month: number }[];
-  allDays: DayInfo[];
-  holidayMap: Record<string, string>;
-}
-
-interface DaySummary {
-  totalHours: number;
-  employeeCount: number;
-  ftePct: number;
-}
 
 export function TimelineSummaryRow({
   employees,
@@ -65,7 +49,11 @@ export function TimelineSummaryRow({
           ? Math.round((totalHours / availableHours) * 100)
           : 0;
 
-      map.set(day.key, { totalHours: Math.round(totalHours * 10) / 10, employeeCount: activeEmployees, ftePct });
+      map.set(day.key, {
+        totalHours: Math.round(totalHours * 10) / 10,
+        employeeCount: activeEmployees,
+        ftePct,
+      });
     }
 
     return map;
@@ -149,7 +137,9 @@ export function TimelineSummaryRow({
                     <span className="text-[9px] text-muted-foreground">—</span>
                   ) : (
                     <>
-                      <span className={`text-[9px] ${getUtilColor(summary?.ftePct ?? 0)}`}>
+                      <span
+                        className={`text-[9px] ${getUtilColor(summary?.ftePct ?? 0)}`}
+                      >
                         {summary?.ftePct ?? 0}%
                       </span>
                     </>
@@ -165,7 +155,9 @@ export function TimelineSummaryRow({
                   className="flex items-center justify-center border-r"
                   style={{ width: MONTH_WIDTH, minHeight: 28 }}
                 >
-                  <span className={`text-xs ${getUtilColor(summary?.ftePct ?? 0)}`}>
+                  <span
+                    className={`text-xs ${getUtilColor(summary?.ftePct ?? 0)}`}
+                  >
                     {summary?.totalHours ?? 0}h / {summary?.ftePct ?? 0}%
                   </span>
                 </div>

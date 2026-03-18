@@ -1,10 +1,5 @@
 import { apiFetch } from "./client";
-
-export interface CalamariConfig {
-  subdomain: string | null;
-  is_configured: boolean;
-  last_synced_at: string | null;
-}
+import type { CalamariConfig } from "@/types/settings";
 
 export function fetchCalamariConfig(): Promise<CalamariConfig> {
   return apiFetch<CalamariConfig>("/api/settings/calamari");

@@ -24,16 +24,8 @@ import {
   createAssignment,
   updateAssignment,
   deleteAssignment,
-  type TimelineAssignment,
 } from "@/api/assignments";
-
-interface AssignmentModalProps {
-  open: boolean;
-  onClose: () => void;
-  assignment?: TimelineAssignment | null;
-  defaultEmployeeId?: number | null;
-  defaultStartDate?: string | null;
-}
+import type { AssignmentModalProps } from "@/types/assignment";
 
 export function AssignmentModal({
   open,

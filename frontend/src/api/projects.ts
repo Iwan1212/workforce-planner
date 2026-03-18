@@ -1,24 +1,6 @@
 import { apiFetch } from "./client";
-
-export interface Project {
-  id: number;
-  name: string;
-  color: string;
-  is_deleted: boolean;
-  created_at: string;
-}
-
-export interface ProjectCreateData {
-  name: string;
-  color: string;
-}
-
-export interface DeleteResponse {
-  deleted?: boolean;
-  has_active_assignments?: boolean;
-  active_assignments_count?: number;
-  message?: string;
-}
+import type { Project, ProjectCreateData } from "@/types/project";
+import type { DeleteResponse } from "@/types/common";
 
 export function fetchProjects(search?: string): Promise<Project[]> {
   const qs = search ? `?search=${encodeURIComponent(search)}` : "";

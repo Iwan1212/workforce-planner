@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/layout/PageHeader";
+import type { ThemeCardProps } from "@/types/settings";
 import { updateTheme } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -34,9 +36,7 @@ export function SettingsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex min-h-9 items-center justify-between">
-        <h2 className="text-2xl font-bold">Ustawienia</h2>
-      </div>
+      <PageHeader title="Ustawienia" />
 
       <section className="max-w-2xl">
         <p className="mb-1 text-sm font-semibold text-foreground">Wygląd</p>
@@ -201,14 +201,6 @@ function CalamariSection() {
       )}
     </>
   );
-}
-
-interface ThemeCardProps {
-  theme: "light" | "dark";
-  label: string;
-  selected: boolean;
-  disabled: boolean;
-  onSelect: (theme: "light" | "dark") => void;
 }
 
 function ThemeCard({ theme, label, selected, disabled, onSelect }: ThemeCardProps) {

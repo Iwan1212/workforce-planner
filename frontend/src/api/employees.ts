@@ -1,28 +1,6 @@
 import { apiFetch } from "./client";
-
-export interface Employee {
-  id: number;
-  first_name: string;
-  last_name: string;
-  team: string | null;
-  email: string | null;
-  is_deleted: boolean;
-  created_at: string;
-}
-
-export interface EmployeeCreateData {
-  first_name: string;
-  last_name: string;
-  team: string | null;
-  email?: string | null;
-}
-
-export interface DeleteResponse {
-  deleted?: boolean;
-  has_active_assignments?: boolean;
-  active_assignments_count?: number;
-  message?: string;
-}
+import type { Employee, EmployeeCreateData, ImportResult } from "@/types/employee";
+import type { DeleteResponse } from "@/types/common";
 
 export function fetchEmployees(teams?: string[], search?: string): Promise<Employee[]> {
   const params = new URLSearchParams();
@@ -57,12 +35,6 @@ export function deleteEmployee(
   return apiFetch<DeleteResponse>(`/api/employees/${id}${params}`, {
     method: "DELETE",
   });
-}
-
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-  errors: { row: number; detail: string }[];
 }
 
 export function importEmployeesCsv(file: File): Promise<ImportResult> {

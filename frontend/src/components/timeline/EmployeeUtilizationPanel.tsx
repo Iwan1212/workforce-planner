@@ -2,18 +2,8 @@ import { useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type {
-  TimelineEmployee,
-  TimelineAssignment,
-  MonthUtilization,
-} from "@/api/assignments";
-
-interface EmployeeUtilizationPanelProps {
-  employee: TimelineEmployee;
-  months: { key: string; year: number; month: number }[];
-  onClose: () => void;
-  onEditAssignment: (assignment: TimelineAssignment) => void;
-}
+import type { TimelineAssignment, MonthUtilization } from "@/types/assignment";
+import type { EmployeeUtilizationPanelProps } from "@/types/timeline";
 
 const MONTH_NAMES = [
   "",
@@ -44,9 +34,7 @@ function getStatusBadge(pct: number) {
     );
   if (pct > 0)
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 text-[10px]">
-        Niski
-      </Badge>
+      <Badge className="bg-yellow-100 text-yellow-800 text-[10px]">Niski</Badge>
     );
   return (
     <Badge variant="secondary" className="text-[10px]">

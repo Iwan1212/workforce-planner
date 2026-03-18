@@ -1,7 +1,4 @@
-interface UtilizationBadgeProps {
-  percentage: number;
-  isOverbooked: boolean;
-}
+import type { UtilizationBadgeProps } from "@/types/timeline";
 
 export function UtilizationBadge({
   percentage,
