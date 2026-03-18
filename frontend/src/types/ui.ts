@@ -16,6 +16,8 @@ export interface ConfirmDialogProps {
   description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Shown on confirm button when isPending (e.g. "Usuwanie..."). Falls back to "..." if omitted. */
+  pendingLabel?: string;
   variant?: "default" | "destructive";
   onConfirm: () => void;
   isPending?: boolean;

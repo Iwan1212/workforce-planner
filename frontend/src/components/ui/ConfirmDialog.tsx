@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   description,
   confirmLabel = "Potwierdź",
   cancelLabel = "Anuluj",
+  pendingLabel,
   variant = "default",
   onConfirm,
   isPending = false,
@@ -30,9 +32,11 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {typeof description === "string" ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <DialogDescription>{description}</DialogDescription>
         ) : (
-          <div className="text-sm text-muted-foreground">{description}</div>
+          <DialogDescription asChild>
+            <div className="text-muted-foreground">{description}</div>
+          </DialogDescription>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
@@ -43,7 +47,7 @@ export function ConfirmDialog({
             onClick={() => onConfirm()}
             disabled={isPending}
           >
-            {isPending ? "..." : confirmLabel}
+            {isPending ? (pendingLabel ?? "...") : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

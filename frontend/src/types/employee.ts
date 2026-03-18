@@ -15,13 +15,6 @@ export interface EmployeeCreateData {
   email?: string | null;
 }
 
-export interface EmployeeFormSubmitData {
-  first_name: string;
-  last_name: string;
-  team: string | null;
-  email?: string | null;
-}
-
 export interface ImportResult {
   imported: number;
   skipped: number;
@@ -31,7 +24,7 @@ export interface ImportResult {
 export interface EmployeeFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: EmployeeFormSubmitData) => void;
+  onSubmit: (data: EmployeeCreateData) => void;
   employee?: Employee | null;
   isSubmitting?: boolean;
 }

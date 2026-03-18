@@ -32,7 +32,9 @@ export interface TimelineState {
 
 export interface DayInfo {
   date: Date;
+  /** "yyyy-MM-dd" */
   key: string;
+  /** 0 = Sunday, 1 = Monday, … (getDay()). Used for weekend detection. */
   dayOfWeek: number;
   label: string;
   isWeekend: boolean;

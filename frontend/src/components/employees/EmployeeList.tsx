@@ -251,6 +251,7 @@ export function EmployeeList() {
           )
         }
         confirmLabel="Usuń"
+        pendingLabel="Usuwanie..."
         variant="destructive"
         onConfirm={handleDeleteConfirm}
         isPending={deleteMutation.isPending}

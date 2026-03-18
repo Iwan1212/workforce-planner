@@ -392,6 +392,7 @@ export function UserManagement() {
           )
         }
         confirmLabel="Usuń"
+        pendingLabel="Usuwanie..."
         variant="destructive"
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         isPending={deleteMutation.isPending}
