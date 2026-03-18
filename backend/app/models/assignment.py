@@ -32,7 +32,7 @@ class Assignment(Base):
     allocation_type: Mapped[AllocationType] = mapped_column(
         Enum(AllocationType), nullable=False
     )
-    allocation_value: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    allocation_value: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
     note: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_tentative: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
