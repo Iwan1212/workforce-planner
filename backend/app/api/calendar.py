@@ -133,6 +133,8 @@ async def get_timeline(
                 a.allocation_value,
                 first_month_year.year,
                 first_month_year.month,
+                start_date=a.start_date,
+                end_date=a.end_date,
             )
             assignment_list.append(
                 {
@@ -258,6 +260,8 @@ def _compute_vacation_overlap_hours(
                             a.allocation_value,
                             year,
                             month,
+                            start_date=a.start_date,
+                            end_date=a.end_date,
                         )
             d += timedelta(days=1)
 

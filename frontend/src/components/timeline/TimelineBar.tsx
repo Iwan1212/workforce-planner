@@ -108,7 +108,9 @@ export function TimelineBar({
   const label =
     assignment.allocation_type === "percentage"
       ? `${assignment.allocation_value}% (${assignment.daily_hours}h/d)`
-      : `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`;
+      : assignment.allocation_type === "monthly_hours"
+      ? `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`
+      : `${assignment.allocation_value}h tot. (${assignment.daily_hours}h/d)`;
 
   // Compute text color based on background luminance for WCAG contrast
   const textColorClass = (() => {

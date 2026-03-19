@@ -217,6 +217,7 @@ export function AssignmentModal({
                 <SelectContent>
                   <SelectItem value="percentage">Procent (%)</SelectItem>
                   <SelectItem value="monthly_hours">Godziny / msc</SelectItem>
+                  <SelectItem value="total_hours">Łączne godziny</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -224,12 +225,14 @@ export function AssignmentModal({
               <Label>
                 {allocationType === "percentage"
                   ? "Wartość (%)"
-                  : "Godziny / msc"}
+                  : allocationType === "monthly_hours"
+                  ? "Godziny / msc"
+                  : "Łączna liczba godzin"}
               </Label>
               <Input
                 type="number"
                 min="1"
-                step="1"
+                step={allocationType === "total_hours" ? "any" : "1"}
                 value={allocationValue}
                 onChange={(e) => setAllocationValue(e.target.value)}
                 required
