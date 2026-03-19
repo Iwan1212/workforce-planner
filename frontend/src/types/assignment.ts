@@ -72,3 +72,55 @@ export interface AssignmentModalProps {
   defaultEmployeeId?: number | null;
   defaultStartDate?: string | null;
 }
+
+export interface AssignmentEmployeeOption {
+  id: number;
+  last_name: string;
+  first_name: string;
+}
+
+export interface AssignmentProjectOption {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface AssignmentFormEmployeeProjectProps {
+  employeeId: string;
+  projectId: string;
+  onEmployeeChange: (value: string) => void;
+  onProjectChange: (value: string) => void;
+  employees: AssignmentEmployeeOption[];
+  projects: AssignmentProjectOption[];
+}
+
+export interface AssignmentFormDatesProps {
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (value: string) => void;
+  onEndDateChange: (value: string) => void;
+}
+
+export interface AssignmentFormAllocationProps {
+  allocationType: string;
+  allocationValue: string;
+  onAllocationTypeChange: (value: string) => void;
+  onAllocationValueChange: (value: string) => void;
+}
+
+export interface AssignmentFormNoteProps {
+  note: string;
+  isTentative: boolean;
+  onNoteChange: (value: string) => void;
+  onTentativeChange: (value: boolean) => void;
+}
+
+export interface AssignmentFormFooterProps {
+  isEditing: boolean;
+  showDeleteConfirm: boolean;
+  onDeleteClick: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  onClose: () => void;
+  isPending: boolean;
+}

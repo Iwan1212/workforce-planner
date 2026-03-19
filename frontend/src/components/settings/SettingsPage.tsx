@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sun, Moon, RefreshCw, Link, Unlink } from "lucide-react";
+import { Sun, Moon, Link, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -139,15 +140,11 @@ function CalamariSection() {
               )}
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+              <RefreshButton
+                label="Synchronizuj teraz"
                 onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
-              >
-                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-                Synchronizuj teraz
-              </Button>
+                isPending={syncMutation.isPending}
+              />
               <Button
                 variant="destructive"
                 size="sm"

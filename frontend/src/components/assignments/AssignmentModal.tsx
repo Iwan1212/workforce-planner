@@ -4,20 +4,9 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { fetchEmployees } from "@/api/employees";
 import { fetchProjects } from "@/api/projects";
 import {
@@ -26,6 +15,11 @@ import {
   deleteAssignment,
 } from "@/api/assignments";
 import type { AssignmentModalProps } from "@/types/assignment";
+import { AssignmentFormEmployeeProject } from "./AssignmentFormEmployeeProject";
+import { AssignmentFormDates } from "./AssignmentFormDates";
+import { AssignmentFormAllocation } from "./AssignmentFormAllocation";
+import { AssignmentFormNote } from "./AssignmentFormNote";
+import { AssignmentFormFooter } from "./AssignmentFormFooter";
 
 export function AssignmentModal({
   open,
@@ -148,162 +142,47 @@ export function AssignmentModal({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="assignment-employee">Pracownik</Label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger id="assignment-employee">
-                <SelectValue placeholder="Wybierz pracownika" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((emp) => (
-                  <SelectItem key={emp.id} value={String(emp.id)}>
-                    {emp.last_name} {emp.first_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AssignmentFormEmployeeProject
+            employeeId={employeeId}
+            projectId={projectId}
+            onEmployeeChange={setEmployeeId}
+            onProjectChange={setProjectId}
+            employees={employees}
+            projects={projects}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="assignment-project">Projekt</Label>
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger id="assignment-project">
-                <SelectValue placeholder="Wybierz projekt" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((proj) => (
-                  <SelectItem key={proj.id} value={String(proj.id)}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-3 w-3 rounded-full ring-1 ring-border"
-                        style={{ backgroundColor: proj.color }}
-                      />
-                      {proj.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AssignmentFormDates
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Data od</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Data do</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+          <AssignmentFormAllocation
+            allocationType={allocationType}
+            allocationValue={allocationValue}
+            onAllocationTypeChange={setAllocationType}
+            onAllocationValueChange={setAllocationValue}
+          />
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="assignment-alloc-type">Typ alokacji</Label>
-              <Select value={allocationType} onValueChange={setAllocationType}>
-                <SelectTrigger id="assignment-alloc-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">Procent (%)</SelectItem>
-                  <SelectItem value="monthly_hours">Godziny / msc</SelectItem>
-                  <SelectItem value="total_hours">Łączne godziny</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>
-                {allocationType === "percentage"
-                  ? "Wartość (%)"
-                  : allocationType === "monthly_hours"
-                  ? "Godziny / msc"
-                  : "Łączna liczba godzin"}
-              </Label>
-              <Input
-                type="number"
-                min="1"
-                step={allocationType === "total_hours" ? "any" : "1"}
-                value={allocationValue}
-                onChange={(e) => setAllocationValue(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+          <AssignmentFormNote
+            note={note}
+            isTentative={isTentative}
+            onNoteChange={setNote}
+            onTentativeChange={setIsTentative}
+          />
 
-          <div className="flex items-center gap-2">
-            <input
-              id="assignment-tentative"
-              type="checkbox"
-              checked={isTentative}
-              onChange={(e) => setIsTentative(e.target.checked)}
-              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-primary"
-            />
-            <Label htmlFor="assignment-tentative" className="cursor-pointer font-normal">
-              Tentative — niepotwierdzony assignment
-            </Label>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Notatka</Label>
-            <Input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Opcjonalna notatka..."
-            />
-          </div>
-
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            {isEditing && !showDeleteConfirm && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="sm:mr-auto"
-              >
-                Usuń
-              </Button>
-            )}
-            {showDeleteConfirm && (
-              <div className="flex items-center gap-2 sm:mr-auto">
-                <span className="text-sm text-destructive">Na pewno?</span>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() =>
-                    assignment && deleteMutation.mutate(assignment.id)
-                  }
-                  disabled={isPending}
-                >
-                  Tak, usuń
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(false)}
-                >
-                  Nie
-                </Button>
-              </div>
-            )}
-            <Button type="button" variant="outline" onClick={onClose}>
-              Anuluj
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Zapisywanie..." : "Zapisz"}
-            </Button>
-          </DialogFooter>
+          <AssignmentFormFooter
+            isEditing={isEditing}
+            showDeleteConfirm={showDeleteConfirm}
+            onDeleteClick={() => setShowDeleteConfirm(true)}
+            onConfirmDelete={() =>
+              assignment && deleteMutation.mutate(assignment.id)
+            }
+            onCancelDelete={() => setShowDeleteConfirm(false)}
+            onClose={onClose}
+            isPending={isPending}
+          />
         </form>
       </DialogContent>
     </Dialog>

@@ -170,6 +170,7 @@ export function TimelineFilters() {
               type="date"
               value={draftDateTo}
               onChange={(e) => setDraftDateTo(e.target.value)}
+              min={draftDateFrom || undefined}
               className="h-7 w-32 text-xs"
             />
           </div>

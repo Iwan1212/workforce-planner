@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -7,10 +7,11 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { addDays, parseISO, format, getDay } from "date-fns";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { useTimeline } from "@/hooks/useTimeline";
 import { useTimelineStore } from "@/stores/timelineStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -99,14 +100,11 @@ export function Timeline() {
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
   const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(null);
 
-  // Sync horizontal scroll between header and body
-  const headerScrollRef = useRef<HTMLDivElement>(null);
-  const bodyScrollRef = useRef<HTMLDivElement>(null);
-  const handleBodyScroll = useCallback(() => {
-    if (headerScrollRef.current && bodyScrollRef.current) {
-      headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
-    }
-  }, []);
+  const LEFT_PANEL_WIDTH = 250;
+  const totalWidth =
+    viewMode === "weekly"
+      ? allDays.length * DAY_WIDTH
+      : months.length * MONTH_WIDTH;
 
   // D&D sensor with activation distance to avoid accidental drags
   const sensors = useSensors(
@@ -231,10 +229,12 @@ export function Timeline() {
     setModalOpen(true);
   };
 
-  const handleEmptyClick = (employeeId: number, monthKey: string) => {
+  const handleEmptyClick = (employeeId: number, dateKey: string) => {
     setEditingAssignment(null);
     setDefaultEmployeeId(employeeId);
-    setDefaultStartDate(`${monthKey}-01`);
+    setDefaultStartDate(
+      dateKey.length === 10 ? dateKey : `${dateKey}-01`
+    );
     setModalOpen(true);
   };
 
@@ -263,8 +263,6 @@ export function Timeline() {
     });
   }, [data, utilizationFilter, startDate, endDate, holidayMap]);
 
-  const hasEmployees = !isLoading && data && data.employees.length > 0;
-
   return (
     <div>
       {/* Sticky top section — <main> has no padding so sticky top-0 works flush. */}
@@ -279,15 +277,11 @@ export function Timeline() {
                     Sync: {new Date(data.vacation_sync_status.last_synced_at).toLocaleString("pl-PL")}
                   </span>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
+                <RefreshButton
+                  label="Sync urlopów"
                   onClick={() => syncVacationsMutation.mutate()}
-                  disabled={syncVacationsMutation.isPending}
-                >
-                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncVacationsMutation.isPending ? "animate-spin" : ""}`} />
-                  Sync urlopów
-                </Button>
+                  isPending={syncVacationsMutation.isPending}
+                />
               </div>
             )}
             {!isViewer && (
@@ -300,29 +294,6 @@ export function Timeline() {
         </div>
 
         <TimelineFilters />
-
-        {hasEmployees && (
-          <div className="rounded-t-md border bg-muted shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
-            <div className="flex">
-              <div className="flex w-[250px] flex-shrink-0 items-center border-r bg-muted px-3 py-2">
-                <span className="text-sm font-medium">Pracownik</span>
-              </div>
-              <div
-                ref={headerScrollRef}
-                className="flex-1 overflow-hidden"
-              >
-                <TimelineHeader
-                  viewMode={viewMode}
-                  months={months}
-                  workingDaysPerMonth={data.working_days_per_month}
-                  weeks={weeks}
-                  allDays={allDays}
-                  holidayMap={holidayMap}
-                />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Body content */}
@@ -369,14 +340,34 @@ export function Timeline() {
         </div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="mx-6 rounded-b-md border-x border-b">
-            <div
-              ref={bodyScrollRef}
-              className="overflow-x-auto"
-              onScroll={handleBodyScroll}
-            >
-              {displayedEmployees.map((emp, idx) => (
-                <TimelineRow
+          <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
+            <div className="overflow-x-auto">
+              <div
+                style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
+              >
+                <div
+                  className="flex border-b bg-muted"
+                  style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
+                >
+                  <div
+                    className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-muted px-3 py-2"
+                    style={{ width: LEFT_PANEL_WIDTH }}
+                  >
+                    <span className="text-sm font-medium">Pracownik</span>
+                  </div>
+                  <div className="flex shrink-0" style={{ minWidth: totalWidth }}>
+                    <TimelineHeader
+                      viewMode={viewMode}
+                      months={months}
+                      workingDaysPerMonth={data.working_days_per_month}
+                      weeks={weeks}
+                      allDays={allDays}
+                      holidayMap={holidayMap}
+                    />
+                  </div>
+                </div>
+                {displayedEmployees.map((emp, idx) => (
+                  <TimelineRow
                   key={emp.id}
                   employeeId={emp.id}
                   name={emp.name}
@@ -396,7 +387,8 @@ export function Timeline() {
                   readOnly={isViewer}
                   isOdd={idx % 2 === 1}
                 />
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </DndContext>

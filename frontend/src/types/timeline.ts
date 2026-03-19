@@ -89,7 +89,7 @@ export interface TimelineRowProps {
   viewMode: ViewMode;
   onAssignmentClick: (assignment: TimelineAssignment) => void;
   onVacationClick: (vacation: VacationInfo) => void;
-  onEmptyClick: (employeeId: number, monthKey: string) => void;
+  onEmptyClick: (employeeId: number, dateKey: string) => void;
   onResizeEnd: (
     assignmentId: number,
     edge: "left" | "right",

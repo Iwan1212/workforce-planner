@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useCrudList } from "@/hooks/useCrudList";
+import { useTeamSelection } from "@/hooks/useTeamSelection";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/DataTable";
+import type { DataTableColumn } from "@/types/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -15,29 +18,53 @@ import {
   fetchEmployees,
   updateEmployee,
 } from "@/api/employees";
-import type { Employee } from "@/types/employee";
+import type { Employee, EmployeeCreateData } from "@/types/employee";
 import { TEAM_LABELS } from "@/lib/constants";
 import { EmployeeForm } from "./EmployeeForm";
 
+const EMPLOYEE_COLUMNS: DataTableColumn<Employee>[] = [
+  {
+    id: "name",
+    header: "Nazwisko i imię",
+    cell: (emp) => `${emp.last_name} ${emp.first_name}`,
+  },
+  {
+    id: "email",
+    header: "Email",
+    cell: (emp) => (
+      <span className="text-muted-foreground">{emp.email || "—"}</span>
+    ),
+  },
+  {
+    id: "team",
+    header: "Zespół",
+    cell: (emp) =>
+      emp.team ? (
+        <Badge variant="secondary">{TEAM_LABELS[emp.team] ?? emp.team}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      ),
+  },
+];
+
 export function EmployeeList() {
-  const queryClient = useQueryClient();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const { selectedTeams, toggleTeam, selectAllTeams } = useTeamSelection();
+  const noneSelected = selectedTeams.length === 0;
+
+  const crud = useCrudList<Employee, EmployeeCreateData, Partial<EmployeeCreateData>>({
+    queryKey: ["employees"],
+    createMutationFn: createEmployee,
+    updateMutationFn: ({ id, data }) => updateEmployee(id, data),
+    deleteMutationFn: (id) => deleteEmployee(id, true),
+    successMessages: {
+      create: "Pracownik dodany",
+      update: "Pracownik zaktualizowany",
+      delete: "Pracownik usunięty",
+    },
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-
-  const toggleTeam = (team: string) => {
-    if (selectedTeams.includes(team)) {
-      setSelectedTeams(selectedTeams.filter((t) => t !== team));
-    } else {
-      setSelectedTeams([...selectedTeams, team]);
-    }
-  };
-
-  const noneSelected = selectedTeams.length === 0;
-  const selectAllTeams = () => setSelectedTeams([]);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees", selectedTeams, debouncedSearch],
@@ -48,86 +75,32 @@ export function EmployeeList() {
       ),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createEmployee,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
-      setFormOpen(false);
-      toast.success("Pracownik dodany");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: Partial<{
-        first_name: string;
-        last_name: string;
-        team: string | null;
-        email: string | null;
-      }>;
-    }) => updateEmployee(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
-      setFormOpen(false);
-      setEditingEmployee(null);
-      toast.success("Pracownik zaktualizowany");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteEmployee(id, true),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
-      setDeleteTarget(null);
-      toast.success("Pracownik usunięty");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const handleFormSubmit = (data: {
     first_name: string;
     last_name: string;
     team: string | null;
     email?: string | null;
   }) => {
-    if (editingEmployee) {
-      updateMutation.mutate({ id: editingEmployee.id, data });
+    if (crud.editingItem) {
+      crud.updateMutation.mutate({ id: crud.editingItem.id, data });
     } else {
-      createMutation.mutate(data);
+      crud.createMutation.mutate(data);
     }
   };
 
-  const handleEdit = (emp: Employee) => {
-    setEditingEmployee(emp);
-    setFormOpen(true);
-  };
-
-  const handleDeleteClick = (emp: Employee) => {
-    setDeleteTarget(emp);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
-    deleteMutation.mutate(deleteTarget.id);
-  };
+  const emptyContent =
+    employees.length === 0
+      ? debouncedSearch || !noneSelected
+        ? `Brak wyników${debouncedSearch ? ` dla „${searchQuery}"` : ""}${!noneSelected ? " w wybranych zespołach" : ""}`
+        : "Brak pracowników. Dodaj pierwszego."
+      : undefined;
 
   return (
     <div className="p-6">
       <PageHeader
         title="Pracownicy"
         action={
-          <Button
-            onClick={() => {
-              setEditingEmployee(null);
-              setFormOpen(true);
-            }}
-          >
+          <Button onClick={crud.openAddForm}>
             <Plus className="mr-2 h-4 w-4" />
             Dodaj pracownika
           </Button>
@@ -148,100 +121,54 @@ export function EmployeeList() {
         />
       </div>
 
-      {isLoading ? (
-        <p className="text-muted-foreground">Ładowanie...</p>
-      ) : employees.length === 0 && (debouncedSearch || !noneSelected) ? (
-        <p className="text-muted-foreground">
-          Brak wyników{debouncedSearch ? <> dla &ldquo;{searchQuery}&rdquo;</> : null}
-          {!noneSelected ? <> w wybranych zespołach</> : null}
-        </p>
-      ) : employees.length === 0 ? (
-        <p className="text-muted-foreground">
-          Brak pracowników. Dodaj pierwszego.
-        </p>
-      ) : (
-        <div className="rounded-md border">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left text-sm font-medium">
-                  Nazwisko i imię
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
-                  Email
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
-                  Zespół
-                </th>
-                <th className="px-4 py-3 text-right text-sm font-medium">
-                  Akcje
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((emp) => (
-                <tr key={emp.id} className="border-b last:border-0">
-                  <td className="px-4 py-3 text-sm">
-                    {emp.last_name} {emp.first_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {emp.email || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {emp.team ? (
-                      <Badge variant="secondary">
-                        {TEAM_LABELS[emp.team] ?? emp.team}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(emp)}
-                      aria-label={`Edytuj ${emp.last_name} ${emp.first_name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteClick(emp)}
-                      aria-label={`Usuń ${emp.last_name} ${emp.first_name}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable<Employee>
+        data={employees}
+        columns={EMPLOYEE_COLUMNS}
+        getRowKey={(emp) => emp.id}
+        renderActions={(emp) => (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => crud.handleEdit(emp)}
+              aria-label={`Edytuj ${emp.last_name} ${emp.first_name}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => crud.handleDeleteClick(emp)}
+              aria-label={`Usuń ${emp.last_name} ${emp.first_name}`}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        )}
+        isLoading={isLoading}
+        emptyContent={emptyContent}
+      />
 
       <EmployeeForm
-        open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingEmployee(null);
-        }}
+        open={crud.formOpen}
+        onClose={crud.closeForm}
         onSubmit={handleFormSubmit}
-        employee={editingEmployee}
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        employee={crud.editingItem}
+        isSubmitting={
+          crud.createMutation.isPending || crud.updateMutation.isPending
+        }
       />
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        open={crud.deleteTarget !== null}
+        onOpenChange={(o) => !o && crud.setDeleteTarget(null)}
         title="Usuń pracownika"
         description={
-          deleteTarget ? (
+          crud.deleteTarget ? (
             <>
               Czy na pewno chcesz usunąć pracownika{" "}
               <strong>
-                {deleteTarget.last_name} {deleteTarget.first_name}
+                {crud.deleteTarget.last_name} {crud.deleteTarget.first_name}
               </strong>
               ? Przyszłe assignmenty zostaną usunięte, a bieżące skrócone do
               dzisiaj.
@@ -253,8 +180,8 @@ export function EmployeeList() {
         confirmLabel="Usuń"
         pendingLabel="Usuwanie..."
         variant="destructive"
-        onConfirm={handleDeleteConfirm}
-        isPending={deleteMutation.isPending}
+        onConfirm={crud.handleDeleteConfirm}
+        isPending={crud.deleteMutation.isPending}
         contentClassName="max-w-md"
       />
     </div>

@@ -7,6 +7,7 @@ import {
   max as dateMax,
   min as dateMin,
   isWithinInterval,
+  addDays,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
@@ -20,6 +21,22 @@ import type {
 import { TEAM_LABELS, LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
 import { TimelineBar } from "./TimelineBar";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
+
+function getMonthlyPixelPosition(date: Date, months: MonthDef[]): number {
+  const monthIndex = months.findIndex(
+    (m) => m.year === date.getFullYear() && m.month === date.getMonth() + 1,
+  );
+  if (monthIndex < 0) {
+    if (date < startOfMonth(new Date(months[0].year, months[0].month - 1, 1)))
+      return 0;
+    return months.length * MONTH_WIDTH;
+  }
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const daysInMonth = differenceInCalendarDays(monthEnd, monthStart) + 1;
+  const dayOffset = differenceInCalendarDays(date, monthStart);
+  return monthIndex * MONTH_WIDTH + (dayOffset / daysInMonth) * MONTH_WIDTH;
+}
 
 function computeBarPositionMonthly(
   item: DateRange,
@@ -40,18 +57,15 @@ function computeBarPositionMonthly(
 
   if (aEnd < firstMonthStart || aStart > lastMonthEnd) return null;
 
-  const totalDays = differenceInCalendarDays(lastMonthEnd, firstMonthStart) + 1;
-  const totalWidth = months.length * MONTH_WIDTH;
-
   const visibleStart = dateMax([aStart, firstMonthStart]);
   const visibleEnd = dateMin([aEnd, lastMonthEnd]);
 
-  const leftDays = differenceInCalendarDays(visibleStart, firstMonthStart);
-  const spanDays = differenceInCalendarDays(visibleEnd, visibleStart) + 1;
+  const left = getMonthlyPixelPosition(visibleStart, months);
+  const right = getMonthlyPixelPosition(addDays(visibleEnd, 1), months);
 
   return {
-    left: (leftDays / totalDays) * totalWidth,
-    width: (spanDays / totalDays) * totalWidth,
+    left,
+    width: right - left,
   };
 }
 
@@ -206,36 +220,67 @@ export function TimelineRow({
   const allBars = [...bars, ...vacationBars];
   const maxRows =
     allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
-  // Extra space for utilization row at top (16px)
   const utilRowHeight = 18;
-  const rowHeight = Math.max(38, maxRows * 32 + 6 + utilRowHeight);
+  const assignmentBarRowHeight = 32;
+  const vacationBarRowHeight = 36;
+  const rowHeight = Math.max(
+    38,
+    maxRows * Math.max(assignmentBarRowHeight, vacationBarRowHeight) +
+      6 +
+      utilRowHeight,
+  );
 
   const totalWidth = isWeekly
     ? allDays.length * DAY_WIDTH
     : months.length * MONTH_WIDTH;
 
-  // Per-period utilization for monthly view (from API)
-  const monthUtils = months.map((m) => {
-    const u = utilization[m.key];
-    return { key: m.key, pct: u ? Math.round(u.percentage) : 0 };
-  });
+  const utilizationPeriods = isWeekly
+    ? weeks.map((w) => ({
+        key: `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`,
+        width: w.days.length * DAY_WIDTH,
+        pct: computeWeeklyUtilization(w, assignments, vacations, holidayMap),
+      }))
+    : months.map((m) => {
+        const u = utilization[m.key];
+        return {
+          key: m.key,
+          width: MONTH_WIDTH,
+          pct: u ? Math.round(u.percentage) : 0,
+        };
+      });
 
-  // Per-period utilization for weekly view (computed client-side)
-  const weekUtils = weeks.map((w) => ({
-    key: `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`,
-    pct: computeWeeklyUtilization(w, assignments, vacations, holidayMap),
-  }));
+  const separatorColumns = isWeekly
+    ? allDays.map((day, i) => ({
+        key: day.key,
+        left: i * DAY_WIDTH,
+        width: DAY_WIDTH,
+        clickKey: day.key,
+        extraClassName:
+          day.isWeekend || !!holidayMap[day.key] ? "bg-muted/40" : "",
+        title: holidayMap[day.key],
+      }))
+    : months.map((m, i) => ({
+        key: m.key,
+        left: i * MONTH_WIDTH,
+        width: MONTH_WIDTH,
+        clickKey: m.key,
+        extraClassName: "",
+        title: undefined as string | undefined,
+      }));
+
+  const LEFT_PANEL_WIDTH = 250;
 
   return (
     <div
       className={`flex border-b ${isOdd ? "bg-muted/20" : ""} ${
         isOver ? "ring-2 ring-inset ring-primary/50" : ""
       }`}
+      style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
     >
       {/* Sticky left panel */}
       <div
-        className="sticky left-0 z-10 flex w-[250px] flex-shrink-0 items-center gap-2 border-r bg-background px-3 py-2"
-        style={{ minHeight: rowHeight }}
+        className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r bg-background px-3 py-2"
+        style={{ width: LEFT_PANEL_WIDTH, minHeight: rowHeight }}
       >
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{name}</div>
@@ -258,111 +303,61 @@ export function TimelineRow({
       >
         {/* Per-period utilization indicators */}
         <div
-          className="absolute top-0 left-0 flex"
+          className="absolute top-0 left-0 z-1 flex bg-transparent"
           style={{ height: utilRowHeight }}
         >
-          {isWeekly
-            ? weeks.map((w, i) => {
-                const pct = weekUtils[i].pct;
-                return (
-                  <div
-                    key={`${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`}
-                    className={`flex items-center justify-center text-[10px] ${getUtilColor(pct)}`}
-                    style={{ width: w.days.length * DAY_WIDTH }}
-                  >
-                    {pct}%
-                  </div>
-                );
-              })
-            : months.map((m, i) => {
-                const pct = monthUtils[i].pct;
-                return (
-                  <div
-                    key={m.key}
-                    className={`flex items-center justify-center text-[10px] ${getUtilColor(pct)}`}
-                    style={{ width: MONTH_WIDTH }}
-                  >
-                    {pct}%
-                  </div>
-                );
-              })}
+          {utilizationPeriods.map((p) => (
+            <div
+              key={p.key}
+              className={`flex items-center justify-center bg-transparent text-[10px] ${getUtilColor(p.pct)}`}
+              style={{ width: p.width }}
+            >
+              {p.pct}%
+            </div>
+          ))}
         </div>
 
         {/* Separators */}
-        {isWeekly
-          ? allDays.map((day, i) => {
-              const isHoliday = !!holidayMap[day.key];
-              return (
-                <div
-                  key={day.key}
-                  role={readOnly ? undefined : "button"}
-                  tabIndex={readOnly ? undefined : 0}
-                  aria-label={
-                    readOnly ? undefined : `Dodaj assignment ${day.key}`
+        {separatorColumns.map((col) => (
+          <div
+            key={col.key}
+            role={readOnly ? undefined : "button"}
+            tabIndex={readOnly ? undefined : 0}
+            aria-label={readOnly ? undefined : `Dodaj assignment ${col.key}`}
+            className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"} ${col.extraClassName}`}
+            style={{
+              left: col.left,
+              width: col.width,
+              top: 0,
+              height: "100%",
+            }}
+            title={col.title}
+            onClick={
+              readOnly
+                ? undefined
+                : () => onEmptyClick(employeeId, col.clickKey)
+            }
+            onKeyDown={
+              readOnly
+                ? undefined
+                : (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onEmptyClick(employeeId, col.clickKey);
+                    }
                   }
-                  className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"} ${
-                    day.isWeekend || isHoliday ? "bg-muted/40" : ""
-                  }`}
-                  style={{
-                    left: i * DAY_WIDTH,
-                    width: DAY_WIDTH,
-                    top: utilRowHeight,
-                    height: `calc(100% - ${utilRowHeight}px)`,
-                  }}
-                  title={holidayMap[day.key]}
-                  onClick={
-                    readOnly
-                      ? undefined
-                      : () => onEmptyClick(employeeId, day.key.slice(0, 7))
-                  }
-                  onKeyDown={
-                    readOnly
-                      ? undefined
-                      : (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onEmptyClick(employeeId, day.key.slice(0, 7));
-                          }
-                        }
-                  }
-                />
-              );
-            })
-          : months.map((m, i) => (
-              <div
-                key={m.key}
-                role={readOnly ? undefined : "button"}
-                tabIndex={readOnly ? undefined : 0}
-                aria-label={readOnly ? undefined : `Dodaj assignment ${m.key}`}
-                className={`absolute border-r border-dashed border-muted-foreground/20 ${readOnly ? "" : "cursor-pointer"}`}
-                style={{
-                  left: i * MONTH_WIDTH,
-                  width: MONTH_WIDTH,
-                  top: utilRowHeight,
-                  height: `calc(100% - ${utilRowHeight}px)`,
-                }}
-                onClick={
-                  readOnly ? undefined : () => onEmptyClick(employeeId, m.key)
-                }
-                onKeyDown={
-                  readOnly
-                    ? undefined
-                    : (e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onEmptyClick(employeeId, m.key);
-                        }
-                      }
-                }
-              />
-            ))}
+            }
+          />
+        ))}
 
         {/* Assignment bars */}
         {bars.map((bar) => (
           <div
             key={bar.assignment.id}
             className="absolute"
-            style={{ top: bar.row * 32 + 2 + utilRowHeight }}
+            style={{
+              top: bar.row * assignmentBarRowHeight + 2 + utilRowHeight,
+            }}
           >
             <TimelineBar
               assignment={bar.assignment}
@@ -390,7 +385,7 @@ export function TimelineRow({
               tabIndex={0}
               className="absolute top-1 flex cursor-pointer items-center overflow-hidden rounded bg-slate-400/80 text-xs text-white shadow-sm select-none dark:bg-slate-500/80"
               style={{
-                top: vbar.row * 32 + 2 + utilRowHeight,
+                top: vbar.row * vacationBarRowHeight + 2 + utilRowHeight,
                 left: vbar.left,
                 width: Math.max(vbar.width, 20),
                 height: 28,

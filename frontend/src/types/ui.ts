@@ -1,4 +1,11 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import type { Button } from "@/components/ui/button";
+
+export interface RefreshButtonProps
+  extends Omit<ComponentProps<typeof Button>, "children"> {
+  label: string;
+  isPending?: boolean;
+}
 
 export interface SearchInputProps {
   value: string;
@@ -33,5 +40,23 @@ export interface TeamFilterChipsProps {
   selectedTeams: string[];
   onToggleTeam: (team: string) => void;
   onSelectAll: () => void;
+  className?: string;
+}
+
+export interface DataTableColumn<T> {
+  id: string;
+  header: string;
+  align?: "left" | "right";
+  cell: (row: T) => ReactNode;
+}
+
+export interface DataTableProps<T> {
+  data: T[];
+  columns: DataTableColumn<T>[];
+  getRowKey: (row: T) => string | number;
+  renderActions: (row: T) => ReactNode;
+  isLoading?: boolean;
+  skeletonRowCount?: number;
+  emptyContent?: ReactNode;
   className?: string;
 }
