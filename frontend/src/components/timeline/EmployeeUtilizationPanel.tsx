@@ -30,11 +30,11 @@ function getStatusBadge(pct: number) {
     );
   if (pct > 80)
     return (
-      <Badge className="bg-green-100 text-green-800 text-[10px]">OK</Badge>
+      <Badge className="bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400 text-[10px]">OK</Badge>
     );
   if (pct > 0)
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 text-[10px]">Niski</Badge>
+      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400 text-[10px]">Niski</Badge>
     );
   return (
     <Badge variant="secondary" className="text-[10px]">
