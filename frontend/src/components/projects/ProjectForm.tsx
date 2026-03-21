@@ -88,7 +88,7 @@ export function ProjectForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {project ? "Edytuj projekt" : "Dodaj projekt"}
+            {project ? "Edytuj projekt" : "Nowy projekt"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
