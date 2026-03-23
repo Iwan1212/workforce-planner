@@ -25,6 +25,9 @@ export function TimelineBar({
   pxPerDay,
   showDailyHours = false,
   readOnly = false,
+  showResizeDateTooltip = false,
+  showResizeLeft = true,
+  showResizeRight = true,
 }: TimelineBarProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -40,6 +43,7 @@ export function TimelineBar({
     y: number;
   } | null>(null);
   const startXRef = useRef(0);
+  const resizeTooltipYRef = useRef(0);
   const justResizedRef = useRef(false);
 
   const [noteTooltip, setNoteTooltip] = useState<{
@@ -75,6 +79,7 @@ export function TimelineBar({
       e.preventDefault();
       setResizing(edge);
       setResizeDelta(0);
+      resizeTooltipYRef.current = e.clientY;
       setResizeTooltipPos({ x: e.clientX, y: e.clientY });
       startXRef.current = e.clientX;
 
@@ -83,7 +88,7 @@ export function TimelineBar({
         setResizeDelta(dx);
         setResizeTooltipPos({
           x: moveEvent.clientX,
-          y: moveEvent.clientY,
+          y: resizeTooltipYRef.current,
         });
       };
 
@@ -171,12 +176,12 @@ export function TimelineBar({
     const end = parseISO(assignment.end_date);
     return format(addDays(end, daysDelta), "d.MM.yyyy", { locale: pl });
   }, [resizing, assignment.start_date, assignment.end_date, daysDelta]);
-  const showTooltip = resizing !== null;
+  const showTooltip = showResizeDateTooltip && resizing !== null;
 
   return (
     <div
       ref={setNodeRef}
-      className={`absolute top-1 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
+      className={`absolute top-0 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
         readOnly
           ? "cursor-default"
           : resizing
@@ -192,7 +197,7 @@ export function TimelineBar({
       }}
     >
       {/* Left resize handle */}
-      {!readOnly && (
+      {!readOnly && showResizeLeft && (
         <div
           className="absolute left-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
           onMouseDown={(e) => handleResizeStart(e, "left")}
@@ -226,7 +231,7 @@ export function TimelineBar({
       </span>
 
       {/* Right resize handle */}
-      {!readOnly && (
+      {!readOnly && showResizeRight && (
         <div
           className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
           onMouseDown={(e) => handleResizeStart(e, "right")}
@@ -245,7 +250,6 @@ export function TimelineBar({
               transform: "translate(-50%, -100%)",
             }}
           >
-            {resizing === "left" ? "Od: " : "Do: "}
             {resizeTooltipDate}
           </div>,
           document.body,

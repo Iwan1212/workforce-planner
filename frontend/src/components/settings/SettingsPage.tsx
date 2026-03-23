@@ -220,7 +220,7 @@ function ThemeCard({ theme, label, selected, disabled, onSelect }: ThemeCardProp
         >
           {/* Mini sidebar */}
           <div
-            className="w-8 flex-shrink-0 flex flex-col gap-1 p-1.5"
+            className="w-8 shrink-0 flex flex-col gap-1 p-1.5"
             style={{ backgroundColor: isDark ? "#18181B" : "#e5e7eb" }}
           >
             <div className="h-1.5 w-full rounded-sm" style={{ backgroundColor: isDark ? "#3F3F46" : "#9ca3af" }} />

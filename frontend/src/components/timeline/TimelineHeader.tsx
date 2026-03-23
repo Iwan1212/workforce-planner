@@ -19,7 +19,7 @@ export function TimelineHeader({
           {weeks.map((week) => (
             <div
               key={week.weekNumber}
-              className="flex-shrink-0 border-b border-r px-2 py-1 text-center"
+              className="shrink-0 border-b border-r px-2 py-1 text-center"
               style={{ width: week.days.length * DAY_WIDTH }}
             >
               <div className="truncate text-xs font-medium">{week.label}</div>
@@ -34,7 +34,7 @@ export function TimelineHeader({
             return (
               <div
                 key={day.key}
-                className={`flex-shrink-0 border-r px-0.5 py-1 text-center ${
+                className={`shrink-0 border-r px-0.5 py-1 text-center ${
                   day.isWeekend || isHoliday ? "bg-muted/60" : ""
                 }`}
                 style={{ width: DAY_WIDTH }}
@@ -67,7 +67,7 @@ export function TimelineHeader({
         return (
           <div
             key={month.key}
-            className="flex-shrink-0 border-r px-3 py-2"
+            className="shrink-0 border-r px-3 py-2"
             style={{ width: MONTH_WIDTH }}
           >
             <div className="text-sm font-medium capitalize">{month.label}</div>

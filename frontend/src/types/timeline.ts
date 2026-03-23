@@ -114,6 +114,9 @@ export interface TimelineBarProps {
   pxPerDay: number;
   showDailyHours?: boolean;
   readOnly?: boolean;
+  showResizeDateTooltip?: boolean;
+  showResizeLeft?: boolean;
+  showResizeRight?: boolean;
 }
 
 export interface DaySummary {
