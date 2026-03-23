@@ -1,3 +1,4 @@
+import pytest
 from datetime import date
 
 from app.services.assignment_service import calculate_assignment_hours_in_month, calculate_daily_hours
@@ -83,3 +84,56 @@ def test_cross_month_assignment():
         "percentage", 50.0, 2026, 2,
     )
     assert feb_hours == 40.0
+
+
+# --- total_hours tests ---
+
+def test_total_hours_daily():
+    """620h over Jan–Mar 2026 (62 working days) = 10h/day."""
+    result = calculate_daily_hours(
+        "total_hours", 620.0, 2026, 1,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 3, 31),
+    )
+    assert result == 10.0
+
+
+def test_total_hours_requires_dates():
+    """total_hours without start/end dates must raise ValueError."""
+    with pytest.raises(ValueError, match="start_date and end_date are required"):
+        calculate_daily_hours("total_hours", 100.0, 2026, 1)
+
+
+def test_total_hours_zero_working_days():
+    """total_hours over a weekend (0 working days) returns 0."""
+    result = calculate_daily_hours(
+        "total_hours", 100.0, 2026, 1,
+        start_date=date(2026, 1, 3),
+        end_date=date(2026, 1, 4),
+    )
+    assert result == 0.0
+
+
+def test_total_hours_single_working_day():
+    """8h total over 1 working day = 8h/day."""
+    result = calculate_daily_hours(
+        "total_hours", 8.0, 2026, 1,
+        start_date=date(2026, 1, 5),
+        end_date=date(2026, 1, 5),
+    )
+    assert result == 8.0
+
+
+def test_total_hours_multimonth_sums_correctly():
+    """620h over Jan–Mar 2026 (62 wd): Jan=200h, Feb=200h, Mar=220h, total=620h."""
+    kwargs = {"allocation_type": "total_hours", "allocation_value": 620.0}
+    dates = {"assignment_start": date(2026, 1, 1), "assignment_end": date(2026, 3, 31)}
+
+    jan = calculate_assignment_hours_in_month(**dates, **kwargs, year=2026, month=1)
+    feb = calculate_assignment_hours_in_month(**dates, **kwargs, year=2026, month=2)
+    mar = calculate_assignment_hours_in_month(**dates, **kwargs, year=2026, month=3)
+
+    assert jan == 200.0
+    assert feb == 200.0
+    assert mar == 220.0
+    assert jan + feb + mar == 620.0

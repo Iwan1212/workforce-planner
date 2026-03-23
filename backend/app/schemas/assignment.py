@@ -12,7 +12,7 @@ class AssignmentCreate(BaseModel):
     project_id: int
     start_date: date
     end_date: date
-    allocation_type: str  # "percentage" | "monthly_hours"
+    allocation_type: str  # "percentage" | "monthly_hours" | "total_hours"
     allocation_value: Decimal
     note: Optional[str] = None
     is_tentative: bool = False
@@ -20,8 +20,8 @@ class AssignmentCreate(BaseModel):
     @field_validator("allocation_type")
     @classmethod
     def validate_allocation_type(cls, v: str) -> str:
-        if v not in ("percentage", "monthly_hours"):
-            raise ValueError("allocation_type must be 'percentage' or 'monthly_hours'")
+        if v not in ("percentage", "monthly_hours", "total_hours"):
+            raise ValueError("allocation_type must be 'percentage', 'monthly_hours' or 'total_hours'")
         return v
 
     @field_validator("allocation_value")
@@ -51,8 +51,8 @@ class AssignmentUpdate(BaseModel):
     @field_validator("allocation_type")
     @classmethod
     def validate_allocation_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in ("percentage", "monthly_hours"):
-            raise ValueError("allocation_type must be 'percentage' or 'monthly_hours'")
+        if v is not None and v not in ("percentage", "monthly_hours", "total_hours"):
+            raise ValueError("allocation_type must be 'percentage', 'monthly_hours' or 'total_hours'")
         return v
 
     @field_validator("allocation_value")

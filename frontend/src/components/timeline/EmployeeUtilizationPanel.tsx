@@ -166,6 +166,8 @@ export function EmployeeUtilizationPanel({
                           <span className="ml-2 text-muted-foreground">
                             {a.allocation_type === "percentage"
                               ? `${a.allocation_value}%`
+                              : a.allocation_type === "total_hours"
+                              ? `${a.allocation_value}h tot.`
                               : `${a.allocation_value}h/msc`}
                           </span>
                         </div>
