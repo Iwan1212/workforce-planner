@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -18,7 +18,7 @@ export function LoginForm() {
   const [resetSending, setResetSending] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !password) return;
 
@@ -32,7 +32,7 @@ export function LoginForm() {
     }
   };
 
-  const handleResetRequest = async (e: FormEvent) => {
+  const handleResetRequest = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!resetEmail) return;
 

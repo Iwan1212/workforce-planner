@@ -1,12 +1,7 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type SyntheticEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogWrapper } from "@/components/ui/dialog";
 import { fetchEmployees } from "@/api/employees";
 import { fetchProjects } from "@/api/projects";
 import {
@@ -108,7 +103,7 @@ export function AssignmentModal({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = {
       employee_id: Number(employeeId),
@@ -134,14 +129,13 @@ export function AssignmentModal({
     deleteMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edytuj assignment" : "Nowy assignment"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <DialogWrapper
+      open={open}
+      onClose={onClose}
+      title={isEditing ? "Edytuj assignment" : "Nowy assignment"}
+      contentClassName="max-w-md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
           <AssignmentFormEmployeeProject
             employeeId={employeeId}
             projectId={projectId}
@@ -184,7 +178,6 @@ export function AssignmentModal({
             isPending={isPending}
           />
         </form>
-      </DialogContent>
-    </Dialog>
+    </DialogWrapper>
   );
 }

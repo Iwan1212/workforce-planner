@@ -1,12 +1,5 @@
-import { type FormEvent, useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { type SyntheticEvent, useEffect, useState } from "react";
+import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,7 +38,7 @@ export function EmployeeForm({
     }
   }, [employee, open]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) return;
     onSubmit({
@@ -57,71 +50,63 @@ export function EmployeeForm({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {employee ? "Edytuj pracownika" : "Dodaj pracownika"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Imię</Label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Nazwisko</Label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="jan.kowalski@firma.pl"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Email do synchronizacji urlopów z Calamari
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Zespół</Label>
-            <Select value={team} onValueChange={setTeam}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— Brak —</SelectItem>
-                {ALL_TEAMS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {TEAM_LABELS[t]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Anuluj
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Zapisywanie..." : "Zapisz"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <DialogWrapper
+      open={open}
+      onClose={onClose}
+      title={employee ? "Edytuj pracownika" : "Dodaj pracownika"}
+      form={{
+        onSubmit: handleSubmit,
+        isSubmitting,
+        submitLabel: "Zapisz",
+      }}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="firstName">Imię</Label>
+        <Input
+          id="firstName"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Nazwisko</Label>
+        <Input
+          id="lastName"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="jan.kowalski@firma.pl"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Email do synchronizacji urlopów z Calamari
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label>Zespół</Label>
+        <Select value={team} onValueChange={setTeam}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">— Brak —</SelectItem>
+            {ALL_TEAMS.map((t) => (
+              <SelectItem key={t} value={t}>
+                {TEAM_LABELS[t]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </DialogWrapper>
   );
 }
