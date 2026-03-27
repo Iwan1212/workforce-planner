@@ -23,7 +23,12 @@ import { updateAssignment } from "@/api/assignments";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
 import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
+import { TimelineEmptyState } from "./TimelineEmptyState";
 import type { VacationRange } from "@/types/timeline";
+
+type TimelineProps = {
+  onNavigate?: (path: string) => void;
+};
 
 function calcUtilizationInRange(
   assignments: TimelineAssignment[],
@@ -70,7 +75,7 @@ function calcUtilizationInRange(
   return Math.round((totalHours / (workingDays * 8)) * 100);
 }
 
-export function Timeline() {
+export function Timeline({ onNavigate }: TimelineProps = {}) {
   const queryClient = useQueryClient();
   const {
     data,
@@ -345,15 +350,11 @@ export function Timeline() {
           ))}
         </div>
       ) : !data || data.employees.length === 0 ? (
-        <div className="mx-6 flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">
-            {searchQuery.trim() ? (
-              <>Brak wyników dla &ldquo;{searchQuery}&rdquo;</>
-            ) : (
-              "Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty."
-            )}
-          </p>
-        </div>
+        <TimelineEmptyState
+          searchQuery={searchQuery}
+          isViewer={isViewer}
+          onNavigateToEmployees={() => onNavigate?.("/employees")}
+        />
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">

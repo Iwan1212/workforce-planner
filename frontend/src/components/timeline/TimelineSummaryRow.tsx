@@ -113,7 +113,7 @@ export function TimelineSummaryRow({
   return (
     <div className="flex border-b bg-muted/30">
       {/* Left label */}
-      <div className="sticky left-0 z-10 flex w-[250px] flex-shrink-0 items-center border-r bg-muted/50 px-3 py-1">
+      <div className="sticky left-0 z-10 flex w-[250px] shrink-0 items-center border-r bg-muted/50 px-3 py-1">
         <span className="text-xs font-medium text-muted-foreground">
           Suma alokacji
         </span>
