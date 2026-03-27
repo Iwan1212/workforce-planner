@@ -8,6 +8,7 @@ import {
   min as dateMin,
   isWithinInterval,
   addDays,
+  format,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
@@ -95,6 +96,41 @@ function computeBarPositionWeekly(
   };
 }
 
+function getResizeHandleVisibility(
+  assignment: TimelineAssignment,
+  isWeekly: boolean,
+  months: MonthDef[],
+  allDays: DayInfo[],
+): { showResizeLeft: boolean; showResizeRight: boolean } {
+  if (isWeekly) {
+    if (allDays.length === 0) {
+      return { showResizeLeft: false, showResizeRight: false };
+    }
+    const firstKey = allDays[0].key;
+    const lastKey = allDays[allDays.length - 1].key;
+    return {
+      showResizeLeft: assignment.start_date >= firstKey,
+      showResizeRight: assignment.end_date <= lastKey,
+    };
+  }
+  if (months.length === 0) {
+    return { showResizeLeft: false, showResizeRight: false };
+  }
+  const firstKey = format(
+    startOfMonth(new Date(months[0].year, months[0].month - 1, 1)),
+    "yyyy-MM-dd",
+  );
+  const lastM = months[months.length - 1];
+  const lastKey = format(
+    endOfMonth(new Date(lastM.year, lastM.month - 1, 1)),
+    "yyyy-MM-dd",
+  );
+  return {
+    showResizeLeft: assignment.start_date >= firstKey,
+    showResizeRight: assignment.end_date <= lastKey,
+  };
+}
+
 /** Find the first non-overlapping row for a bar and register it. */
 function assignRow(
   pos: { left: number; width: number },
@@ -122,7 +158,6 @@ function computeWeeklyUtilization(
 ): number {
   let totalHours = 0;
   let workingDays = 0;
-  let vacationDays = 0;
 
   for (const day of week.days) {
     if (day.isWeekend || holidayMap[day.key]) continue;
@@ -135,7 +170,6 @@ function computeWeeklyUtilization(
     });
 
     if (isOnVacation) {
-      vacationDays++;
       continue;
     }
 
@@ -221,14 +255,8 @@ export function TimelineRow({
   const maxRows =
     allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
   const utilRowHeight = 18;
-  const assignmentBarRowHeight = 32;
-  const vacationBarRowHeight = 36;
-  const rowHeight = Math.max(
-    38,
-    maxRows * Math.max(assignmentBarRowHeight, vacationBarRowHeight) +
-      6 +
-      utilRowHeight,
-  );
+  const barRowHeight = 32;
+  const rowHeight = Math.max(38, maxRows * barRowHeight + 6 + utilRowHeight);
 
   const totalWidth = isWeekly
     ? allDays.length * DAY_WIDTH
@@ -351,27 +379,38 @@ export function TimelineRow({
         ))}
 
         {/* Assignment bars */}
-        {bars.map((bar) => (
-          <div
-            key={bar.assignment.id}
-            className="absolute"
-            style={{
-              top: bar.row * assignmentBarRowHeight + 2 + utilRowHeight,
-            }}
-          >
-            <TimelineBar
-              assignment={bar.assignment}
-              employeeId={employeeId}
-              left={bar.left}
-              width={bar.width}
-              onClick={() => onAssignmentClick(bar.assignment)}
-              onResizeEnd={onResizeEnd}
-              pxPerDay={pxPerDay}
-              showDailyHours={isWeekly}
-              readOnly={readOnly}
-            />
-          </div>
-        ))}
+        {bars.map((bar) => {
+          const resizeVis = getResizeHandleVisibility(
+            bar.assignment,
+            isWeekly,
+            months,
+            allDays,
+          );
+          return (
+            <div
+              key={bar.assignment.id}
+              className="absolute"
+              style={{
+                top: bar.row * barRowHeight + 2 + utilRowHeight,
+              }}
+            >
+              <TimelineBar
+                assignment={bar.assignment}
+                employeeId={employeeId}
+                left={bar.left}
+                width={bar.width}
+                onClick={() => onAssignmentClick(bar.assignment)}
+                onResizeEnd={onResizeEnd}
+                pxPerDay={pxPerDay}
+                showDailyHours={isWeekly}
+                showResizeDateTooltip={!isWeekly}
+                readOnly={readOnly}
+                showResizeLeft={resizeVis.showResizeLeft}
+                showResizeRight={resizeVis.showResizeRight}
+              />
+            </div>
+          );
+        })}
 
         {/* Vacation bars */}
         {vacationBars.map((vbar, i) => {
@@ -383,9 +422,9 @@ export function TimelineRow({
               key={`vac-${i}`}
               role="button"
               tabIndex={0}
-              className="absolute top-1 flex cursor-pointer items-center overflow-hidden rounded bg-slate-400/80 text-xs text-white shadow-sm select-none dark:bg-slate-500/80"
+              className="absolute flex cursor-pointer items-center overflow-hidden rounded bg-slate-400/80 text-xs text-white shadow-sm select-none dark:bg-slate-500/80"
               style={{
-                top: vbar.row * vacationBarRowHeight + 2 + utilRowHeight,
+                top: vbar.row * barRowHeight + 2 + utilRowHeight,
                 left: vbar.left,
                 width: Math.max(vbar.width, 20),
                 height: 28,
@@ -401,7 +440,7 @@ export function TimelineRow({
             >
               {/* Striped accent on left edge */}
               <div
-                className="h-full w-1.5 flex-shrink-0"
+                className="h-full w-1.5 shrink-0"
                 style={{
                   backgroundImage:
                     "repeating-linear-gradient(135deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)",

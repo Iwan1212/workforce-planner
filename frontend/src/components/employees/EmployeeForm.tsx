@@ -1,12 +1,5 @@
-import { type FormEvent, useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { type SyntheticEvent, useState } from "react";
+import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +10,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
-import type { EmployeeFormProps } from "@/types/employee";
+import type { Employee, EmployeeFormProps } from "@/types/employee";
+
+function initialFormState(employee: Employee | null | undefined) {
+  if (!employee) {
+    return {
+      firstName: "",
+      lastName: "",
+      team: "none",
+      email: "",
+    };
+  }
+  return {
+    firstName: employee.first_name,
+    lastName: employee.last_name,
+    team: employee.team ?? "none",
+    email: employee.email ?? "",
+  };
+}
 
 export function EmployeeForm({
   open,
@@ -26,102 +36,82 @@ export function EmployeeForm({
   employee,
   isSubmitting,
 }: EmployeeFormProps) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [team, setTeam] = useState<string>("none");
-  const [email, setEmail] = useState("");
+  const [form, setForm] = useState(() => initialFormState(employee));
 
-  useEffect(() => {
-    if (employee) {
-      setFirstName(employee.first_name);
-      setLastName(employee.last_name);
-      setTeam(employee.team ?? "none");
-      setEmail(employee.email ?? "");
-    } else {
-      setFirstName("");
-      setLastName("");
-      setTeam("none");
-      setEmail("");
-    }
-  }, [employee, open]);
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) return;
+    if (!form.firstName.trim() || !form.lastName.trim()) return;
     onSubmit({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      team: team === "none" ? null : team,
-      email: email.trim() || null,
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      team: form.team === "none" ? null : form.team,
+      email: form.email.trim() || null,
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {employee ? "Edytuj pracownika" : "Dodaj pracownika"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Imię</Label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Nazwisko</Label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="jan.kowalski@firma.pl"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Email do synchronizacji urlopów z Calamari
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Zespół</Label>
-            <Select value={team} onValueChange={setTeam}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— Brak —</SelectItem>
-                {ALL_TEAMS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {TEAM_LABELS[t]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Anuluj
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Zapisywanie..." : "Zapisz"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <DialogWrapper
+      open={open}
+      onClose={onClose}
+      title={employee ? "Edytuj pracownika" : "Dodaj pracownika"}
+      form={{
+        onSubmit: handleSubmit,
+        isSubmitting,
+        submitLabel: "Zapisz",
+      }}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="firstName">Imię</Label>
+        <Input
+          id="firstName"
+          value={form.firstName}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, firstName: e.target.value }))
+          }
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Nazwisko</Label>
+        <Input
+          id="lastName"
+          value={form.lastName}
+          onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="jan.kowalski@firma.pl"
+          value={form.email}
+          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+        />
+        <p className="text-xs text-muted-foreground">
+          Email do synchronizacji urlopów z Calamari
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label>Zespół</Label>
+        <Select
+          value={form.team}
+          onValueChange={(v) => setForm((f) => ({ ...f, team: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">— Brak —</SelectItem>
+            {ALL_TEAMS.map((t) => (
+              <SelectItem key={t} value={t}>
+                {TEAM_LABELS[t]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </DialogWrapper>
   );
 }

@@ -14,6 +14,7 @@ import { pl } from "date-fns/locale";
 import { CircleHelp, StickyNote } from "lucide-react";
 import type { TimelineBarProps } from "@/types/timeline";
 import { getContrastTextClass } from "@/lib/utils";
+import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
 
 export function TimelineBar({
   assignment,
@@ -25,6 +26,9 @@ export function TimelineBar({
   pxPerDay,
   showDailyHours = false,
   readOnly = false,
+  showResizeDateTooltip = false,
+  showResizeLeft = true,
+  showResizeRight = true,
 }: TimelineBarProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -40,6 +44,7 @@ export function TimelineBar({
     y: number;
   } | null>(null);
   const startXRef = useRef(0);
+  const resizeTooltipYRef = useRef(0);
   const justResizedRef = useRef(false);
 
   const [noteTooltip, setNoteTooltip] = useState<{
@@ -75,6 +80,7 @@ export function TimelineBar({
       e.preventDefault();
       setResizing(edge);
       setResizeDelta(0);
+      resizeTooltipYRef.current = e.clientY;
       setResizeTooltipPos({ x: e.clientX, y: e.clientY });
       startXRef.current = e.clientX;
 
@@ -83,7 +89,7 @@ export function TimelineBar({
         setResizeDelta(dx);
         setResizeTooltipPos({
           x: moveEvent.clientX,
-          y: moveEvent.clientY,
+          y: resizeTooltipYRef.current,
         });
       };
 
@@ -123,8 +129,8 @@ export function TimelineBar({
     assignment.allocation_type === "percentage"
       ? `${assignment.allocation_value}% (${assignment.daily_hours}h/d)`
       : assignment.allocation_type === "monthly_hours"
-      ? `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`
-      : `${assignment.allocation_value}h tot. (${assignment.daily_hours}h/d)`;
+        ? `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`
+        : `${assignment.allocation_value}h tot. (${assignment.daily_hours}h/d)`;
 
   const textColorClass = assignment.is_tentative
     ? ""
@@ -146,8 +152,6 @@ export function TimelineBar({
         left: adjustedLeft,
         width: adjustedWidth,
         height: 28,
-        backgroundColor: "white",
-        border: `2px solid ${assignment.project_color}`,
         color: assignment.project_color,
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         opacity: isDragging ? 0.5 : 1,
@@ -157,11 +161,17 @@ export function TimelineBar({
         left: adjustedLeft,
         width: adjustedWidth,
         height: 28,
-        backgroundColor: assignment.project_color,
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging || resizing ? 50 : 1,
       };
+
+  const barFillStyle: React.CSSProperties = assignment.is_tentative
+    ? {
+        backgroundColor: "white",
+        border: `2px solid ${assignment.project_color}`,
+      }
+    : { backgroundColor: assignment.project_color };
 
   const daysDelta = Math.round(resizeDelta / pxPerDay);
   const resizeTooltipDate = useMemo(() => {
@@ -173,12 +183,12 @@ export function TimelineBar({
     const end = parseISO(assignment.end_date);
     return format(addDays(end, daysDelta), "d.MM.yyyy", { locale: pl });
   }, [resizing, assignment.start_date, assignment.end_date, daysDelta]);
-  const showTooltip = resizing !== null;
+  const showTooltip = showResizeDateTooltip && resizing !== null;
 
   return (
     <div
       ref={setNodeRef}
-      className={`absolute top-1 flex items-center overflow-hidden rounded text-xs ${textColorClass} shadow-sm ${
+      className={`absolute top-0 flex items-center rounded text-xs ${textColorClass} shadow-sm ${
         readOnly
           ? "cursor-default"
           : resizing
@@ -193,8 +203,13 @@ export function TimelineBar({
         }
       }}
     >
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded"
+        style={barFillStyle}
+        aria-hidden
+      />
       {/* Left resize handle */}
-      {!readOnly && (
+      {!readOnly && showResizeLeft && (
         <div
           className="absolute left-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
           onMouseDown={(e) => handleResizeStart(e, "left")}
@@ -203,32 +218,44 @@ export function TimelineBar({
 
       {/* Content - drag handle in the middle */}
       <span
-        className="flex min-w-0 flex-1 items-center gap-1 truncate px-2"
+        className="relative z-1 flex min-w-0 flex-1 items-center px-2"
         {...listeners}
         {...attributes}
       >
-        <span className="truncate">
-          {showDailyHours
-            ? `${assignment.daily_hours}h/d`
-            : `${assignment.project_name} · ${label}`}
-        </span>
-        {assignment.is_tentative && (
-          <CircleHelp size={12} className="shrink-0 opacity-75" />
-        )}
-        {hasNote && (
-          <span
-            ref={iconRef}
-            className="ml-0.5 inline-flex shrink-0 align-text-bottom"
-            onPointerEnter={showNoteTooltip}
-            onPointerLeave={hideNoteTooltip}
-          >
-            <StickyNote size={12} className="opacity-75" />
+        <span
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-sm px-1 py-px"
+          style={{
+            position: "sticky",
+            left: TIMELINE_LEFT_PANEL_WIDTH,
+            top: 0,
+            backgroundColor: assignment.is_tentative
+              ? "white"
+              : assignment.project_color,
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {showDailyHours
+              ? `${assignment.project_name} (${assignment.daily_hours}h/d)`
+              : `${assignment.project_name} · ${label}`}
           </span>
-        )}
+          {assignment.is_tentative && (
+            <CircleHelp size={12} className="shrink-0 opacity-75" />
+          )}
+          {hasNote && (
+            <span
+              ref={iconRef}
+              className="inline-flex shrink-0 align-text-bottom"
+              onPointerEnter={showNoteTooltip}
+              onPointerLeave={hideNoteTooltip}
+            >
+              <StickyNote size={12} className="opacity-75" />
+            </span>
+          )}
+        </span>
       </span>
 
       {/* Right resize handle */}
-      {!readOnly && (
+      {!readOnly && showResizeRight && (
         <div
           className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-black/20"
           onMouseDown={(e) => handleResizeStart(e, "right")}
@@ -247,7 +274,6 @@ export function TimelineBar({
               transform: "translate(-50%, -100%)",
             }}
           >
-            {resizing === "left" ? "Od: " : "Do: "}
             {resizeTooltipDate}
           </div>,
           document.body,

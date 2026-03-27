@@ -34,3 +34,5 @@ export function getUtilColor(pct: number): string {
   if (pct > 0) return "text-green-600";
   return "text-muted-foreground";
 }
+
+export const TIMELINE_LEFT_PANEL_WIDTH = 250;

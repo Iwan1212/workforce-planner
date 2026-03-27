@@ -64,7 +64,7 @@ function App() {
 
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
-      {currentPath === "/" && <Timeline />}
+      {currentPath === "/" && <Timeline onNavigate={navigate} />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
       {currentPath === "/users" && <UserManagement />}

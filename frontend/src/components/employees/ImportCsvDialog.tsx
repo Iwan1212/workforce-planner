@@ -2,13 +2,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogWrapper } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { importEmployeesCsv } from "@/api/employees";
 import type { ImportCsvDialogProps, ImportResult } from "@/types/employee";
@@ -66,13 +60,29 @@ export function ImportCsvDialog({ open, onClose }: ImportCsvDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Import pracowników z CSV</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <DialogWrapper
+      open={open}
+      onClose={handleClose}
+      title="Import pracowników z CSV"
+      contentClassName="max-w-lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={handleClose}>
+            {result ? "Zamknij" : "Anuluj"}
+          </Button>
+          {!result && (
+            <Button
+              onClick={handleUpload}
+              disabled={!selectedFile || importMutation.isPending}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {importMutation.isPending ? "Importowanie..." : "Importuj"}
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
             Wymagane kolumny: <code>first_name</code>, <code>last_name</code>,{" "}
             <code>team</code> (opcjonalnie). Maks. 500 wierszy, 1 MB.
@@ -148,22 +158,6 @@ export function ImportCsvDialog({ open, onClose }: ImportCsvDialogProps) {
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            {result ? "Zamknij" : "Anuluj"}
-          </Button>
-          {!result && (
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || importMutation.isPending}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {importMutation.isPending ? "Importowanie..." : "Importuj"}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </DialogWrapper>
   );
 }

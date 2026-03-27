@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import type { DialogWrapperProps } from "@/types/ui";
 
 function Dialog({
   ...props
@@ -142,6 +143,57 @@ function DialogDescription({
   );
 }
 
+function DialogWrapper({
+  open,
+  onClose,
+  title,
+  children,
+  contentClassName,
+  footer,
+  form,
+}: DialogWrapperProps) {
+  const submitting = form?.isSubmitting ?? false;
+
+  const main =
+    form != null ? (
+      <form
+        onSubmit={form.onSubmit}
+        className={cn("space-y-4", form.className)}
+      >
+        {children}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {form.cancelLabel ?? "Anuluj"}
+          </Button>
+          <Button
+            type="submit"
+            disabled={submitting || Boolean(form.submitDisabled)}
+          >
+            {submitting
+              ? (form.submittingLabel ?? "Zapisywanie...")
+              : form.submitLabel}
+          </Button>
+        </DialogFooter>
+      </form>
+    ) : (
+      <>
+        {children}
+        {footer != null ? <DialogFooter>{footer}</DialogFooter> : null}
+      </>
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className={cn(contentClassName)}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {main}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export {
   Dialog,
   DialogClose,
@@ -153,4 +205,7 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  DialogWrapper,
 };
+
+export type { DialogWrapperFormProps, DialogWrapperProps } from "@/types/ui";
