@@ -8,6 +8,7 @@ import {
   min as dateMin,
   isWithinInterval,
   addDays,
+  format,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
@@ -41,7 +42,7 @@ function getMonthlyPixelPosition(date: Date, months: MonthDef[]): number {
 function computeBarPositionMonthly(
   item: DateRange,
   months: MonthDef[],
-): { left: number; width: number } | null {
+): { left: number; width: number; visibleStart: Date } | null {
   if (months.length === 0) return null;
 
   const aStart = parseISO(item.start_date);
@@ -66,13 +67,14 @@ function computeBarPositionMonthly(
   return {
     left,
     width: right - left,
+    visibleStart,
   };
 }
 
 function computeBarPositionWeekly(
   item: DateRange,
   allDays: DayInfo[],
-): { left: number; width: number } | null {
+): { left: number; width: number; visibleStart: Date } | null {
   if (allDays.length === 0) return null;
 
   const aStart = parseISO(item.start_date);
@@ -92,6 +94,7 @@ function computeBarPositionWeekly(
   return {
     left: leftDays * DAY_WIDTH,
     width: spanDays * DAY_WIDTH,
+    visibleStart,
   };
 }
 
@@ -169,6 +172,7 @@ export function TimelineRow({
   onVacationClick,
   onEmptyClick,
   onResizeEnd,
+  onBarContextMenu,
   isOdd,
   readOnly = false,
 }: TimelineRowProps) {
@@ -364,8 +368,12 @@ export function TimelineRow({
               employeeId={employeeId}
               left={bar.left}
               width={bar.width}
+              barStartDate={format(bar.visibleStart, "yyyy-MM-dd")}
               onClick={() => onAssignmentClick(bar.assignment)}
               onResizeEnd={onResizeEnd}
+              onBarContextMenu={(x, y, splitDate, splitDateIsValid) =>
+                onBarContextMenu(bar.assignment.id, x, y, splitDate, splitDateIsValid)
+              }
               pxPerDay={pxPerDay}
               showDailyHours={isWeekly}
               readOnly={readOnly}

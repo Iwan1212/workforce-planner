@@ -130,7 +130,7 @@ export function UserFormDialog({
               onValueChange={setRole}
               disabled={isSelf}
             >
-              <SelectTrigger id="user-form-role">
+              <SelectTrigger id="user-form-role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

@@ -22,7 +22,7 @@ export function AssignmentFormNote({
           htmlFor="assignment-tentative"
           className="cursor-pointer font-normal"
         >
-          Tentative — niepotwierdzony assignment
+          Tentative - niepotwierdzony assignment
         </Label>
       </div>
 

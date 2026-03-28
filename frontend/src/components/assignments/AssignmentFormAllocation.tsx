@@ -20,7 +20,7 @@ export function AssignmentFormAllocation({
       <div className="space-y-2">
         <Label htmlFor="assignment-alloc-type">Typ alokacji</Label>
         <Select value={allocationType} onValueChange={onAllocationTypeChange}>
-          <SelectTrigger id="assignment-alloc-type">
+          <SelectTrigger id="assignment-alloc-type" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
