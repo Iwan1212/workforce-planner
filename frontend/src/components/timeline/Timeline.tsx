@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -7,9 +7,11 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { addDays, parseISO, format, getDay } from "date-fns";
-import { Plus } from "lucide-react";
+import { pl } from "date-fns/locale";
+import { Copy, Plus, Scissors } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { useTimeline } from "@/hooks/useTimeline";
@@ -19,7 +21,7 @@ import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
 import { AssignmentModal } from "@/components/assignments/AssignmentModal";
-import { updateAssignment } from "@/api/assignments";
+import { updateAssignment, splitAssignment, duplicateAssignment } from "@/api/assignments";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
 import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
@@ -100,6 +102,34 @@ export function Timeline() {
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
   const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(null);
 
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    splitDate: string;
+    splitDateLabel: string;
+    splitDateIsValid: boolean;
+    assignmentId: number;
+  } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
+
   const LEFT_PANEL_WIDTH = 250;
   const totalWidth =
     viewMode === "weekly"
@@ -120,6 +150,50 @@ export function Timeline() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  // Split mutation
+  const splitMutation = useMutation({
+    mutationFn: ({ id, date }: { id: number; date: string }) =>
+      splitAssignment(id, date),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      toast.success("Assignment podzielony");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Duplicate mutation
+  const duplicateMutation = useMutation({
+    mutationFn: (id: number) => duplicateAssignment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      toast.success("Assignment zduplikowany");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const handleBarContextMenu = useCallback(
+    (
+      assignmentId: number,
+      x: number,
+      y: number,
+      splitDate: string,
+      splitDateIsValid: boolean,
+    ) => {
+      setContextMenu({
+        x,
+        y,
+        splitDate,
+        splitDateLabel: format(parseISO(splitDate), "d.MM.yyyy", { locale: pl }),
+        splitDateIsValid,
+        assignmentId,
+      });
+      // Close assignment modal if open
+      setModalOpen(false);
+      setEditingAssignment(null);
+    },
+    [],
+  );
 
   // Mutation for D&D and resize
   const patchMutation = useMutation({
@@ -384,6 +458,7 @@ export function Timeline() {
                   onVacationClick={handleVacationClick}
                   onEmptyClick={handleEmptyClick}
                   onResizeEnd={handleResizeEnd}
+                  onBarContextMenu={handleBarContextMenu}
                   readOnly={isViewer}
                   isOdd={idx % 2 === 1}
                 />
@@ -395,6 +470,42 @@ export function Timeline() {
       )}
 
       <div className="pb-6" />
+
+      {/* Context menu for split / duplicate */}
+      {contextMenu &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            className="fixed z-[9999] min-w-44 overflow-hidden rounded-md border bg-popover py-1 shadow-md"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!contextMenu.splitDateIsValid}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                splitMutation.mutate({ id: contextMenu.assignmentId, date: contextMenu.splitDate });
+                setContextMenu(null);
+              }}
+            >
+              <Scissors size={13} className="shrink-0" />
+              <span>Podziel: {contextMenu.splitDateLabel}</span>
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                duplicateMutation.mutate(contextMenu.assignmentId);
+                setContextMenu(null);
+              }}
+            >
+              <Copy size={13} className="shrink-0" />
+              <span>Duplikuj</span>
+            </button>
+          </div>,
+          document.body,
+        )}
+
       <VacationDialog
         open={vacationModalOpen}
         onClose={() => {
