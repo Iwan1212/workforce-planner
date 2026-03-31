@@ -25,6 +25,7 @@ import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import type { VacationRange } from "@/types/timeline";
+import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
 
 type TimelineProps = {
   onNavigate?: (path: string) => void;
@@ -99,7 +100,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       for (const h of data.holidays) map[h.date] = h.name;
     }
     return map;
-  }, [data]);
+  }, [data?.holidays]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] =
@@ -113,7 +114,6 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     null,
   );
 
-  const LEFT_PANEL_WIDTH = 250;
   const totalWidth =
     viewMode === "weekly"
       ? allDays.length * DAY_WIDTH
@@ -322,7 +322,10 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       {isLoading ? (
         <div className="mx-6 rounded-md border">
           <div className="flex border-b">
-            <div className="w-[250px] shrink-0 border-r p-3">
+            <div
+              className="shrink-0 border-r p-3"
+              style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
+            >
               <div className="h-4 w-20 animate-pulse rounded bg-muted" />
             </div>
             <div className="flex flex-1">
@@ -336,7 +339,10 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex border-b">
-              <div className="w-[250px] shrink-0 border-r p-3">
+              <div
+                className="shrink-0 border-r p-3"
+                style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
+              >
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
                 <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
               </div>
@@ -359,14 +365,14 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
             <div className="overflow-x-auto">
-              <div style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}>
+              <div style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}>
                 <div
                   className="flex border-b bg-muted"
-                  style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
+                  style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}
                 >
                   <div
                     className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-muted px-3 py-2"
-                    style={{ width: LEFT_PANEL_WIDTH }}
+                    style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
                   >
                     <span className="text-sm font-medium">Pracownik</span>
                   </div>

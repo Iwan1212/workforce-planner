@@ -147,6 +147,7 @@ function DialogWrapper({
   open,
   onClose,
   title,
+  description,
   children,
   contentClassName,
   footer,
@@ -184,9 +185,15 @@ function DialogWrapper({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className={cn(contentClassName)}>
+      <DialogContent
+        className={cn(contentClassName)}
+        {...(description ? {} : { "aria-describedby": undefined })}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
         {main}
       </DialogContent>

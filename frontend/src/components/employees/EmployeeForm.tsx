@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,11 @@ export function EmployeeForm({
 }: EmployeeFormProps) {
   const [form, setForm] = useState(() => initialFormState(employee));
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    setForm(initialFormState(employee));
+  }, [employee]);
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.firstName.trim() || !form.lastName.trim()) return;
     onSubmit({

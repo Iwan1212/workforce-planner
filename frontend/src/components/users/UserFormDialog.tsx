@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,7 @@ export function UserFormDialog({
   const passwordMismatch =
     (password || passwordConfirm) && password !== passwordConfirm;
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (passwordMismatch) {
       toast.error("Hasła nie są identyczne");

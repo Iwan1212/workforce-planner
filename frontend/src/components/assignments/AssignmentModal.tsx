@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DialogWrapper } from "@/components/ui/dialog";
@@ -103,7 +103,7 @@ export function AssignmentModal({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = {
       employee_id: Number(employeeId),

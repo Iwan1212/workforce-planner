@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode, SyntheticEvent } from "react";
+import type { ComponentProps, FormEvent, ReactNode } from "react";
 import type { Button } from "@/components/ui/button";
 
 export interface RefreshButtonProps extends Omit<
@@ -64,7 +64,7 @@ export interface DataTableProps<T> {
 }
 
 export interface DialogWrapperFormProps {
-  onSubmit: (e: SyntheticEvent<HTMLFormElement>) => void;
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   className?: string;
   isSubmitting?: boolean;
   submitDisabled?: boolean;
@@ -77,6 +77,7 @@ export interface DialogWrapperProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
+  description?: string;
   contentClassName?: string;
   children: ReactNode;
   footer?: ReactNode;

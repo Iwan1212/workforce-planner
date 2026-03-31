@@ -168,7 +168,7 @@ export function TimelineBar({
 
   const barFillStyle: React.CSSProperties = assignment.is_tentative
     ? {
-        backgroundColor: "white",
+        backgroundColor: "var(--background)",
         border: `2px solid ${assignment.project_color}`,
       }
     : { backgroundColor: assignment.project_color };
@@ -229,7 +229,7 @@ export function TimelineBar({
             left: TIMELINE_LEFT_PANEL_WIDTH,
             top: 0,
             backgroundColor: assignment.is_tentative
-              ? "white"
+              ? "var(--background)"
               : assignment.project_color,
           }}
         >
