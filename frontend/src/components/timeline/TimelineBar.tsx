@@ -235,7 +235,7 @@ export function TimelineBar({
         >
           <span className="min-w-0 flex-1 truncate">
             {showDailyHours
-              ? `${assignment.project_name} (${assignment.daily_hours}h/d)`
+              ? `${assignment.project_name} · (${assignment.daily_hours}h/d)`
               : `${assignment.project_name} · ${label}`}
           </span>
           {assignment.is_tentative && (
