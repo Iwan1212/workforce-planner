@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sun, Moon, Link, Unlink } from "lucide-react";
+import { Sun, Moon, Link, Unlink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { ThemeCardProps } from "@/types/settings";
 import { updateTheme } from "@/api/auth";
@@ -40,7 +41,7 @@ export function SettingsPage() {
       <PageHeader title="Ustawienia" />
 
       <section className="max-w-2xl">
-        <p className="mb-1 text-sm font-semibold text-foreground">Wygląd</p>
+        <p className="mb-1 text-base font-semibold text-foreground">Wygląd</p>
         <p className="mb-4 text-sm text-muted-foreground">Wybierz schemat kolorystyczny aplikacji</p>
 
         <div className="flex gap-6">
@@ -62,9 +63,12 @@ export function SettingsPage() {
       </section>
 
       {isAdmin && (
-        <section className="mt-10 max-w-2xl">
-          <CalamariSection />
-        </section>
+        <>
+          <Separator className="my-6" />
+          <section>
+            <CalamariSection />
+          </section>
+        </>
       )}
     </div>
   );
@@ -118,7 +122,7 @@ function CalamariSection() {
 
   return (
     <>
-      <p className="mb-1 text-sm font-semibold text-foreground">Integracja Calamari</p>
+      <p className="mb-1 text-base font-semibold text-foreground">Integracja Calamari</p>
       <p className="mb-4 text-sm text-muted-foreground">
         Podłącz Calamari HR, aby automatycznie pobierać zatwierdzone urlopy pracowników
       </p>
@@ -126,10 +130,13 @@ function CalamariSection() {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Ładowanie...</p>
       ) : isConfigured ? (
-        <div className="space-y-4 rounded-lg border p-4">
+        <div className="space-y-4 rounded-lg border bg-muted/50 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-green-600">Połączono</p>
+              <p className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                <CheckCircle2 className="h-4 w-4" />
+                Połączono
+              </p>
               <p className="text-xs text-muted-foreground">
                 Subdomena: {config?.subdomain ?? "—"}
               </p>
@@ -148,6 +155,7 @@ function CalamariSection() {
               <Button
                 variant="destructive"
                 size="sm"
+                className="dark:bg-destructive dark:hover:bg-destructive/90"
                 onClick={() => disconnectMutation.mutate()}
                 disabled={isPending}
               >

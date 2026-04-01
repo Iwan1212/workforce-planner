@@ -61,7 +61,7 @@ export function EmployeeForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {employee ? "Edytuj pracownika" : "Dodaj pracownika"}
+            {employee ? "Edytuj pracownika" : "Nowy pracownik"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -99,7 +99,7 @@ export function EmployeeForm({
           <div className="space-y-2">
             <Label>Zespół</Label>
             <Select value={team} onValueChange={setTeam}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

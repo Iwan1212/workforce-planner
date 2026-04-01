@@ -59,7 +59,7 @@ export function LoginForm() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Reset hasła</CardTitle>
+            <CardTitle className="text-2xl" style={{ fontFamily: "var(--font-heading)" }}>Reset hasła</CardTitle>
             <CardDescription>
               Podaj email, aby otrzymać link do resetu
             </CardDescription>
@@ -109,7 +109,9 @@ export function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Workforce Planner</CardTitle>
+          <CardTitle className="text-2xl" style={{ fontFamily: "var(--font-heading)" }}>
+            Workforce <span className="text-violet-500">Planner</span>
+          </CardTitle>
           <CardDescription>Zaloguj się do systemu</CardDescription>
         </CardHeader>
         <CardContent>
@@ -142,13 +144,14 @@ export function LoginForm() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Logowanie..." : "Zaloguj się"}
             </Button>
-            <button
+            <Button
               type="button"
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              variant="ghost"
+              className="w-full"
               onClick={() => setShowReset(true)}
             >
               Nie pamiętam hasła
-            </button>
+            </Button>
           </form>
         </CardContent>
       </Card>
