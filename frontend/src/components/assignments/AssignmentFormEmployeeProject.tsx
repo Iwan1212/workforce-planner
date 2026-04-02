@@ -21,7 +21,7 @@ export function AssignmentFormEmployeeProject({
       <div className="space-y-2">
         <Label htmlFor="assignment-employee">Pracownik</Label>
         <Select value={employeeId} onValueChange={onEmployeeChange}>
-          <SelectTrigger id="assignment-employee">
+          <SelectTrigger id="assignment-employee" className="w-full">
             <SelectValue placeholder="Wybierz pracownika" />
           </SelectTrigger>
           <SelectContent>
@@ -37,7 +37,7 @@ export function AssignmentFormEmployeeProject({
       <div className="space-y-2">
         <Label htmlFor="assignment-project">Projekt</Label>
         <Select value={projectId} onValueChange={onProjectChange}>
-          <SelectTrigger id="assignment-project">
+          <SelectTrigger id="assignment-project" className="w-full">
             <SelectValue placeholder="Wybierz projekt" />
           </SelectTrigger>
           <SelectContent>

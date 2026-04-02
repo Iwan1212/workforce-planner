@@ -69,11 +69,7 @@ export function LoginForm() {
           {resetMessage && (
             <p className="text-sm text-muted-foreground">{resetMessage}</p>
           )}
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={resetSending}
-          >
+          <Button type="submit" className="w-full" disabled={resetSending}>
             {resetSending ? "Wysyłanie..." : "Wyślij link do resetu"}
           </Button>
           <Button
@@ -93,7 +89,14 @@ export function LoginForm() {
   }
 
   return (
-    <AuthCard title="Workforce Planner" description="Zaloguj się do systemu">
+    <AuthCard
+      title={
+        <>
+          Workforce <span className="text-violet-500">Planner</span>
+        </>
+      }
+      description="Zaloguj się do systemu"
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -123,13 +126,14 @@ export function LoginForm() {
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Logowanie..." : "Zaloguj się"}
         </Button>
-        <button
+        <Button
+          variant="ghost"
           type="button"
           className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
           onClick={() => setShowReset(true)}
         >
           Nie pamiętam hasła
-        </button>
+        </Button>
       </form>
     </AuthCard>
   );

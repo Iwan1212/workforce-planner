@@ -80,7 +80,7 @@ export function ProjectForm({
     <DialogWrapper
       open={open}
       onClose={onClose}
-      title={project ? "Edytuj projekt" : "Dodaj projekt"}
+      title={project ? "Edytuj projekt" : "Nowy projekt"}
       form={{
         onSubmit: handleSubmit,
         isSubmitting,

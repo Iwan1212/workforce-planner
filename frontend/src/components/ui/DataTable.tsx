@@ -18,7 +18,7 @@ export function DataTable<T>({
       <div className={cn("rounded-md border", className)}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50">
+            <tr className="border-b bg-muted">
               {columns.map((col) => (
                 <th
                   key={col.id}
@@ -82,7 +82,7 @@ export function DataTable<T>({
     <div className={cn("rounded-md border", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b bg-muted/50">
+          <tr className="border-b bg-muted">
             {columns.map((col) => (
               <th
                 key={col.id}

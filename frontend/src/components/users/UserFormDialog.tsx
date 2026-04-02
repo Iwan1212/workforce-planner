@@ -123,7 +123,7 @@ export function UserFormDialog({
       <div className="space-y-2">
         <Label htmlFor="user-form-role">Rola</Label>
         <Select value={role} onValueChange={setRole} disabled={isSelf}>
-          <SelectTrigger id="user-form-role">
+          <SelectTrigger id="user-form-role" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

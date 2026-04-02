@@ -57,7 +57,7 @@ export function EmployeeForm({
     <DialogWrapper
       open={open}
       onClose={onClose}
-      title={employee ? "Edytuj pracownika" : "Dodaj pracownika"}
+      title={employee ? "Edytuj pracownika" : "Nowy pracownik"}
       form={{
         onSubmit: handleSubmit,
         isSubmitting,
@@ -103,7 +103,7 @@ export function EmployeeForm({
           value={form.team}
           onValueChange={(v) => setForm((f) => ({ ...f, team: v }))}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -309,7 +309,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
             {!isViewer && (
               <Button onClick={handleNewAssignment}>
                 <Plus className="mr-2 h-4 w-4" />
-                Nowy assignment
+                Dodaj assignment
               </Button>
             )}
           </div>
