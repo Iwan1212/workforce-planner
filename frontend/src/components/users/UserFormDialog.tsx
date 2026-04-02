@@ -1,13 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -62,7 +55,7 @@ export function UserFormDialog({
   const passwordMismatch =
     (password || passwordConfirm) && password !== passwordConfirm;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (passwordMismatch) {
       toast.error("Hasła nie są identyczne");
@@ -86,112 +79,96 @@ export function UserFormDialog({
     }
   };
 
-  const submitDisabled = Boolean(
-    isSubmitting ||
-      (isEdit
-        ? !!password && passwordMismatch
-        : !!passwordConfirm && passwordMismatch),
+  const passwordSubmitDisabled = Boolean(
+    isEdit
+      ? !!password && passwordMismatch
+      : !!passwordConfirm && passwordMismatch,
   );
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Edytuj użytkownika" : "Nowy użytkownik"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="user-form-name">Imię i nazwisko</Label>
-            <Input
-              id="user-form-name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Jan Kowalski"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-form-email">Email</Label>
-            <Input
-              id="user-form-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="jan@firma.pl"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-form-role">Rola</Label>
-            <Select
-              value={role}
-              onValueChange={setRole}
-              disabled={isSelf}
-            >
-              <SelectTrigger id="user-form-role" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">Użytkownik</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-            {isSelf && (
-              <p className="text-xs text-muted-foreground">
-                Nie możesz zmienić własnej roli
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-form-password">
-              {isEdit ? "Nowe hasło" : "Hasło"}
-            </Label>
-            <PasswordInput
-              id="user-form-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={
-                isEdit ? "Pozostaw puste, aby nie zmieniać" : "Minimum 8 znaków"
-              }
-              required={!isEdit}
-              minLength={isEdit ? undefined : 8}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="user-form-password-confirm">
-              {isEdit ? "Powtórz nowe hasło" : "Powtórz hasło"}
-            </Label>
-            <PasswordInput
-              id="user-form-password-confirm"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-              placeholder={isEdit ? "Powtórz nowe hasło" : "Powtórz hasło"}
-              required={!isEdit}
-              minLength={isEdit ? undefined : 8}
-            />
-            {passwordMismatch && (
-              <p className="text-xs text-destructive">Hasła nie są identyczne</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Anuluj
-            </Button>
-            <Button type="submit" disabled={submitDisabled}>
-              {isSubmitting
-                ? isEdit
-                  ? "Zapisywanie..."
-                  : "Dodawanie..."
-                : isEdit
-                  ? "Zapisz"
-                  : "Dodaj"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <DialogWrapper
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Edytuj użytkownika" : "Nowy użytkownik"}
+      contentClassName="max-w-md"
+      form={{
+        onSubmit: handleSubmit,
+        isSubmitting,
+        submitDisabled: passwordSubmitDisabled,
+        submitLabel: isEdit ? "Zapisz" : "Dodaj",
+        submittingLabel: isEdit ? "Zapisywanie..." : "Dodawanie...",
+      }}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="user-form-name">Imię i nazwisko</Label>
+        <Input
+          id="user-form-name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Jan Kowalski"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="user-form-email">Email</Label>
+        <Input
+          id="user-form-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="jan@firma.pl"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="user-form-role">Rola</Label>
+        <Select value={role} onValueChange={setRole} disabled={isSelf}>
+          <SelectTrigger id="user-form-role" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="user">Użytkownik</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="viewer">Viewer</SelectItem>
+          </SelectContent>
+        </Select>
+        {isSelf && (
+          <p className="text-xs text-muted-foreground">
+            Nie możesz zmienić własnej roli
+          </p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="user-form-password">
+          {isEdit ? "Nowe hasło" : "Hasło"}
+        </Label>
+        <PasswordInput
+          id="user-form-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={
+            isEdit ? "Pozostaw puste, aby nie zmieniać" : "Minimum 8 znaków"
+          }
+          required={!isEdit}
+          minLength={isEdit ? undefined : 8}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="user-form-password-confirm">
+          {isEdit ? "Powtórz nowe hasło" : "Powtórz hasło"}
+        </Label>
+        <PasswordInput
+          id="user-form-password-confirm"
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          placeholder={isEdit ? "Powtórz nowe hasło" : "Powtórz hasło"}
+          required={!isEdit}
+          minLength={isEdit ? undefined : 8}
+        />
+        {passwordMismatch && (
+          <p className="text-xs text-destructive">Hasła nie są identyczne</p>
+        )}
+      </div>
+    </DialogWrapper>
   );
 }

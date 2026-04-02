@@ -25,7 +25,13 @@ import { updateAssignment, splitAssignment, duplicateAssignment } from "@/api/as
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
 import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
+import { TimelineEmptyState } from "./TimelineEmptyState";
 import type { VacationRange } from "@/types/timeline";
+import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
+
+type TimelineProps = {
+  onNavigate?: (path: string) => void;
+};
 
 function calcUtilizationInRange(
   assignments: TimelineAssignment[],
@@ -41,7 +47,6 @@ function calcUtilizationInRange(
 
   let totalHours = 0;
   let workingDays = 0;
-  let vacationDays = 0;
 
   let current = rangeStart;
   while (current <= rangeEnd) {
@@ -56,9 +61,7 @@ function calcUtilizationInRange(
         return current >= vStart && current <= vEnd;
       });
 
-      if (isOnVacation) {
-        vacationDays++;
-      } else {
+      if (!isOnVacation) {
         for (const a of assignments) {
           const aStart = parseISO(a.start_date);
           const aEnd = parseISO(a.end_date);
@@ -75,9 +78,18 @@ function calcUtilizationInRange(
   return Math.round((totalHours / (workingDays * 8)) * 100);
 }
 
-export function Timeline() {
+export function Timeline({ onNavigate }: TimelineProps = {}) {
   const queryClient = useQueryClient();
-  const { data, isLoading, months, weeks, allDays, viewMode, startDate, endDate } = useTimeline();
+  const {
+    data,
+    isLoading,
+    months,
+    weeks,
+    allDays,
+    viewMode,
+    startDate,
+    endDate,
+  } = useTimeline();
   const searchQuery = useTimelineStore((s) => s.searchQuery);
   const utilizationFilter = useTimelineStore((s) => s.utilizationFilter);
   const currentUser = useAuthStore((s) => s.user);
@@ -96,11 +108,13 @@ export function Timeline() {
   const [editingAssignment, setEditingAssignment] =
     useState<TimelineAssignment | null>(null);
   const [defaultEmployeeId, setDefaultEmployeeId] = useState<number | null>(
-    null
+    null,
   );
   const [defaultStartDate, setDefaultStartDate] = useState<string | null>(null);
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
-  const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(null);
+  const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(
+    null,
+  );
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -130,7 +144,6 @@ export function Timeline() {
     };
   }, [contextMenu]);
 
-  const LEFT_PANEL_WIDTH = 250;
   const totalWidth =
     viewMode === "weekly"
       ? allDays.length * DAY_WIDTH
@@ -138,7 +151,7 @@ export function Timeline() {
 
   // D&D sensor with activation distance to avoid accidental drags
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
   // Vacation sync mutation
@@ -237,10 +250,10 @@ export function Timeline() {
               "innego pracownika";
             toast.success(`Assignment przeniesiony na ${targetName}`);
           },
-        }
+        },
       );
     },
-    [patchMutation, data]
+    [patchMutation, data],
   );
 
   // Resize handler — change start or end date
@@ -267,7 +280,7 @@ export function Timeline() {
         const lastDate = new Date(lastMonth.year, lastMonth.month, 0);
         const totalDays =
           Math.round(
-            (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
+            (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24),
           ) + 1;
         pxPerDay = totalWidth / totalDays;
       }
@@ -288,15 +301,15 @@ export function Timeline() {
         { id: assignmentId, data: patchData },
         {
           onSuccess: () => toast.success("Daty zaktualizowane"),
-        }
+        },
       );
     },
-    [data, months, viewMode, patchMutation]
+    [data, months, viewMode, patchMutation],
   );
 
   const handleAssignmentClick = (
     assignment: TimelineAssignment,
-    employeeId: number
+    employeeId: number,
   ) => {
     setEditingAssignment(assignment);
     setDefaultEmployeeId(employeeId);
@@ -306,9 +319,7 @@ export function Timeline() {
   const handleEmptyClick = (employeeId: number, dateKey: string) => {
     setEditingAssignment(null);
     setDefaultEmployeeId(employeeId);
-    setDefaultStartDate(
-      dateKey.length === 10 ? dateKey : `${dateKey}-01`
-    );
+    setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
     setModalOpen(true);
   };
 
@@ -330,7 +341,15 @@ export function Timeline() {
     const { dateFrom, dateTo, minPct, maxPct } = utilizationFilter;
     if (minPct === null && maxPct === null) return employees;
     return employees.filter((emp) => {
-      const pct = calcUtilizationInRange(emp.assignments, emp.vacations ?? [], holidayMap, dateFrom, dateTo, startDate, endDate);
+      const pct = calcUtilizationInRange(
+        emp.assignments,
+        emp.vacations ?? [],
+        holidayMap,
+        dateFrom,
+        dateTo,
+        startDate,
+        endDate,
+      );
       if (minPct !== null && pct < minPct) return false;
       if (maxPct !== null && pct > maxPct) return false;
       return true;
@@ -348,7 +367,10 @@ export function Timeline() {
               <div className="flex items-center gap-2">
                 {data.vacation_sync_status.last_synced_at && (
                   <span className="text-xs text-muted-foreground">
-                    Sync: {new Date(data.vacation_sync_status.last_synced_at).toLocaleString("pl-PL")}
+                    Sync:{" "}
+                    {new Date(
+                      data.vacation_sync_status.last_synced_at,
+                    ).toLocaleString("pl-PL")}
                   </span>
                 )}
                 <RefreshButton
@@ -374,15 +396,15 @@ export function Timeline() {
       {isLoading ? (
         <div className="mx-6 rounded-md border">
           <div className="flex border-b">
-            <div className="w-[250px] flex-shrink-0 border-r p-3">
+            <div
+              className="shrink-0 border-r p-3"
+              style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
+            >
               <div className="h-4 w-20 animate-pulse rounded bg-muted" />
             </div>
             <div className="flex flex-1">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-[200px] flex-shrink-0 border-r p-3"
-                >
+                <div key={i} className="w-[200px] shrink-0 border-r p-3">
                   <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                   <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
                 </div>
@@ -391,7 +413,10 @@ export function Timeline() {
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex border-b">
-              <div className="w-[250px] flex-shrink-0 border-r p-3">
+              <div
+                className="shrink-0 border-r p-3"
+                style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
+              >
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
                 <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
               </div>
@@ -405,31 +430,30 @@ export function Timeline() {
           ))}
         </div>
       ) : !data || data.employees.length === 0 ? (
-        <div className="mx-6 flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">
-            {searchQuery.trim()
-              ? <>Brak wyników dla &ldquo;{searchQuery}&rdquo;</>
-              : "Brak pracowników do wyświetlenia. Dodaj pracowników i assignmenty."}
-          </p>
-        </div>
+        <TimelineEmptyState
+          searchQuery={searchQuery}
+          isViewer={isViewer}
+          onNavigateToEmployees={() => onNavigate?.("/employees")}
+        />
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
             <div className="overflow-x-auto">
-              <div
-                style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
-              >
+              <div style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}>
                 <div
                   className="flex border-b bg-muted"
-                  style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
+                  style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}
                 >
                   <div
                     className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-muted px-3 py-2"
-                    style={{ width: LEFT_PANEL_WIDTH }}
+                    style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
                   >
                     <span className="text-sm font-medium">Pracownik</span>
                   </div>
-                  <div className="flex shrink-0" style={{ minWidth: totalWidth }}>
+                  <div
+                    className="flex shrink-0"
+                    style={{ minWidth: totalWidth }}
+                  >
                     <TimelineHeader
                       viewMode={viewMode}
                       months={months}
@@ -442,26 +466,26 @@ export function Timeline() {
                 </div>
                 {displayedEmployees.map((emp, idx) => (
                   <TimelineRow
-                  key={emp.id}
-                  employeeId={emp.id}
-                  name={emp.name}
-                  team={emp.team}
-                  assignments={emp.assignments}
-                  vacations={emp.vacations}
-                  utilization={emp.utilization}
-                  months={months}
-                  weeks={weeks}
-                  allDays={allDays}
-                  viewMode={viewMode}
-                  holidayMap={holidayMap}
-                  onAssignmentClick={(a) => handleAssignmentClick(a, emp.id)}
-                  onVacationClick={handleVacationClick}
-                  onEmptyClick={handleEmptyClick}
-                  onResizeEnd={handleResizeEnd}
-                  onBarContextMenu={handleBarContextMenu}
+                    key={emp.id}
+                    employeeId={emp.id}
+                    name={emp.name}
+                    team={emp.team}
+                    assignments={emp.assignments}
+                    vacations={emp.vacations}
+                    utilization={emp.utilization}
+                    months={months}
+                    weeks={weeks}
+                    allDays={allDays}
+                    viewMode={viewMode}
+                    holidayMap={holidayMap}
+                    onAssignmentClick={(a) => handleAssignmentClick(a, emp.id)}
+                    onVacationClick={handleVacationClick}
+                    onEmptyClick={handleEmptyClick}
+                    onResizeEnd={handleResizeEnd}
+                    onBarContextMenu={handleBarContextMenu}
                   readOnly={isViewer}
-                  isOdd={idx % 2 === 1}
-                />
+                    isOdd={idx % 2 === 1}
+                  />
                 ))}
               </div>
             </div>

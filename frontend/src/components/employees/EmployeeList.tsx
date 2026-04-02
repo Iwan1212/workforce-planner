@@ -51,7 +51,11 @@ export function EmployeeList() {
   const { selectedTeams, toggleTeam, selectAllTeams } = useTeamSelection();
   const noneSelected = selectedTeams.length === 0;
 
-  const crud = useCrudList<Employee, EmployeeCreateData, Partial<EmployeeCreateData>>({
+  const crud = useCrudList<
+    Employee,
+    EmployeeCreateData,
+    Partial<EmployeeCreateData>
+  >({
     queryKey: ["employees"],
     createMutationFn: createEmployee,
     updateMutationFn: ({ id, data }) => updateEmployee(id, data),
@@ -150,6 +154,7 @@ export function EmployeeList() {
       />
 
       <EmployeeForm
+        key={`${crud.editingItem?.id ?? "new"}-${crud.formOpen}`}
         open={crud.formOpen}
         onClose={crud.closeForm}
         onSubmit={handleFormSubmit}

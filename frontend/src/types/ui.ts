@@ -1,8 +1,10 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, FormEvent, ReactNode } from "react";
 import type { Button } from "@/components/ui/button";
 
-export interface RefreshButtonProps
-  extends Omit<ComponentProps<typeof Button>, "children"> {
+export interface RefreshButtonProps extends Omit<
+  ComponentProps<typeof Button>,
+  "children"
+> {
   label: string;
   isPending?: boolean;
 }
@@ -59,4 +61,25 @@ export interface DataTableProps<T> {
   skeletonRowCount?: number;
   emptyContent?: ReactNode;
   className?: string;
+}
+
+export interface DialogWrapperFormProps {
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  className?: string;
+  isSubmitting?: boolean;
+  submitDisabled?: boolean;
+  cancelLabel?: string;
+  submitLabel: string;
+  submittingLabel?: string;
+}
+
+export interface DialogWrapperProps {
+  open: boolean;
+  onClose: () => void;
+  title: ReactNode;
+  description?: string;
+  contentClassName?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  form?: DialogWrapperFormProps;
 }
