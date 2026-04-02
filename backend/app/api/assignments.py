@@ -187,7 +187,7 @@ async def update_assignment(
     return _build_response(assignment)
 
 
-@router.post("/{assignment_id}/split")
+@router.post("/{assignment_id}/split", response_model=list[AssignmentResponse])
 async def split_assignment(
     assignment_id: int,
     split_date: date = Query(...),
@@ -250,6 +250,23 @@ async def duplicate_assignment(
     assignment = result.scalar_one_or_none()
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # Validate employee and project are not soft-deleted
+    emp = await db.execute(
+        select(Employee).where(
+            Employee.id == assignment.employee_id, Employee.is_deleted == False
+        )
+    )
+    if not emp.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
+
+    proj = await db.execute(
+        select(Project).where(
+            Project.id == assignment.project_id, Project.is_deleted == False
+        )
+    )
+    if not proj.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Cannot duplicate: project has been deleted")
 
     new_assignment = Assignment(
         employee_id=assignment.employee_id,

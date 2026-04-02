@@ -477,7 +477,10 @@ export function Timeline() {
           <div
             ref={contextMenuRef}
             className="fixed z-[9999] min-w-44 overflow-hidden rounded-md border bg-popover py-1 shadow-md"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            style={{
+              left: Math.min(contextMenu.x, window.innerWidth - 200),
+              top: Math.min(contextMenu.y, window.innerHeight - 100),
+            }}
           >
             <button
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
