@@ -40,3 +40,13 @@ export function updateAssignment(
 export function deleteAssignment(id: number) {
   return apiFetch(`/api/assignments/${id}`, { method: "DELETE" });
 }
+
+export function splitAssignment(id: number, splitDate: string) {
+  return apiFetch(`/api/assignments/${id}/split?split_date=${splitDate}`, {
+    method: "POST",
+  });
+}
+
+export function duplicateAssignment(id: number) {
+  return apiFetch(`/api/assignments/${id}/duplicate`, { method: "POST" });
+}
