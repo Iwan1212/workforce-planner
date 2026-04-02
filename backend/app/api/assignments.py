@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -185,6 +185,103 @@ async def update_assignment(
     await db.commit()
     await db.refresh(assignment)
     return _build_response(assignment)
+
+
+@router.post("/{assignment_id}/split", response_model=list[AssignmentResponse])
+async def split_assignment(
+    assignment_id: int,
+    split_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Split assignment into two at split_date. Original becomes start→split_date-1, new is split_date→end."""
+    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    if split_date <= assignment.start_date or split_date > assignment.end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="split_date must be strictly after start_date and not after end_date",
+        )
+
+    original_end = split_date - timedelta(days=1)
+
+    wd1 = get_working_days(assignment.start_date, original_end)
+    wd2 = get_working_days(split_date, assignment.end_date)
+    if wd1 < 1 or wd2 < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Obie części muszą zawierać co najmniej 1 dzień roboczy",
+        )
+
+    new_assignment = Assignment(
+        employee_id=assignment.employee_id,
+        project_id=assignment.project_id,
+        start_date=split_date,
+        end_date=assignment.end_date,
+        allocation_type=assignment.allocation_type,
+        allocation_value=assignment.allocation_value,
+        note=assignment.note,
+        is_tentative=assignment.is_tentative,
+    )
+    assignment.end_date = original_end
+
+    db.add(new_assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    await db.refresh(new_assignment)
+    return [_build_response(assignment), _build_response(new_assignment)]
+
+
+@router.post(
+    "/{assignment_id}/duplicate",
+    response_model=AssignmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def duplicate_assignment(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Duplicate an assignment with identical parameters and dates."""
+    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # Validate employee and project are not soft-deleted
+    emp = await db.execute(
+        select(Employee).where(
+            Employee.id == assignment.employee_id, Employee.is_deleted == False
+        )
+    )
+    if not emp.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
+
+    proj = await db.execute(
+        select(Project).where(
+            Project.id == assignment.project_id, Project.is_deleted == False
+        )
+    )
+    if not proj.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Cannot duplicate: project has been deleted")
+
+    new_assignment = Assignment(
+        employee_id=assignment.employee_id,
+        project_id=assignment.project_id,
+        start_date=assignment.start_date,
+        end_date=assignment.end_date,
+        allocation_type=assignment.allocation_type,
+        allocation_value=assignment.allocation_value,
+        note=assignment.note,
+        is_tentative=assignment.is_tentative,
+    )
+    db.add(new_assignment)
+    await db.commit()
+    await db.refresh(new_assignment)
+    return _build_response(new_assignment)
 
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)

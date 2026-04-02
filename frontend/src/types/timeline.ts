@@ -95,6 +95,13 @@ export interface TimelineRowProps {
     edge: "left" | "right",
     deltaPx: number,
   ) => void;
+  onBarContextMenu: (
+    assignmentId: number,
+    x: number,
+    y: number,
+    splitDate: string,
+    splitDateIsValid: boolean,
+  ) => void;
   holidayMap: Record<string, string>;
   isOdd: boolean;
   readOnly?: boolean;
@@ -105,11 +112,19 @@ export interface TimelineBarProps {
   employeeId: number;
   left: number;
   width: number;
+  /** Date string (yyyy-MM-dd) corresponding to the bar's left edge (may differ from assignment.start_date when clipped) */
+  barStartDate: string;
   onClick: () => void;
   onResizeEnd: (
     assignmentId: number,
     edge: "left" | "right",
     deltaPx: number,
+  ) => void;
+  onBarContextMenu: (
+    x: number,
+    y: number,
+    splitDate: string,
+    splitDateIsValid: boolean,
   ) => void;
   pxPerDay: number;
   showDailyHours?: boolean;

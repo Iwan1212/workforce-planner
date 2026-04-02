@@ -21,8 +21,10 @@ export function TimelineBar({
   employeeId,
   left,
   width,
+  barStartDate,
   onClick,
   onResizeEnd,
+  onBarContextMenu,
   pxPerDay,
   showDailyHours = false,
   readOnly = false,
@@ -73,6 +75,25 @@ export function TimelineBar({
   const hideNoteTooltip = () => {
     setNoteTooltip(null);
   };
+
+  const handleContextMenu = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (readOnly) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const barRect = e.currentTarget.getBoundingClientRect();
+      const relX = e.clientX - barRect.left;
+      const daysOffset = Math.floor(relX / pxPerDay);
+      const splitDate = format(
+        addDays(parseISO(barStartDate), daysOffset),
+        "yyyy-MM-dd",
+      );
+      const splitDateIsValid =
+        splitDate > assignment.start_date && splitDate <= assignment.end_date;
+      onBarContextMenu(e.clientX, e.clientY, splitDate, splitDateIsValid);
+    },
+    [readOnly, pxPerDay, barStartDate, assignment.start_date, assignment.end_date, onBarContextMenu],
+  );
 
   const handleResizeStart = useCallback(
     (e: MouseEvent, edge: "left" | "right") => {
@@ -202,6 +223,7 @@ export function TimelineBar({
           onClick();
         }
       }}
+      onContextMenu={handleContextMenu}
     >
       <div
         className="pointer-events-none absolute inset-0 overflow-hidden rounded"
