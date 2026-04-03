@@ -25,6 +25,7 @@ export function TimelineBar({
   onClick,
   onResizeEnd,
   onBarContextMenu,
+  splitDateFromRelX,
   pxPerDay,
   showDailyHours = false,
   readOnly = false,
@@ -83,16 +84,28 @@ export function TimelineBar({
       e.stopPropagation();
       const barRect = e.currentTarget.getBoundingClientRect();
       const relX = e.clientX - barRect.left;
-      const daysOffset = Math.floor(relX / pxPerDay);
-      const splitDate = format(
-        addDays(parseISO(barStartDate), daysOffset),
-        "yyyy-MM-dd",
-      );
+      const splitDate = splitDateFromRelX
+        ? splitDateFromRelX(relX)
+        : format(
+            addDays(
+              parseISO(barStartDate),
+              Math.floor(relX / pxPerDay),
+            ),
+            "yyyy-MM-dd",
+          );
       const splitDateIsValid =
         splitDate > assignment.start_date && splitDate <= assignment.end_date;
       onBarContextMenu(e.clientX, e.clientY, splitDate, splitDateIsValid);
     },
-    [readOnly, pxPerDay, barStartDate, assignment.start_date, assignment.end_date, onBarContextMenu],
+    [
+      readOnly,
+      splitDateFromRelX,
+      pxPerDay,
+      barStartDate,
+      assignment.start_date,
+      assignment.end_date,
+      onBarContextMenu,
+    ],
   );
 
   const handleResizeStart = useCallback(

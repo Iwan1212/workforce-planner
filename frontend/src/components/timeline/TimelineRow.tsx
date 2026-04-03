@@ -39,6 +39,31 @@ function getMonthlyPixelPosition(date: Date, months: MonthDef[]): number {
   return monthIndex * MONTH_WIDTH + (dayOffset / daysInMonth) * MONTH_WIDTH;
 }
 
+function getDateFromMonthlyPixelPosition(
+  timelineX: number,
+  months: MonthDef[],
+): Date {
+  if (months.length === 0) {
+    return new Date();
+  }
+  const maxX = months.length * MONTH_WIDTH;
+  const clampedX = Math.max(0, Math.min(timelineX, maxX - Number.EPSILON));
+  const monthIndex = Math.min(
+    Math.floor(clampedX / MONTH_WIDTH),
+    months.length - 1,
+  );
+  const m = months[monthIndex];
+  const monthStart = startOfMonth(new Date(m.year, m.month - 1, 1));
+  const monthEnd = endOfMonth(monthStart);
+  const daysInMonth = differenceInCalendarDays(monthEnd, monthStart) + 1;
+  const relWithinMonth = clampedX - monthIndex * MONTH_WIDTH;
+  const dayOffset = Math.min(
+    Math.floor((relWithinMonth / MONTH_WIDTH) * daysInMonth),
+    daysInMonth - 1,
+  );
+  return addDays(monthStart, dayOffset);
+}
+
 function computeBarPositionMonthly(
   item: DateRange,
   months: MonthDef[],
@@ -403,12 +428,30 @@ export function TimelineRow({
                 left={bar.left}
                 width={bar.width}
                 barStartDate={format(bar.visibleStart, "yyyy-MM-dd")}
-              onClick={() => onAssignmentClick(bar.assignment)}
+                onClick={() => onAssignmentClick(bar.assignment)}
                 onResizeEnd={onResizeEnd}
                 onBarContextMenu={(x, y, splitDate, splitDateIsValid) =>
-                onBarContextMenu(bar.assignment.id, x, y, splitDate, splitDateIsValid)
-              }
-              pxPerDay={pxPerDay}
+                  onBarContextMenu(
+                    bar.assignment.id,
+                    x,
+                    y,
+                    splitDate,
+                    splitDateIsValid,
+                  )
+                }
+                splitDateFromRelX={
+                  isWeekly
+                    ? undefined
+                    : (relX) =>
+                        format(
+                          getDateFromMonthlyPixelPosition(
+                            bar.left + relX,
+                            months,
+                          ),
+                          "yyyy-MM-dd",
+                        )
+                }
+                pxPerDay={pxPerDay}
                 showDailyHours={isWeekly}
                 showResizeDateTooltip={!isWeekly}
                 readOnly={readOnly}
