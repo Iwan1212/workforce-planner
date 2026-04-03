@@ -126,6 +126,7 @@ export interface TimelineBarProps {
     splitDate: string,
     splitDateIsValid: boolean,
   ) => void;
+  splitDateFromRelX?: (relX: number) => string;
   pxPerDay: number;
   showDailyHours?: boolean;
   readOnly?: boolean;
