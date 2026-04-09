@@ -72,8 +72,8 @@
 
 | Column | Type | Constraints |
 |---|---|---|
-| key | String | PK |
-| value | String | not null |
+| key | String(255) | PK |
+| value | String(2000) | not null |
 | updated_at | DateTime | auto on update |
 
 ## Relationships
