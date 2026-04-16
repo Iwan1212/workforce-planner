@@ -8,7 +8,9 @@ import {
 } from "react";
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -39,6 +41,7 @@ import { VacationDialog } from "./VacationDialog";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import type { VacationRange } from "@/types/timeline";
 import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
+import { TimelineBarDragPreview } from "./TimelineBarDragPreview";
 
 type TimelineProps = {
   onNavigate?: (path: string) => void;
@@ -126,6 +129,12 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(
     null,
   );
+
+  const [dragPreview, setDragPreview] = useState<{
+    assignment: TimelineAssignment;
+    barWidth: number;
+    showDailyHours: boolean;
+  } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -262,6 +271,23 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const d = event.active.data.current as
+      | {
+          assignment: TimelineAssignment;
+          barWidth: number;
+          showDailyHours: boolean;
+        }
+      | undefined;
+    if (d?.assignment != null) {
+      setDragPreview({
+        assignment: d.assignment,
+        barWidth: d.barWidth,
+        showDailyHours: d.showDailyHours,
+      });
+    }
+  }, []);
+
   // D&D handler — move assignment to different employee
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -293,6 +319,14 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       );
     },
     [patchMutation, data],
+  );
+
+  const handleDragEndWithPreview = useCallback(
+    (event: DragEndEvent) => {
+      setDragPreview(null);
+      handleDragEnd(event);
+    },
+    [handleDragEnd],
   );
 
   // Resize handler — change start or end date
@@ -478,10 +512,15 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
           onNavigateToEmployees={() => onNavigate?.("/employees")}
         />
       ) : (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEndWithPreview}
+          onDragCancel={() => setDragPreview(null)}
+        >
+          <div className="mx-6 min-w-0 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
             <div
-              className="overflow-auto"
+              className="overflow-auto overscroll-contain"
               style={{ maxHeight: timelineGridMaxHeight }}
             >
               <div style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}>
@@ -535,6 +574,15 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               </div>
             </div>
           </div>
+          <DragOverlay dropAnimation={null}>
+            {dragPreview ? (
+              <TimelineBarDragPreview
+                assignment={dragPreview.assignment}
+                width={dragPreview.barWidth}
+                showDailyHours={dragPreview.showDailyHours}
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
 
