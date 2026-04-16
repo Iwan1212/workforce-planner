@@ -42,11 +42,29 @@ export function AssignmentModal({
     enabled: open,
   });
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => fetchProjects(),
+  const { data: allProjects = [], status: activeProjectsStatus } = useQuery({
+    queryKey: ["projects", "active"],
+    queryFn: () => fetchProjects(undefined, "active"),
     enabled: open,
   });
+
+  const currentProjectId = assignment?.project_id;
+  const isCurrentProjectActive = allProjects.some((p) => p.id === currentProjectId);
+
+  // Only fetch archived projects when editing and the assigned project is not in the active list
+  const { data: archivedProjects = [] } = useQuery({
+    queryKey: ["projects", "archived"],
+    queryFn: () => fetchProjects(undefined, "archived"),
+    enabled:
+      open && isEditing && activeProjectsStatus === "success" && !isCurrentProjectActive,
+  });
+
+  const projects = isEditing
+    ? [
+        ...allProjects,
+        ...archivedProjects.filter((p) => p.id === currentProjectId),
+      ]
+    : allProjects;
 
   useEffect(() => {
     if (!open) return;

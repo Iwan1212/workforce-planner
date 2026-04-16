@@ -21,12 +21,19 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 async def list_projects(
     search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
+    status: str = Query("active"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     query = select(Project)
     if not include_deleted:
         query = query.where(Project.is_deleted == False)
+    if status == "archived":
+        query = query.where(Project.is_archived == True)
+    elif status == "all":
+        pass  # no filter — return both active and archived
+    else:  # "active" (default)
+        query = query.where(Project.is_archived == False)
     if search:
         query = query.where(Project.name.ilike(f"%{search}%"))
     query = query.order_by(Project.name)
@@ -135,3 +142,39 @@ async def delete_project(
 
     await db.commit()
     return {"deleted": True}
+
+
+@router.post("/{project_id}/archive", response_model=ProjectResponse)
+async def archive_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if project.is_deleted:
+        raise HTTPException(status_code=400, detail="Cannot archive a deleted project")
+
+    project.is_archived = True
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
+@router.post("/{project_id}/unarchive", response_model=ProjectResponse)
+async def unarchive_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.is_archived = False
+    await db.commit()
+    await db.refresh(project)
+    return project
