@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -21,7 +28,11 @@ import { TimelineFilters } from "./TimelineFilters";
 import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 import { TimelineRow } from "./TimelineRow";
 import { AssignmentModal } from "@/components/assignments/AssignmentModal";
-import { updateAssignment, splitAssignment, duplicateAssignment } from "@/api/assignments";
+import {
+  updateAssignment,
+  splitAssignment,
+  duplicateAssignment,
+} from "@/api/assignments";
 import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
 import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
@@ -125,11 +136,37 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     assignmentId: number;
   } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [timelineGridMaxHeight, setTimelineGridMaxHeight] = useState<
+    string | undefined
+  >("min(80dvh, calc(100dvh - 12rem))");
+
+  useLayoutEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+
+    const update = () => {
+      const h = Math.round(toolbar.getBoundingClientRect().height);
+      setTimelineGridMaxHeight(`calc(100dvh - ${h}px - 2.5rem)`);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(toolbar);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   useEffect(() => {
     if (!contextMenu) return;
     const handleMouseDown = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target as Node)
+      ) {
         setContextMenu(null);
       }
     };
@@ -197,7 +234,9 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
         x,
         y,
         splitDate,
-        splitDateLabel: format(parseISO(splitDate), "d.MM.yyyy", { locale: pl }),
+        splitDateLabel: format(parseISO(splitDate), "d.MM.yyyy", {
+          locale: pl,
+        }),
         splitDateIsValid,
         assignmentId,
       });
@@ -359,7 +398,10 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   return (
     <div>
       {/* Sticky top section — <main> has no padding so sticky top-0 works flush. */}
-      <div className="sticky top-0 z-30 bg-background px-6 pt-6">
+      <div
+        ref={toolbarRef}
+        className="sticky top-0 z-30 bg-background px-6 pt-6"
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Timeline</h2>
           <div className="flex items-center gap-2">
@@ -438,14 +480,17 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mx-6 rounded-md border bg-background shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-auto"
+              style={{ maxHeight: timelineGridMaxHeight }}
+            >
               <div style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}>
                 <div
-                  className="flex border-b bg-muted"
+                  className="sticky top-0 z-20 flex border-b bg-muted shadow-sm"
                   style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}
                 >
                   <div
-                    className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-muted px-3 py-2"
+                    className="sticky left-0 z-30 flex shrink-0 items-center border-r bg-muted px-3 py-2"
                     style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
                   >
                     <span className="text-sm font-medium">Pracownik</span>
@@ -483,7 +528,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     onEmptyClick={handleEmptyClick}
                     onResizeEnd={handleResizeEnd}
                     onBarContextMenu={handleBarContextMenu}
-                  readOnly={isViewer}
+                    readOnly={isViewer}
                     isOdd={idx % 2 === 1}
                   />
                 ))}
@@ -511,7 +556,10 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               disabled={!contextMenu.splitDateIsValid}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => {
-                splitMutation.mutate({ id: contextMenu.assignmentId, date: contextMenu.splitDate });
+                splitMutation.mutate({
+                  id: contextMenu.assignmentId,
+                  date: contextMenu.splitDate,
+                });
                 setContextMenu(null);
               }}
             >
