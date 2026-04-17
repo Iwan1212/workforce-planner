@@ -2,9 +2,14 @@ import { apiFetch } from "./client";
 import type { Project, ProjectCreateData } from "@/types/project";
 import type { DeleteResponse } from "@/types/common";
 
-export function fetchProjects(search?: string): Promise<Project[]> {
-  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
-  return apiFetch<Project[]>(`/api/projects${qs}`);
+export function fetchProjects(
+  search?: string,
+  status: "active" | "archived" | "all" = "active",
+): Promise<Project[]> {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  params.set("status", status);
+  return apiFetch<Project[]>(`/api/projects?${params.toString()}`);
 }
 
 export function createProject(data: ProjectCreateData): Promise<Project> {
@@ -26,10 +31,18 @@ export function updateProject(
 
 export function deleteProject(
   id: number,
-  confirm = false
+  confirm = false,
 ): Promise<DeleteResponse> {
   const params = confirm ? "?confirm=true" : "";
   return apiFetch<DeleteResponse>(`/api/projects/${id}${params}`, {
     method: "DELETE",
   });
+}
+
+export function archiveProject(id: number): Promise<Project> {
+  return apiFetch<Project>(`/api/projects/${id}/archive`, { method: "POST" });
+}
+
+export function unarchiveProject(id: number): Promise<Project> {
+  return apiFetch<Project>(`/api/projects/${id}/unarchive`, { method: "POST" });
 }

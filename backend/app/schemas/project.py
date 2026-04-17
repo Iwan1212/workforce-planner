@@ -38,6 +38,7 @@ class ProjectResponse(BaseModel):
     name: str
     color: str
     is_deleted: bool
+    is_archived: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
