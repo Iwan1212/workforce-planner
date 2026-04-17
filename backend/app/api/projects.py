@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func as sa_func
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 async def list_projects(
     search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
-    status: str = Query("active"),
+    status: Literal["active", "archived", "all"] = Query("active"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -173,6 +173,9 @@ async def unarchive_project(
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.is_deleted:
+        raise HTTPException(status_code=400, detail="Cannot unarchive a deleted project")
 
     project.is_archived = False
     await db.commit()
