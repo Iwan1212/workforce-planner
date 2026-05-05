@@ -176,43 +176,6 @@ function assignRow(
   return row;
 }
 
-/** Compute weekly utilization % from assignments, accounting for vacations. */
-function computeWeeklyUtilization(
-  week: WeekInfo,
-  assignments: TimelineAssignment[],
-  vacations: VacationInfo[],
-  holidayMap: Record<string, string>,
-): number {
-  let totalHours = 0;
-  let workingDays = 0;
-
-  for (const day of week.days) {
-    if (day.isWeekend || holidayMap[day.key]) continue;
-    workingDays++;
-
-    const isOnVacation = vacations.some((v) => {
-      const vStart = parseISO(v.start_date);
-      const vEnd = parseISO(v.end_date);
-      return isWithinInterval(day.date, { start: vStart, end: vEnd });
-    });
-
-    if (isOnVacation) {
-      continue;
-    }
-
-    for (const a of assignments) {
-      const aStart = parseISO(a.start_date);
-      const aEnd = parseISO(a.end_date);
-      if (isWithinInterval(day.date, { start: aStart, end: aEnd })) {
-        totalHours += a.daily_hours;
-      }
-    }
-  }
-
-  if (workingDays === 0) return 0;
-  const availableHours = workingDays * 8;
-  return Math.round((totalHours / availableHours) * 100);
-}
 
 export function TimelineRow({
   employeeId,
@@ -220,7 +183,7 @@ export function TimelineRow({
   team,
   assignments,
   vacations = [],
-  utilization,
+  occupancy,
   months,
   weeks,
   allDays,
@@ -290,18 +253,26 @@ export function TimelineRow({
     ? allDays.length * DAY_WIDTH
     : months.length * MONTH_WIDTH;
 
-  const utilizationPeriods = isWeekly
-    ? weeks.map((w) => ({
-        key: `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`,
-        width: w.days.length * DAY_WIDTH,
-        pct: computeWeeklyUtilization(w, assignments, vacations, holidayMap),
-      }))
+  const occupancyPeriods = isWeekly
+    ? weeks.map((w) => {
+        const key = `w-${w.days[0]?.key.slice(0, 4)}-${w.weekNumber}`;
+        const o = occupancy[key];
+        return {
+          key,
+          width: w.days.length * DAY_WIDTH,
+          pct: o?.percentage ?? 0,
+          hours: o?.hours ?? 0,
+          available: o?.available_hours ?? 0,
+        };
+      })
     : months.map((m) => {
-        const u = utilization[m.key];
+        const o = occupancy[m.key];
         return {
           key: m.key,
           width: MONTH_WIDTH,
-          pct: u ? Math.round(u.percentage) : 0,
+          pct: o?.percentage ?? 0,
+          hours: o?.hours ?? 0,
+          available: o?.available_hours ?? 0,
         };
       });
 
@@ -357,18 +328,20 @@ export function TimelineRow({
           minHeight: rowHeight,
         }}
       >
-        {/* Per-period utilization indicators */}
+        {/* Per-period occupancy indicators */}
         <div
           className="absolute top-0 left-0 z-1 flex bg-transparent"
           style={{ height: utilRowHeight }}
         >
-          {utilizationPeriods.map((p) => (
+          {occupancyPeriods.map((p) => (
             <div
               key={p.key}
               className={`flex items-center justify-center bg-transparent text-[10px] ${getUtilColor(p.pct)}`}
               style={{ width: p.width }}
             >
-              {p.pct}%
+              {p.available === 0
+                ? "—"
+                : `${Math.round(p.hours)}/${Math.round(p.available)}h · ${Math.round(p.pct)}%`}
             </div>
           ))}
         </div>

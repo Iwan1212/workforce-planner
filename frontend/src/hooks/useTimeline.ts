@@ -56,7 +56,7 @@ function generateWeeks(start: Date, count: number): WeekInfo[] {
 }
 
 export function useTimeline() {
-  const { startDate, selectedTeams, searchQuery, viewMode, utilizationFilter } =
+  const { startDate, selectedTeams, searchQuery, viewMode, occupancyFilter } =
     useTimelineStore();
 
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
@@ -66,25 +66,27 @@ export function useTimeline() {
       ? addMonths(startDate, MONTHS_VISIBLE)
       : addWeeks(startDate, WEEKS_VISIBLE);
 
-  // Extend API query range to cover utilization filter dates if they exceed visible range
+  // Extend API query range to cover occupancy filter dates if they exceed visible range
   let queryStart = startDate;
   let queryEnd = endDate;
-  if (utilizationFilter?.dateFrom) {
-    const f = parseISO(utilizationFilter.dateFrom);
+  if (occupancyFilter?.dateFrom) {
+    const f = parseISO(occupancyFilter.dateFrom);
     if (f < queryStart) queryStart = f;
   }
-  if (utilizationFilter?.dateTo) {
-    const t = parseISO(utilizationFilter.dateTo);
+  if (occupancyFilter?.dateTo) {
+    const t = parseISO(occupancyFilter.dateTo);
     if (t > queryEnd) queryEnd = t;
   }
 
   const startStr = format(queryStart, "yyyy-MM-dd");
   const endStr = format(queryEnd, "yyyy-MM-dd");
 
+  const granularity = viewMode === "weekly" ? "weekly" : "monthly";
+
   const query = useQuery({
     queryKey: ["timeline", startStr, endStr, selectedTeams, debouncedSearch, viewMode],
     queryFn: () =>
-      fetchTimeline(startStr, endStr, selectedTeams, debouncedSearch || undefined),
+      fetchTimeline(startStr, endStr, selectedTeams, debouncedSearch || undefined, granularity),
   });
 
   // Generate list of months for monthly header

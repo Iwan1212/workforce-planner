@@ -12,11 +12,10 @@ export interface TimelineAssignment {
   daily_hours: number;
 }
 
-export interface MonthUtilization {
+export interface PeriodOccupancy {
   percentage: number;
   hours: number;
   available_hours: number;
-  vacation_days?: number;
   is_overbooked: boolean;
 }
 
@@ -34,7 +33,7 @@ export interface TimelineEmployee {
   team: string | null;
   assignments: TimelineAssignment[];
   vacations?: VacationInfo[];
-  utilization: Record<string, MonthUtilization>;
+  occupancy: Record<string, PeriodOccupancy>;
 }
 
 export interface HolidayInfo {

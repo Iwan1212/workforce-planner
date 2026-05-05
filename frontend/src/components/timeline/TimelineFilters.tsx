@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { TeamFilterChips } from "@/components/common/TeamFilterChips";
 import { useTimelineStore } from "@/stores/timelineStore";
-import type { ViewMode, UtilizationFilter } from "@/types/timeline";
+import type { ViewMode, OccupancyFilter } from "@/types/timeline";
 
 export function TimelineFilters() {
   const {
@@ -18,8 +18,8 @@ export function TimelineFilters() {
     scrollBack,
     scrollForward,
     goToToday,
-    utilizationFilter,
-    setUtilizationFilter,
+    occupancyFilter,
+    setOccupancyFilter,
   } = useTimelineStore();
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -39,18 +39,18 @@ export function TimelineFilters() {
   const selectAllTeams = () => setSelectedTeams([]);
 
   const isFilterActive =
-    utilizationFilter !== null &&
-    (utilizationFilter.dateFrom !== null ||
-      utilizationFilter.dateTo !== null ||
-      utilizationFilter.minPct !== null ||
-      utilizationFilter.maxPct !== null);
+    occupancyFilter !== null &&
+    (occupancyFilter.dateFrom !== null ||
+      occupancyFilter.dateTo !== null ||
+      occupancyFilter.minPct !== null ||
+      occupancyFilter.maxPct !== null);
 
   const handleTogglePanel = () => {
     if (!panelOpen) {
-      setDraftDateFrom(utilizationFilter?.dateFrom ?? "");
-      setDraftDateTo(utilizationFilter?.dateTo ?? "");
-      setDraftMinPct(utilizationFilter?.minPct?.toString() ?? "");
-      setDraftMaxPct(utilizationFilter?.maxPct?.toString() ?? "");
+      setDraftDateFrom(occupancyFilter?.dateFrom ?? "");
+      setDraftDateTo(occupancyFilter?.dateTo ?? "");
+      setDraftMinPct(occupancyFilter?.minPct?.toString() ?? "");
+      setDraftMaxPct(occupancyFilter?.maxPct?.toString() ?? "");
     }
     setPanelOpen((v) => !v);
   };
@@ -62,10 +62,10 @@ export function TimelineFilters() {
     const dateTo = draftDateTo || null;
 
     if (minPct === null && maxPct === null && dateFrom === null && dateTo === null) {
-      setUtilizationFilter(null);
+      setOccupancyFilter(null);
     } else {
-      const filter: UtilizationFilter = { dateFrom, dateTo, minPct, maxPct };
-      setUtilizationFilter(filter);
+      const filter: OccupancyFilter = { dateFrom, dateTo, minPct, maxPct };
+      setOccupancyFilter(filter);
     }
     setPanelOpen(false);
   };
@@ -75,7 +75,7 @@ export function TimelineFilters() {
     setDraftDateTo("");
     setDraftMinPct("");
     setDraftMaxPct("");
-    setUtilizationFilter(null);
+    setOccupancyFilter(null);
     setPanelOpen(false);
   };
 
@@ -113,7 +113,7 @@ export function TimelineFilters() {
         </div>
       </div>
 
-      {/* Row 2: Search + Team filter + Utilization filter button */}
+      {/* Row 2: Search + Team filter + Occupancy filter button */}
       <div className="flex items-center gap-3">
         <SearchInput
           className="w-56"
@@ -131,7 +131,7 @@ export function TimelineFilters() {
         {/* Divider */}
         <div className="h-5 w-px bg-border" />
 
-        {/* Utilization filter button */}
+        {/* Occupancy filter button */}
         <button
           onClick={handleTogglePanel}
           className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
@@ -144,7 +144,7 @@ export function TimelineFilters() {
           aria-pressed={panelOpen}
         >
           <Percent className="h-3 w-3" />
-          Utylizacja
+          Obłożenie
           {panelOpen ? (
             <ChevronUp className="h-3 w-3" />
           ) : (
@@ -153,7 +153,7 @@ export function TimelineFilters() {
         </button>
       </div>
 
-      {/* Utilization filter panel */}
+      {/* Occupancy filter panel */}
       {panelOpen && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border bg-muted/40 px-4 py-3">
           {/* Date range */}
@@ -175,9 +175,9 @@ export function TimelineFilters() {
             />
           </div>
 
-          {/* Utilization range */}
+          {/* Occupancy range */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Utylizacja</span>
+            <span className="text-xs font-medium text-muted-foreground">Obłożenie</span>
             <Input
               type="text"
               inputMode="numeric"

@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { TimelineAssignment, MonthUtilization } from "@/types/assignment";
-import type { EmployeeUtilizationPanelProps } from "@/types/timeline";
+import type { TimelineAssignment } from "@/types/assignment";
+import type { EmployeeOccupancyPanelProps } from "@/types/timeline";
 
 const MONTH_NAMES = [
   "",
@@ -57,12 +57,12 @@ function UtilBar({ pct }: { pct: number }) {
   );
 }
 
-export function EmployeeUtilizationPanel({
+export function EmployeeOccupancyPanel({
   employee,
   months,
   onClose,
   onEditAssignment,
-}: EmployeeUtilizationPanelProps) {
+}: EmployeeOccupancyPanelProps) {
   // Group assignments by project
   const projectGroups = useMemo(() => {
     const groups = new Map<
@@ -108,8 +108,7 @@ export function EmployeeUtilizationPanel({
           <h4 className="mb-3 text-sm font-medium">Obciążenie miesięczne</h4>
           <div className="space-y-2">
             {months.map((m) => {
-              const u: MonthUtilization | undefined =
-                employee.utilization[m.key];
+              const u = employee.occupancy[m.key];
               const pct = u ? Math.round(u.percentage) : 0;
               const hours = u ? Math.round(u.hours) : 0;
               const available = u ? Math.round(u.available_hours) : 0;
