@@ -28,12 +28,11 @@ async def list_projects(
     query = select(Project)
     if not include_deleted:
         query = query.where(Project.is_deleted == False)
-    if status == "archived":
-        query = query.where(Project.is_archived == True)
-    elif status == "all":
-        pass  # no filter — return both active and archived
-    else:  # "active" (default)
+    if status == "active":
         query = query.where(Project.is_archived == False)
+    elif status == "archived":
+        query = query.where(Project.is_archived == True)
+    # "all" — no filter
     if search:
         query = query.where(Project.name.ilike(f"%{search}%"))
     query = query.order_by(Project.name)

@@ -227,7 +227,7 @@ export function ProjectList() {
         }
         confirmLabel="Archiwizuj"
         pendingLabel="Archiwizowanie..."
-        onConfirm={() => archiveMutation.mutate(archiveTarget!.id)}
+        onConfirm={() => archiveTarget && archiveMutation.mutate(archiveTarget.id)}
         isPending={archiveMutation.isPending}
         contentClassName="max-w-md"
       />
