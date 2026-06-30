@@ -123,6 +123,16 @@ export function EmployeeList() {
           onToggleTeam={toggleTeam}
           onSelectAll={selectAllTeams}
         />
+        {!isLoading && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {employees.length}{" "}
+            {employees.length === 1
+              ? "pracownik"
+              : employees.length >= 2 && employees.length <= 4
+                ? "pracownicy"
+                : "pracowników"}
+          </span>
+        )}
       </div>
 
       <DataTable<Employee>

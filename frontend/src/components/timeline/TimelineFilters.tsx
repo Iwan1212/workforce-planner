@@ -7,7 +7,7 @@ import { TeamFilterChips } from "@/components/common/TeamFilterChips";
 import { useTimelineStore } from "@/stores/timelineStore";
 import type { ViewMode, UtilizationFilter } from "@/types/timeline";
 
-export function TimelineFilters() {
+export function TimelineFilters({ count }: { count?: number }) {
   const {
     viewMode,
     setViewMode,
@@ -151,6 +151,17 @@ export function TimelineFilters() {
             <ChevronDown className="h-3 w-3" />
           )}
         </button>
+
+        {count !== undefined && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {count}{" "}
+            {count === 1
+              ? "pracownik"
+              : count >= 2 && count <= 4
+                ? "pracownicy"
+                : "pracowników"}
+          </span>
+        )}
       </div>
 
       {/* Utilization filter panel */}

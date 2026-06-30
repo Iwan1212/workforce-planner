@@ -149,6 +149,16 @@ export function ProjectList() {
             </button>
           ))}
         </div>
+        {!isLoading && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {projects.length}{" "}
+            {projects.length === 1
+              ? "projekt"
+              : projects.length >= 2 && projects.length <= 4
+                ? "projekty"
+                : "projektów"}
+          </span>
+        )}
       </div>
 
       <DataTable<Project>
