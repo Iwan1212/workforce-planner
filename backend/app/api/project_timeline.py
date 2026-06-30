@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.assignment import Assignment
+from app.models.employee import Employee
 from app.models.project import Project
 from app.models.user import User
 from app.services.assignment_service import calculate_daily_hours
@@ -61,12 +62,14 @@ async def get_project_timeline(
     project_ids = [p.id for p in projects]
     assignments_by_project: dict[int, list] = {pid: [] for pid in project_ids}
     if project_ids:
+        active_employee_ids = select(Employee.id).where(Employee.is_deleted == False)
         a_result = await db.execute(
             select(Assignment)
             .where(
                 Assignment.project_id.in_(project_ids),
                 Assignment.start_date <= end_date,
                 Assignment.end_date >= start_date,
+                Assignment.employee_id.in_(active_employee_ids),
             )
             .order_by(Assignment.start_date)
         )
