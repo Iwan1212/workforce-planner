@@ -209,9 +209,14 @@ def _week_key(week_start: date) -> str:
 
 
 def _get_weeks_in_range(start_date: date, end_date: date) -> list[tuple[date, date]]:
-    """Return (week_start, week_end) pairs for all 7-day windows in range."""
+    """Return (week_start, week_end) pairs for all ISO weeks touching the range.
+
+    The first window is aligned to the Monday of start_date's week so that
+    windows are always true ISO weeks (Monday–Sunday), matching the frontend's
+    Monday-based week grid regardless of which weekday start_date falls on.
+    """
     weeks = []
-    current = start_date
+    current = start_date - timedelta(days=start_date.weekday())
     while current <= end_date:
         week_end = current + timedelta(days=6)
         weeks.append((current, week_end))
@@ -259,11 +264,7 @@ def _compute_occupancy_for_period(
                 start_date=a.start_date,
                 end_date=a.end_date,
             )
-            is_percentage = (
-                a.allocation_type == AllocationType.percentage
-                or a.allocation_type.value == AllocationType.percentage.value
-            )
-            if is_percentage:
+            if a.allocation_type == AllocationType.percentage:
                 if not is_vacation:
                     hours_numerator += daily
             else:
