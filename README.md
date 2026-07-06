@@ -26,7 +26,7 @@ Workforce Planner is a full-stack web application designed for IT companies mana
 - **Interactive Timeline** — Monthly and weekly views with drag & drop assignment management
 - **Drag & Drop** — Move assignments between employees by dragging bars across rows
 - **Resize to Reschedule** — Drag assignment edges to change start/end dates in real time
-- **Overbooking Detection** — Per-period utilization with color-coded indicators (green / yellow / red)
+- **Overbooking Detection** — Per-period occupancy with color-coded indicators (green / yellow / red)
 - **Polish Holidays** — Built-in calendar with all Polish public holidays (fixed + Easter-based)
 - **Flexible Allocation** — Assign by percentage (e.g. 50% FTE) or monthly hours (e.g. 120h/month)
 - **Team Filtering** — Filter timeline by team: Frontend, Backend, QA, PM, Mobile, UX/UI, DevOps
@@ -216,7 +216,7 @@ DELETE /api/assignments/{id}            # Delete assignment
 GET    /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Frontend,Backend
 ```
 
-Returns employees with assignments, per-month utilization, holidays, and working days per month.
+Returns employees with assignments, vacations, per-period occupancy (monthly or weekly), holidays, and working days per month.
 
 ### Calendar
 

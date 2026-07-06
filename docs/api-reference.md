@@ -109,6 +109,7 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `end_date` | date | yes | Range end (YYYY-MM-DD) |
 | `teams` | string | no | Comma-separated team filter |
 | `search` | string | no | Filter employees by first/last name |
+| `granularity` | enum | no | `monthly` (default) or `weekly` — period size for occupancy |
 
 ### Response
 
@@ -134,19 +135,26 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
           "daily_hours": 4.0
         }
       ],
-      "utilization": {
+      "vacations": [
+        {
+          "start_date": "2026-02-02",
+          "end_date": "2026-02-03",
+          "leave_type": "vacation",
+          "employee_email": "jan.kowalski@example.com",
+          "synced_at": "2026-04-07T14:30:00Z"
+        }
+      ],
+      "occupancy": {
         "2026-01": {
           "percentage": 75,
           "hours": 126,
           "available_hours": 168,
-          "vacation_days": 0,
           "is_overbooked": false
         },
         "2026-02": {
           "percentage": 110,
-          "hours": 176,
-          "available_hours": 160,
-          "vacation_days": 2,
+          "hours": 167.2,
+          "available_hours": 152,
           "is_overbooked": true
         }
       }
@@ -178,7 +186,8 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `name` | string | "Last First" format |
 | `team` | string\|null | Team enum value |
 | `assignments` | array | Assignments within requested date range |
-| `utilization` | object | Per-month utilization keyed by "YYYY-MM" |
+| `vacations` | array | Vacations within requested date range |
+| `occupancy` | object | Per-period occupancy keyed by "YYYY-MM" (monthly) or "w-YYYY-WW" (weekly) |
 
 **Assignment object (in timeline):**
 
@@ -196,14 +205,13 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `is_tentative` | bool | Whether assignment is tentative |
 | `daily_hours` | float | Computed daily hours |
 
-**Utilization object (per month):**
+**Occupancy object (per period — month or week):**
 
 | Field | Type | Description |
 |---|---|---|
-| `percentage` | int | Sum of all assignment percentages |
-| `hours` | float | Total allocated hours |
-| `available_hours` | float | Working days x 8h |
-| `vacation_days` | int | Working days covered by vacations |
+| `percentage` | float | Allocated hours / net available hours x 100 |
+| `hours` | float | Total allocated hours in the period |
+| `available_hours` | float | Net available hours: (working days − vacation days) x 8h |
 | `is_overbooked` | bool | True if percentage > 100 |
 
 **Vacation sync status:**

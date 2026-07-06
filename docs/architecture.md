@@ -70,10 +70,10 @@ Timeline.tsx                      # Main container — orchestrates layout + dat
 ├── TimelineHeader.tsx            # Date columns (months or weeks), holiday markers
 ├── TimelineEmptyState.tsx        # Empty state when no employees match filters
 ├── TimelineSummaryRow.tsx        # Aggregated summary row
-├── EmployeeUtilizationPanel.tsx  # Detailed utilization breakdown panel
+├── EmployeeOccupancyPanel.tsx    # Detailed occupancy breakdown panel
 ├── VacationDialog.tsx            # Vacation details dialog
 └── TimelineRow.tsx               # One row per employee — sticky name column
-    ├── UtilizationBadge.tsx      # Per-period % utilization (green/yellow/red)
+    ├── OccupancyBadge.tsx        # Per-period % occupancy (green/yellow/red)
     └── TimelineBar.tsx           # Assignment bar — draggable (dnd-kit) + resizable edges
 ```
 
