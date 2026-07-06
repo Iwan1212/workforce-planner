@@ -7,6 +7,7 @@ import { ProjectList } from "@/components/projects/ProjectList";
 import { Timeline } from "@/components/timeline/Timeline";
 import { UserManagement } from "@/components/users/UserManagement";
 import { SettingsPage } from "@/components/settings/SettingsPage";
+import { ProjectTimeline } from "@/components/project-timeline/ProjectTimeline";
 
 function App() {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
@@ -65,6 +66,7 @@ function App() {
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
       {currentPath === "/" && <Timeline onNavigate={navigate} />}
+      {currentPath === "/project-timeline" && <ProjectTimeline />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
       {currentPath === "/users" && <UserManagement />}

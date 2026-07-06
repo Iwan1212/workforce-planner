@@ -12,6 +12,7 @@ from app.api.auth import router as auth_router
 from app.api.assignments import router as assignments_router
 from app.api.calendar import router as calendar_router
 from app.api.employees import router as employees_router
+from app.api.project_timeline import router as project_timeline_router
 from app.api.projects import router as projects_router
 from app.api.settings import router as settings_router
 from app.api.users import router as users_router
@@ -56,6 +57,7 @@ app.include_router(employees_router)
 app.include_router(projects_router)
 app.include_router(assignments_router)
 app.include_router(calendar_router)
+app.include_router(project_timeline_router)
 app.include_router(settings_router)
 app.include_router(users_router)
 
