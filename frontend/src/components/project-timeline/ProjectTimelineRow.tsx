@@ -1,127 +1,18 @@
 import { useDroppable } from "@dnd-kit/core";
-import {
-  startOfMonth,
-  endOfMonth,
-  differenceInCalendarDays,
-  parseISO,
-  max as dateMax,
-  min as dateMin,
-  addDays,
-  format,
-} from "date-fns";
+import { startOfMonth, endOfMonth, differenceInCalendarDays, format } from "date-fns";
 import type { ProjectTimelineAssignment, ProjectTimelineProject } from "@/types/project-timeline";
 import type { TimelineAssignment } from "@/types/assignment";
 import type { MonthDef, DateRange, DayInfo } from "@/types/timeline";
 import { TimelineBar } from "@/components/timeline/TimelineBar";
 import { MONTH_WIDTH, DAY_WIDTH } from "@/components/timeline/TimelineHeader";
 import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
-
-function getMonthlyPixelPosition(date: Date, months: MonthDef[]): number {
-  const monthIndex = months.findIndex(
-    (m) => m.year === date.getFullYear() && m.month === date.getMonth() + 1,
-  );
-  if (monthIndex < 0) {
-    if (date < startOfMonth(new Date(months[0].year, months[0].month - 1, 1)))
-      return 0;
-    return months.length * MONTH_WIDTH;
-  }
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  const daysInMonth = differenceInCalendarDays(monthEnd, monthStart) + 1;
-  const dayOffset = differenceInCalendarDays(date, monthStart);
-  return monthIndex * MONTH_WIDTH + (dayOffset / daysInMonth) * MONTH_WIDTH;
-}
-
-function getDateFromMonthlyPixelPosition(timelineX: number, months: MonthDef[]): Date {
-  if (months.length === 0) return new Date();
-  const maxX = months.length * MONTH_WIDTH;
-  const clampedX = Math.max(0, Math.min(timelineX, maxX - Number.EPSILON));
-  const monthIndex = Math.min(Math.floor(clampedX / MONTH_WIDTH), months.length - 1);
-  const m = months[monthIndex];
-  const monthStart = startOfMonth(new Date(m.year, m.month - 1, 1));
-  const monthEnd = endOfMonth(monthStart);
-  const daysInMonth = differenceInCalendarDays(monthEnd, monthStart) + 1;
-  const relWithinMonth = clampedX - monthIndex * MONTH_WIDTH;
-  const dayOffset = Math.min(
-    Math.floor((relWithinMonth / MONTH_WIDTH) * daysInMonth),
-    daysInMonth - 1,
-  );
-  return addDays(monthStart, dayOffset);
-}
-
-function computeBarPositionMonthly(
-  item: DateRange,
-  months: MonthDef[],
-): { left: number; width: number; visibleStart: Date } | null {
-  if (months.length === 0) return null;
-  const aStart = parseISO(item.start_date);
-  const aEnd = parseISO(item.end_date);
-  const firstMonthStart = startOfMonth(new Date(months[0].year, months[0].month - 1, 1));
-  const lastMonth = months[months.length - 1];
-  const lastMonthEnd = endOfMonth(new Date(lastMonth.year, lastMonth.month - 1, 1));
-  if (aEnd < firstMonthStart || aStart > lastMonthEnd) return null;
-  const visibleStart = dateMax([aStart, firstMonthStart]);
-  const visibleEnd = dateMin([aEnd, lastMonthEnd]);
-  const left = getMonthlyPixelPosition(visibleStart, months);
-  const right = getMonthlyPixelPosition(addDays(visibleEnd, 1), months);
-  return { left, width: right - left, visibleStart };
-}
-
-function computeBarPositionWeekly(
-  item: DateRange,
-  allDays: DayInfo[],
-): { left: number; width: number; visibleStart: Date } | null {
-  if (allDays.length === 0) return null;
-  const aStart = parseISO(item.start_date);
-  const aEnd = parseISO(item.end_date);
-  const firstDay = allDays[0].date;
-  const lastDay = allDays[allDays.length - 1].date;
-  if (aEnd < firstDay || aStart > lastDay) return null;
-  const visibleStart = dateMax([aStart, firstDay]);
-  const visibleEnd = dateMin([aEnd, lastDay]);
-  const leftDays = differenceInCalendarDays(visibleStart, firstDay);
-  const spanDays = differenceInCalendarDays(visibleEnd, visibleStart) + 1;
-  return { left: leftDays * DAY_WIDTH, width: spanDays * DAY_WIDTH, visibleStart };
-}
-
-function getResizeHandleVisibility(
-  assignment: { start_date: string; end_date: string },
-  isWeekly: boolean,
-  months: MonthDef[],
-  allDays: DayInfo[],
-): { showResizeLeft: boolean; showResizeRight: boolean } {
-  if (isWeekly) {
-    if (allDays.length === 0) return { showResizeLeft: false, showResizeRight: false };
-    return {
-      showResizeLeft: assignment.start_date >= allDays[0].key,
-      showResizeRight: assignment.end_date <= allDays[allDays.length - 1].key,
-    };
-  }
-  if (months.length === 0) return { showResizeLeft: false, showResizeRight: false };
-  const firstKey = format(
-    startOfMonth(new Date(months[0].year, months[0].month - 1, 1)),
-    "yyyy-MM-dd",
-  );
-  const lastM = months[months.length - 1];
-  const lastKey = format(endOfMonth(new Date(lastM.year, lastM.month - 1, 1)), "yyyy-MM-dd");
-  return {
-    showResizeLeft: assignment.start_date >= firstKey,
-    showResizeRight: assignment.end_date <= lastKey,
-  };
-}
-
-function assignRow(
-  pos: { left: number; width: number },
-  occupiedRows: { left: number; right: number; row: number }[],
-): number {
-  let row = 0;
-  const right = pos.left + pos.width;
-  while (occupiedRows.some((o) => o.row === row && pos.left < o.right && right > o.left)) {
-    row++;
-  }
-  occupiedRows.push({ left: pos.left, right, row });
-  return row;
-}
+import {
+  getDateFromMonthlyPixelPosition,
+  computeBarPositionMonthly,
+  computeBarPositionWeekly,
+  getResizeHandleVisibility,
+  assignRow,
+} from "@/lib/timelineLayout";
 
 interface ProjectTimelineRowProps {
   project: ProjectTimelineProject;
