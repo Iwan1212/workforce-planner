@@ -1,5 +1,4 @@
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import {
   type MouseEvent,
   useCallback,
@@ -33,12 +32,11 @@ export function TimelineBar({
   showResizeLeft = true,
   showResizeRight = true,
 }: TimelineBarProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `assignment-${assignment.id}`,
-      data: { assignment, employeeId },
-      disabled: readOnly,
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `assignment-${assignment.id}`,
+    data: { assignment, employeeId, barWidth: width, showDailyHours },
+    disabled: readOnly,
+  });
 
   const [resizing, setResizing] = useState<"left" | "right" | null>(null);
   const [resizeDelta, setResizeDelta] = useState(0);
@@ -187,16 +185,14 @@ export function TimelineBar({
         width: adjustedWidth,
         height: 28,
         color: assignment.project_color,
-        transform: transform ? CSS.Translate.toString(transform) : undefined,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0 : 1,
         zIndex: isDragging || resizing ? 50 : 1,
       }
     : {
         left: adjustedLeft,
         width: adjustedWidth,
         height: 28,
-        transform: transform ? CSS.Translate.toString(transform) : undefined,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0 : 1,
         zIndex: isDragging || resizing ? 50 : 1,
       };
 

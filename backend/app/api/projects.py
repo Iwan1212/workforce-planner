@@ -21,16 +21,16 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 async def list_projects(
     search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
-    status: Literal["active", "archived", "all"] = Query("active"),
+    project_status: Literal["active", "archived", "all"] = Query("active", alias="status"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     query = select(Project)
     if not include_deleted:
         query = query.where(Project.is_deleted == False)
-    if status == "active":
+    if project_status == "active":
         query = query.where(Project.is_archived == False)
-    elif status == "archived":
+    elif project_status == "archived":
         query = query.where(Project.is_archived == True)
     # "all" — no filter
     if search:

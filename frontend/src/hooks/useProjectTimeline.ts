@@ -1,19 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "./useDebouncedValue";
-import { addMonths, addWeeks, format, parseISO } from "date-fns";
+import { addMonths, addWeeks, format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { fetchTimeline } from "@/api/assignments";
-import { useTimelineStore } from "@/stores/timelineStore";
+import { fetchProjectTimeline } from "@/api/projectTimeline";
+import { useProjectTimelineStore } from "@/stores/projectTimelineStore";
 import { generateWeeks } from "@/lib/timelineLayout";
 import type { DayInfo, WeekInfo } from "@/types/timeline";
 
 const MONTHS_VISIBLE = 7;
 const WEEKS_VISIBLE = 6;
 
-export function useTimeline() {
-  const { startDate, selectedTeams, searchQuery, viewMode, utilizationFilter } =
-    useTimelineStore();
-
+export function useProjectTimeline() {
+  const { startDate, searchQuery, viewMode } = useProjectTimelineStore();
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
 
   const endDate =
@@ -21,30 +19,15 @@ export function useTimeline() {
       ? addMonths(startDate, MONTHS_VISIBLE)
       : addWeeks(startDate, WEEKS_VISIBLE);
 
-  // Extend API query range to cover utilization filter dates if they exceed visible range
-  let queryStart = startDate;
-  let queryEnd = endDate;
-  if (utilizationFilter?.dateFrom) {
-    const f = parseISO(utilizationFilter.dateFrom);
-    if (f < queryStart) queryStart = f;
-  }
-  if (utilizationFilter?.dateTo) {
-    const t = parseISO(utilizationFilter.dateTo);
-    if (t > queryEnd) queryEnd = t;
-  }
-
-  const startStr = format(queryStart, "yyyy-MM-dd");
-  const endStr = format(queryEnd, "yyyy-MM-dd");
+  const startStr = format(startDate, "yyyy-MM-dd");
+  const endStr = format(endDate, "yyyy-MM-dd");
 
   const query = useQuery({
-    queryKey: ["timeline", startStr, endStr, selectedTeams, debouncedSearch, viewMode],
-    queryFn: () =>
-      fetchTimeline(startStr, endStr, selectedTeams, debouncedSearch || undefined),
+    queryKey: ["project-timeline", startStr, endStr, debouncedSearch, viewMode],
+    queryFn: () => fetchProjectTimeline(startStr, endStr, debouncedSearch || undefined),
   });
 
-  // Generate list of months for monthly header
-  const months: { year: number; month: number; label: string; key: string }[] =
-    [];
+  const months: { year: number; month: number; label: string; key: string }[] = [];
   if (viewMode === "monthly") {
     let current = new Date(startDate);
     for (let i = 0; i < MONTHS_VISIBLE; i++) {
@@ -58,7 +41,6 @@ export function useTimeline() {
     }
   }
 
-  // Generate weeks/days for weekly header
   const weeks: WeekInfo[] =
     viewMode === "weekly" ? generateWeeks(startDate, WEEKS_VISIBLE) : [];
 

@@ -21,6 +21,7 @@ export function AssignmentModal({
   onClose,
   assignment,
   defaultEmployeeId,
+  defaultProjectId,
   defaultStartDate,
 }: AssignmentModalProps) {
   const queryClient = useQueryClient();
@@ -79,7 +80,7 @@ export function AssignmentModal({
       setIsTentative(assignment.is_tentative);
     } else {
       setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
-      setProjectId("");
+      setProjectId(defaultProjectId ? String(defaultProjectId) : "");
       setStartDate(defaultStartDate ?? "");
       setEndDate("");
       setAllocationType("percentage");
@@ -88,12 +89,13 @@ export function AssignmentModal({
       setIsTentative(false);
     }
     setShowDeleteConfirm(false);
-  }, [open, assignment, defaultEmployeeId, defaultStartDate]);
+  }, [open, assignment, defaultEmployeeId, defaultProjectId, defaultStartDate]);
 
   const createMutation = useMutation({
     mutationFn: createAssignment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment utworzony");
       onClose();
     },
@@ -105,6 +107,7 @@ export function AssignmentModal({
       updateAssignment(data[0], data[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment zaktualizowany");
       onClose();
     },
@@ -115,6 +118,7 @@ export function AssignmentModal({
     mutationFn: deleteAssignment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment usunięty");
       onClose();
     },

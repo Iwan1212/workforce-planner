@@ -15,100 +15,56 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { addDays, parseISO, format, getDay } from "date-fns";
+import { addDays, parseISO, format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Copy, Plus, Scissors } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { RefreshButton } from "@/components/ui/RefreshButton";
-import { useTimeline } from "@/hooks/useTimeline";
-import { useTimelineStore } from "@/stores/timelineStore";
+import { useProjectTimeline } from "@/hooks/useProjectTimeline";
+import { useProjectTimelineStore } from "@/stores/projectTimelineStore";
 import { useAuthStore } from "@/stores/authStore";
-import { TimelineFilters } from "./TimelineFilters";
-import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
-import { TimelineRow } from "./TimelineRow";
+import { ProjectTimelineFilters } from "./ProjectTimelineFilters";
+import { ProjectTimelineRow } from "./ProjectTimelineRow";
+import { TimelineHeader, MONTH_WIDTH, DAY_WIDTH } from "@/components/timeline/TimelineHeader";
+import { TimelineBarDragPreview } from "@/components/timeline/TimelineBarDragPreview";
 import { AssignmentModal } from "@/components/assignments/AssignmentModal";
 import {
   updateAssignment,
   splitAssignment,
   duplicateAssignment,
 } from "@/api/assignments";
-import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
-import { triggerVacationSync } from "@/api/settings";
-import { VacationDialog } from "./VacationDialog";
-import { TimelineEmptyState } from "./TimelineEmptyState";
-import type { VacationRange } from "@/types/timeline";
+import type { TimelineAssignment } from "@/types/assignment";
+import type { ProjectTimelineAssignment, ProjectTimelineProject } from "@/types/project-timeline";
 import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
-import { TimelineBarDragPreview } from "./TimelineBarDragPreview";
+import { Search, FolderOpen } from "lucide-react";
 
-type TimelineProps = {
-  onNavigate?: (path: string) => void;
-};
-
-function calcUtilizationInRange(
-  assignments: TimelineAssignment[],
-  vacations: VacationRange[],
-  holidayMap: Record<string, string>,
-  dateFrom: string | null,
-  dateTo: string | null,
-  visibleStart: Date,
-  visibleEnd: Date,
-): number {
-  const rangeStart = dateFrom ? parseISO(dateFrom) : visibleStart;
-  const rangeEnd = dateTo ? parseISO(dateTo) : visibleEnd;
-
-  let totalHours = 0;
-  let workingDays = 0;
-
-  let current = rangeStart;
-  while (current <= rangeEnd) {
-    const dow = getDay(current); // 0=Sun, 6=Sat
-    const dateKey = format(current, "yyyy-MM-dd");
-    if (dow !== 0 && dow !== 6 && !holidayMap[dateKey]) {
-      workingDays++;
-
-      const isOnVacation = vacations.some((v) => {
-        const vStart = parseISO(v.start_date);
-        const vEnd = parseISO(v.end_date);
-        return current >= vStart && current <= vEnd;
-      });
-
-      if (!isOnVacation) {
-        for (const a of assignments) {
-          const aStart = parseISO(a.start_date);
-          const aEnd = parseISO(a.end_date);
-          if (current >= aStart && current <= aEnd) {
-            totalHours += a.daily_hours;
-          }
-        }
-      }
-    }
-    current = addDays(current, 1);
-  }
-
-  if (workingDays === 0) return 0;
-  return Math.round((totalHours / (workingDays * 8)) * 100);
+function adaptForModal(
+  assignment: ProjectTimelineAssignment,
+  project: ProjectTimelineProject,
+): TimelineAssignment {
+  return {
+    id: assignment.id,
+    project_id: project.id,
+    project_name: project.name,
+    project_color: project.color,
+    start_date: assignment.start_date,
+    end_date: assignment.end_date,
+    allocation_type: assignment.allocation_type,
+    allocation_value: assignment.allocation_value,
+    note: assignment.note,
+    is_tentative: assignment.is_tentative,
+    daily_hours: assignment.daily_hours,
+  };
 }
 
-export function Timeline({ onNavigate }: TimelineProps = {}) {
+export function ProjectTimeline() {
   const queryClient = useQueryClient();
-  const {
-    data,
-    isLoading,
-    months,
-    weeks,
-    allDays,
-    viewMode,
-    startDate,
-    endDate,
-  } = useTimeline();
-  const searchQuery = useTimelineStore((s) => s.searchQuery);
-  const utilizationFilter = useTimelineStore((s) => s.utilizationFilter);
+  const { data, isLoading, months, weeks, allDays, viewMode } = useProjectTimeline();
+  const searchQuery = useProjectTimelineStore((s) => s.searchQuery);
   const currentUser = useAuthStore((s) => s.user);
   const isViewer = currentUser?.role === "viewer";
-  const isAdmin = currentUser?.role === "admin";
 
   const holidayMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -119,16 +75,10 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   }, [data?.holidays]);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingAssignment, setEditingAssignment] =
-    useState<TimelineAssignment | null>(null);
-  const [defaultEmployeeId, setDefaultEmployeeId] = useState<number | null>(
-    null,
-  );
+  const [editingAssignment, setEditingAssignment] = useState<TimelineAssignment | null>(null);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<number | null>(null);
+  const [defaultProjectId, setDefaultProjectId] = useState<number | null>(null);
   const [defaultStartDate, setDefaultStartDate] = useState<string | null>(null);
-  const [vacationModalOpen, setVacationModalOpen] = useState(false);
-  const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(
-    null,
-  );
 
   const [dragPreview, setDragPreview] = useState<{
     assignment: TimelineAssignment;
@@ -146,19 +96,17 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const [timelineGridMaxHeight, setTimelineGridMaxHeight] = useState<
-    string | undefined
-  >("min(80dvh, calc(100dvh - 12rem))");
+  const [timelineGridMaxHeight, setTimelineGridMaxHeight] = useState<string | undefined>(
+    "min(80dvh, calc(100dvh - 12rem))",
+  );
 
   useLayoutEffect(() => {
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
-
     const update = () => {
       const h = Math.round(toolbar.getBoundingClientRect().height);
       setTimelineGridMaxHeight(`calc(100dvh - ${h}px - 2.5rem)`);
     };
-
     update();
     const ro = new ResizeObserver(update);
     ro.observe(toolbar);
@@ -172,10 +120,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   useEffect(() => {
     if (!contextMenu) return;
     const handleMouseDown = (e: MouseEvent) => {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(e.target as Node)
-      ) {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
         setContextMenu(null);
       }
     };
@@ -191,42 +136,38 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   }, [contextMenu]);
 
   const totalWidth =
-    viewMode === "weekly"
-      ? allDays.length * DAY_WIDTH
-      : months.length * MONTH_WIDTH;
+    viewMode === "weekly" ? allDays.length * DAY_WIDTH : months.length * MONTH_WIDTH;
 
-  // D&D sensor with activation distance to avoid accidental drags
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  // Vacation sync mutation
-  const syncVacationsMutation = useMutation({
-    mutationFn: triggerVacationSync,
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-      toast.success(`Zsynchronizowano ${result.synced} urlopów`);
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  // Split mutation
   const splitMutation = useMutation({
-    mutationFn: ({ id, date }: { id: number; date: string }) =>
-      splitAssignment(id, date),
+    mutationFn: ({ id, date }: { id: number; date: string }) => splitAssignment(id, date),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
       toast.success("Assignment podzielony");
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Duplicate mutation
   const duplicateMutation = useMutation({
     mutationFn: (id: number) => duplicateAssignment(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
       toast.success("Assignment zduplikowany");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const patchMutation = useMutation({
+    mutationFn: ({ id, data: patchData }: { id: number; data: Record<string, unknown> }) =>
+      updateAssignment(id, patchData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -243,76 +184,41 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
         x,
         y,
         splitDate,
-        splitDateLabel: format(parseISO(splitDate), "d.MM.yyyy", {
-          locale: pl,
-        }),
+        splitDateLabel: format(parseISO(splitDate), "d.MM.yyyy", { locale: pl }),
         splitDateIsValid,
         assignmentId,
       });
-      // Close assignment modal if open
       setModalOpen(false);
       setEditingAssignment(null);
     },
     [],
   );
 
-  // Mutation for D&D and resize
-  const patchMutation = useMutation({
-    mutationFn: ({
-      id,
-      data: patchData,
-    }: {
-      id: number;
-      data: Record<string, unknown>;
-    }) => updateAssignment(id, patchData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeline"] });
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const d = event.active.data.current as
-      | {
-          assignment: TimelineAssignment;
-          barWidth: number;
-          showDailyHours: boolean;
-        }
+      | { assignment: TimelineAssignment; barWidth: number; showDailyHours: boolean }
       | undefined;
     if (d?.assignment != null) {
-      setDragPreview({
-        assignment: d.assignment,
-        barWidth: d.barWidth,
-        showDailyHours: d.showDailyHours,
-      });
+      setDragPreview({ assignment: d.assignment, barWidth: d.barWidth, showDailyHours: d.showDailyHours });
     }
   }, []);
 
-  // D&D handler — move assignment to different employee
+  // D&D — move assignment to a different project
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over) return;
-
-      const dragData = active.data.current as {
-        assignment: TimelineAssignment;
-        employeeId: number;
-      };
-      const dropData = over.data.current as { employeeId: number };
-
+      const dragData = active.data.current as { assignment: TimelineAssignment; employeeId: number };
+      const dropData = over.data.current as { projectId: number };
       if (!dragData || !dropData) return;
-      if (dragData.employeeId === dropData.employeeId) return;
-
+      // employeeId in drag data is actually the source projectId (passed by ProjectTimelineRow)
+      if (dragData.employeeId === dropData.projectId) return;
       patchMutation.mutate(
-        {
-          id: dragData.assignment.id,
-          data: { employee_id: dropData.employeeId },
-        },
+        { id: dragData.assignment.id, data: { project_id: dropData.projectId } },
         {
           onSuccess: () => {
             const targetName =
-              data?.employees.find((e) => e.id === dropData.employeeId)?.name ??
-              "innego pracownika";
+              data?.projects.find((p) => p.id === dropData.projectId)?.name ?? "innego projektu";
             toast.success(`Assignment przeniesiony na ${targetName}`);
           },
         },
@@ -329,15 +235,12 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     [handleDragEnd],
   );
 
-  // Resize handler — change start or end date
   const handleResizeEnd = useCallback(
     (assignmentId: number, edge: "left" | "right", deltaPx: number) => {
       if (!data) return;
-
-      // Find the assignment in data
-      let assignment: TimelineAssignment | undefined;
-      for (const emp of data.employees) {
-        assignment = emp.assignments.find((a) => a.id === assignmentId);
+      let assignment: ProjectTimelineAssignment | undefined;
+      for (const proj of data.projects) {
+        assignment = proj.assignments.find((a) => a.id === assignmentId);
         if (assignment) break;
       }
       if (!assignment) return;
@@ -346,16 +249,14 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       if (viewMode === "weekly") {
         pxPerDay = DAY_WIDTH;
       } else {
-        const totalWidth = months.length * MONTH_WIDTH;
+        const totalPx = months.length * MONTH_WIDTH;
         const firstMonth = months[0];
         const lastMonth = months[months.length - 1];
         const firstDate = new Date(firstMonth.year, firstMonth.month - 1, 1);
         const lastDate = new Date(lastMonth.year, lastMonth.month, 0);
         const totalDays =
-          Math.round(
-            (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24),
-          ) + 1;
-        pxPerDay = totalWidth / totalDays;
+          Math.round((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        pxPerDay = totalPx / totalDays;
       }
 
       const daysDelta = Math.round(deltaPx / pxPerDay);
@@ -363,119 +264,68 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
 
       const patchData: Record<string, string> = {};
       if (edge === "left") {
-        const newStart = addDays(parseISO(assignment.start_date), daysDelta);
-        patchData.start_date = format(newStart, "yyyy-MM-dd");
+        patchData.start_date = format(addDays(parseISO(assignment.start_date), daysDelta), "yyyy-MM-dd");
       } else {
-        const newEnd = addDays(parseISO(assignment.end_date), daysDelta);
-        patchData.end_date = format(newEnd, "yyyy-MM-dd");
+        patchData.end_date = format(addDays(parseISO(assignment.end_date), daysDelta), "yyyy-MM-dd");
       }
 
       patchMutation.mutate(
         { id: assignmentId, data: patchData },
-        {
-          onSuccess: () => toast.success("Daty zaktualizowane"),
-        },
+        { onSuccess: () => toast.success("Daty zaktualizowane") },
       );
     },
     [data, months, viewMode, patchMutation],
   );
 
   const handleAssignmentClick = (
-    assignment: TimelineAssignment,
-    employeeId: number,
+    assignment: ProjectTimelineAssignment,
+    project: ProjectTimelineProject,
   ) => {
-    setEditingAssignment(assignment);
-    setDefaultEmployeeId(employeeId);
-    setModalOpen(true);
-  };
-
-  const handleEmptyClick = (employeeId: number, dateKey: string) => {
-    setEditingAssignment(null);
-    setDefaultEmployeeId(employeeId);
-    setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
-    setModalOpen(true);
-  };
-
-  const handleVacationClick = (vacation: VacationInfo) => {
-    setSelectedVacation(vacation);
-    setVacationModalOpen(true);
-  };
-
-  const handleNewAssignment = () => {
-    setEditingAssignment(null);
-    setDefaultEmployeeId(null);
+    setEditingAssignment(adaptForModal(assignment, project));
+    setEditingEmployeeId(assignment.employee_id);
+    setDefaultProjectId(null);
     setDefaultStartDate(null);
     setModalOpen(true);
   };
 
-  const displayedEmployees = useMemo(() => {
-    const employees = data?.employees ?? [];
-    if (!utilizationFilter) return employees;
-    const { dateFrom, dateTo, minPct, maxPct } = utilizationFilter;
-    if (minPct === null && maxPct === null) return employees;
-    return employees.filter((emp) => {
-      const pct = calcUtilizationInRange(
-        emp.assignments,
-        emp.vacations ?? [],
-        holidayMap,
-        dateFrom,
-        dateTo,
-        startDate,
-        endDate,
-      );
-      if (minPct !== null && pct < minPct) return false;
-      if (maxPct !== null && pct > maxPct) return false;
-      return true;
-    });
-  }, [data, utilizationFilter, startDate, endDate, holidayMap]);
+  const handleEmptyClick = (projectId: number, dateKey: string) => {
+    setEditingAssignment(null);
+    setEditingEmployeeId(null);
+    setDefaultProjectId(projectId);
+    setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
+    setModalOpen(true);
+  };
+
+  const handleNewAssignment = () => {
+    setEditingAssignment(null);
+    setEditingEmployeeId(null);
+    setDefaultProjectId(null);
+    setDefaultStartDate(null);
+    setModalOpen(true);
+  };
+
+  const displayedProjects = data?.projects ?? [];
+  const trimmedSearch = searchQuery.trim();
 
   return (
     <div>
-      {/* Sticky top section — <main> has no padding so sticky top-0 works flush. */}
-      <div
-        ref={toolbarRef}
-        className="sticky top-0 z-30 bg-background px-6 pt-6"
-      >
+      <div ref={toolbarRef} className="sticky top-0 z-30 bg-background px-6 pt-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Timeline</h2>
-          <div className="flex items-center gap-2">
-            {isAdmin && data?.vacation_sync_status?.is_configured && (
-              <div className="flex items-center gap-2">
-                {data.vacation_sync_status.last_synced_at && (
-                  <span className="text-xs text-muted-foreground">
-                    Sync:{" "}
-                    {new Date(
-                      data.vacation_sync_status.last_synced_at,
-                    ).toLocaleString("pl-PL")}
-                  </span>
-                )}
-                <RefreshButton
-                  label="Sync urlopów"
-                  onClick={() => syncVacationsMutation.mutate()}
-                  isPending={syncVacationsMutation.isPending}
-                />
-              </div>
-            )}
-            {!isViewer && (
-              <Button onClick={handleNewAssignment}>
-                <Plus className="mr-2 h-4 w-4" />
-                Dodaj assignment
-              </Button>
-            )}
-          </div>
+          <h2 className="text-2xl font-bold">Project Timeline</h2>
+          {!isViewer && (
+            <Button onClick={handleNewAssignment}>
+              <Plus className="mr-2 h-4 w-4" />
+              Dodaj assignment
+            </Button>
+          )}
         </div>
-
-        <TimelineFilters count={isLoading ? undefined : displayedEmployees.length} />
+        <ProjectTimelineFilters count={isLoading ? undefined : displayedProjects.length} />
       </div>
 
-      {/* Body content */}
       {isLoading ? (
         <div className="mx-6 rounded-md border">
           <div className="flex border-b">
-            <div
-              className="shrink-0 border-r p-3"
-              style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
-            >
+            <div className="shrink-0 border-r p-3" style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}>
               <div className="h-4 w-20 animate-pulse rounded bg-muted" />
             </div>
             <div className="flex flex-1">
@@ -489,12 +339,8 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex border-b">
-              <div
-                className="shrink-0 border-r p-3"
-                style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
-              >
+              <div className="shrink-0 border-r p-3" style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}>
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-                <div className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
               </div>
               <div className="flex-1 p-3">
                 <div
@@ -505,12 +351,24 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
             </div>
           ))}
         </div>
-      ) : !data || data.employees.length === 0 ? (
-        <TimelineEmptyState
-          searchQuery={searchQuery}
-          isViewer={isViewer}
-          onNavigateToEmployees={() => onNavigate?.("/employees")}
-        />
+      ) : !data || displayedProjects.length === 0 ? (
+        <div className="mx-6 flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 px-6 py-12 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted" aria-hidden>
+            {trimmedSearch ? (
+              <Search className="h-6 w-6 text-muted-foreground" />
+            ) : (
+              <FolderOpen className="h-6 w-6 text-muted-foreground" />
+            )}
+          </div>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">
+            {trimmedSearch ? `Brak wyników dla „${trimmedSearch}"` : "Brak projektów"}
+          </h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            {trimmedSearch
+              ? "Spróbuj innej frazy albo wyczyść wyszukiwanie."
+              : "Dodaj projekty i assignmenty, aby zobaczyć plan projektów w tym widoku."}
+          </p>
+        </div>
       ) : (
         <DndContext
           sensors={sensors}
@@ -524,6 +382,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               style={{ maxHeight: timelineGridMaxHeight }}
             >
               <div style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}>
+                {/* Sticky header row */}
                 <div
                   className="sticky top-0 z-20 flex border-b bg-muted shadow-sm"
                   style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}
@@ -532,12 +391,9 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     className="sticky left-0 z-30 flex shrink-0 items-center border-r bg-muted px-3 py-2"
                     style={{ width: TIMELINE_LEFT_PANEL_WIDTH }}
                   >
-                    <span className="text-sm font-medium">Pracownik</span>
+                    <span className="text-sm font-medium">Projekt</span>
                   </div>
-                  <div
-                    className="flex shrink-0"
-                    style={{ minWidth: totalWidth }}
-                  >
+                  <div className="flex shrink-0" style={{ minWidth: totalWidth }}>
                     <TimelineHeader
                       viewMode={viewMode}
                       months={months}
@@ -548,22 +404,17 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     />
                   </div>
                 </div>
-                {displayedEmployees.map((emp, idx) => (
-                  <TimelineRow
-                    key={emp.id}
-                    employeeId={emp.id}
-                    name={emp.name}
-                    team={emp.team}
-                    assignments={emp.assignments}
-                    vacations={emp.vacations}
-                    utilization={emp.utilization}
+
+                {/* Project rows */}
+                {displayedProjects.map((project, idx) => (
+                  <ProjectTimelineRow
+                    key={project.id}
+                    project={project}
                     months={months}
-                    weeks={weeks}
                     allDays={allDays}
                     viewMode={viewMode}
                     holidayMap={holidayMap}
-                    onAssignmentClick={(a) => handleAssignmentClick(a, emp.id)}
-                    onVacationClick={handleVacationClick}
+                    onAssignmentClick={(a) => handleAssignmentClick(a, project)}
                     onEmptyClick={handleEmptyClick}
                     onResizeEnd={handleResizeEnd}
                     onBarContextMenu={handleBarContextMenu}
@@ -574,6 +425,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               </div>
             </div>
           </div>
+
           <DragOverlay dropAnimation={null}>
             {dragPreview ? (
               <TimelineBarDragPreview
@@ -604,10 +456,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               disabled={!contextMenu.splitDateIsValid}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => {
-                splitMutation.mutate({
-                  id: contextMenu.assignmentId,
-                  date: contextMenu.splitDate,
-                });
+                splitMutation.mutate({ id: contextMenu.assignmentId, date: contextMenu.splitDate });
                 setContextMenu(null);
               }}
             >
@@ -629,23 +478,16 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
           document.body,
         )}
 
-      <VacationDialog
-        open={vacationModalOpen}
-        onClose={() => {
-          setVacationModalOpen(false);
-          setSelectedVacation(null);
-        }}
-        vacation={selectedVacation}
-        holidayMap={holidayMap}
-      />
       <AssignmentModal
         open={modalOpen}
         onClose={() => {
           setModalOpen(false);
           setEditingAssignment(null);
+          setEditingEmployeeId(null);
         }}
         assignment={editingAssignment}
-        defaultEmployeeId={defaultEmployeeId}
+        defaultEmployeeId={editingEmployeeId}
+        defaultProjectId={defaultProjectId}
         defaultStartDate={defaultStartDate}
       />
     </div>
