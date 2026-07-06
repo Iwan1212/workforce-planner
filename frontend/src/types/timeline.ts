@@ -1,13 +1,13 @@
 import type {
   TimelineAssignment,
   TimelineEmployee,
-  MonthUtilization,
+  PeriodOccupancy,
   VacationInfo,
 } from "./assignment";
 
 export type ViewMode = "monthly" | "weekly";
 
-export interface UtilizationFilter {
+export interface OccupancyFilter {
   dateFrom: string | null;
   dateTo: string | null;
   minPct: number | null;
@@ -19,12 +19,12 @@ export interface TimelineState {
   startDate: Date;
   selectedTeams: string[];
   searchQuery: string;
-  utilizationFilter: UtilizationFilter | null;
+  occupancyFilter: OccupancyFilter | null;
   setViewMode: (mode: ViewMode) => void;
   setStartDate: (date: Date) => void;
   setSelectedTeams: (teams: string[]) => void;
   setSearchQuery: (query: string) => void;
-  setUtilizationFilter: (filter: UtilizationFilter | null) => void;
+  setOccupancyFilter: (filter: OccupancyFilter | null) => void;
   scrollForward: () => void;
   scrollBack: () => void;
   goToToday: () => void;
@@ -82,7 +82,7 @@ export interface TimelineRowProps {
   team: string | null;
   assignments: TimelineAssignment[];
   vacations?: VacationInfo[];
-  utilization: Record<string, MonthUtilization>;
+  occupancy: Record<string, PeriodOccupancy>;
   months: MonthDef[];
   weeks: WeekInfo[];
   allDays: DayInfo[];
@@ -149,7 +149,7 @@ export interface TimelineSummaryRowProps {
   holidayMap: Record<string, string>;
 }
 
-export interface EmployeeUtilizationPanelProps {
+export interface EmployeeOccupancyPanelProps {
   employee: TimelineEmployee;
   months: MonthDef[];
   onClose: () => void;
@@ -163,7 +163,7 @@ export interface VacationDialogProps {
   holidayMap: Record<string, string>;
 }
 
-export interface UtilizationBadgeProps {
+export interface OccupancyBadgeProps {
   percentage: number;
   isOverbooked: boolean;
 }

@@ -3,21 +3,18 @@ from __future__ import annotations
 import calendar as cal_mod
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin
-from app.models.assignment import Assignment
+from app.models.assignment import AllocationType, Assignment
 from app.models.employee import Employee, Team
 from app.models.user import User
 from app.models.vacation import Vacation
-from app.services.assignment_service import (
-    calculate_assignment_hours_in_month,
-    calculate_daily_hours,
-)
+from app.services.assignment_service import calculate_daily_hours
 from app.services.vacation_sync_service import (
     get_calamari_config,
     get_default_sync_range,
@@ -36,6 +33,7 @@ async def get_timeline(
     end_date: date = Query(...),
     teams: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    granularity: Literal["monthly", "weekly"] = Query("monthly"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
@@ -165,47 +163,22 @@ async def get_timeline(
             for v in emp_vacations
         ]
 
-        # Calculate utilization per month (accounting for vacation days)
-        utilization = {}
-        for y, m in months:
-            key = f"{y}-{m:02d}"
-            wd = working_days_per_month[key]
-            avail = Decimal(str(wd)) * Decimal("8")
-
-            vacation_days = _count_vacation_working_days(emp_vacations, y, m)
-
-            total = Decimal("0")
-            for a in assignments:
-                total += calculate_assignment_hours_in_month(
-                    a.start_date,
-                    a.end_date,
-                    a.allocation_type.value,
-                    a.allocation_value,
-                    y,
-                    m,
+        # Calculate occupancy per period (month or week)
+        occupancy: dict = {}
+        if granularity == "weekly":
+            for week_start, week_end in _get_weeks_in_range(start_date, end_date):
+                key = _week_key(week_start)
+                occupancy[key] = _compute_occupancy_for_period(
+                    assignments, emp_vacations, week_start, week_end, holiday_dates,
                 )
-
-            # Subtract assignment hours that fall on vacation days
-            vacation_overlap = _compute_vacation_overlap_hours(
-                emp_vacations, assignments, y, m, holiday_dates,
-            )
-            effective_total = max(total - vacation_overlap, Decimal("0"))
-
-            pct = float(
-                round(
-                    (effective_total / avail * Decimal("100"))
-                    if avail > 0
-                    else Decimal("0"),
-                    1,
+        else:
+            for y, m in months:
+                key = f"{y}-{m:02d}"
+                period_start = date(y, m, 1)
+                period_end = date(y, m, cal_mod.monthrange(y, m)[1])
+                occupancy[key] = _compute_occupancy_for_period(
+                    assignments, emp_vacations, period_start, period_end, holiday_dates,
                 )
-            )
-            utilization[key] = {
-                "percentage": pct,
-                "hours": float(round(effective_total, 1)),
-                "available_hours": float(round(avail, 1)),
-                "vacation_days": vacation_days,
-                "is_overbooked": pct > 100,
-            }
 
         employee_data.append(
             {
@@ -214,7 +187,7 @@ async def get_timeline(
                 "team": emp.team.value if emp.team else None,
                 "assignments": assignment_list,
                 "vacations": vacation_list,
-                "utilization": utilization,
+                "occupancy": occupancy,
             }
         )
 
@@ -229,62 +202,89 @@ async def get_timeline(
     }
 
 
-def _compute_vacation_overlap_hours(
-    vacations: list,
+def _week_key(week_start: date) -> str:
+    """Generate week key matching frontend format: 'w-YYYY-WW'."""
+    _, iso_week, _ = week_start.isocalendar()
+    return f"w-{week_start.year}-{iso_week}"
+
+
+def _get_weeks_in_range(start_date: date, end_date: date) -> list[tuple[date, date]]:
+    """Return (week_start, week_end) pairs for all ISO weeks touching the range.
+
+    The first window is aligned to the Monday of start_date's week so that
+    windows are always true ISO weeks (Monday–Sunday), matching the frontend's
+    Monday-based week grid regardless of which weekday start_date falls on.
+    """
+    weeks = []
+    current = start_date - timedelta(days=start_date.weekday())
+    while current <= end_date:
+        week_end = current + timedelta(days=6)
+        weeks.append((current, week_end))
+        current = week_end + timedelta(days=1)
+    return weeks
+
+
+def _compute_occupancy_for_period(
     assignments: list,
-    year: int,
-    month: int,
+    vacations: list,
+    period_start: date,
+    period_end: date,
     holiday_dates: set,
-) -> Decimal:
-    """Compute total assignment hours that fall on vacation working days in a month."""
-    if not vacations or not assignments:
-        return Decimal("0")
+) -> dict:
+    """Compute occupancy metrics for a period (week or month).
 
-    month_start = date(year, month, 1)
-    month_end = date(year, month, cal_mod.monthrange(year, month)[1])
-    total = Decimal("0")
+    Denominator: net_available = (working_days - vacation_days) * 8
+    Numerator:
+      - percentage allocations: hours only on non-vacation working days
+      - hours-based allocations: full committed hours across all working days
+        (vacation reduces net_available, not the commitment)
+    """
+    net_available_days = 0
+    hours_numerator = Decimal("0")
 
-    for v in vacations:
-        overlap_start = max(v.start_date, month_start)
-        overlap_end = min(v.end_date, month_end)
-        if overlap_start > overlap_end:
-            continue
-
-        d = overlap_start
-        while d <= overlap_end:
-            if d.weekday() < 5 and d not in holiday_dates:
-                for a in assignments:
-                    if a.start_date <= d <= a.end_date:
-                        total += calculate_daily_hours(
-                            a.allocation_type.value,
-                            a.allocation_value,
-                            year,
-                            month,
-                            start_date=a.start_date,
-                            end_date=a.end_date,
-                        )
+    d = period_start
+    while d <= period_end:
+        if d.weekday() >= 5 or d in holiday_dates:
             d += timedelta(days=1)
-
-    return total
-
-
-def _count_vacation_working_days(vacations: list, year: int, month: int) -> int:
-    """Count working days covered by vacations in a specific month."""
-    if not vacations:
-        return 0
-
-    month_start = date(year, month, 1)
-    month_end = date(year, month, cal_mod.monthrange(year, month)[1])
-    total = 0
-
-    for v in vacations:
-        overlap_start = max(v.start_date, month_start)
-        overlap_end = min(v.end_date, month_end)
-        if overlap_start > overlap_end:
             continue
-        total += get_working_days(overlap_start, overlap_end)
 
-    return total
+        is_vacation = any(v.start_date <= d <= v.end_date for v in vacations)
+
+        if not is_vacation:
+            net_available_days += 1
+
+        for a in assignments:
+            if not (a.start_date <= d <= a.end_date):
+                continue
+            daily = calculate_daily_hours(
+                a.allocation_type.value,
+                a.allocation_value,
+                d.year,
+                d.month,
+                start_date=a.start_date,
+                end_date=a.end_date,
+            )
+            if a.allocation_type == AllocationType.percentage:
+                if not is_vacation:
+                    hours_numerator += daily
+            else:
+                hours_numerator += daily
+
+        d += timedelta(days=1)
+
+    net_available = Decimal(str(net_available_days)) * Decimal("8")
+
+    if net_available == 0:
+        pct = 0.0
+    else:
+        pct = float(round(hours_numerator / net_available * Decimal("100"), 1))
+
+    return {
+        "percentage": pct,
+        "hours": float(round(hours_numerator, 1)),
+        "available_hours": float(round(net_available, 1)),
+        "is_overbooked": pct > 100,
+    }
 
 
 async def _get_vacation_sync_status(db: AsyncSession) -> dict:

@@ -1,9 +1,9 @@
-import type { UtilizationBadgeProps } from "@/types/timeline";
+import type { OccupancyBadgeProps } from "@/types/timeline";
 
-export function UtilizationBadge({
+export function OccupancyBadge({
   percentage,
   isOverbooked,
-}: UtilizationBadgeProps) {
+}: OccupancyBadgeProps) {
   let colorClasses: string;
   if (isOverbooked) {
     colorClasses = "bg-red-100 text-red-700 font-bold dark:bg-red-500/20 dark:text-red-400";

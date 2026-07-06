@@ -47,7 +47,7 @@ type TimelineProps = {
   onNavigate?: (path: string) => void;
 };
 
-function calcUtilizationInRange(
+function calcOccupancyInRange(
   assignments: TimelineAssignment[],
   vacations: VacationRange[],
   holidayMap: Record<string, string>,
@@ -105,7 +105,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     endDate,
   } = useTimeline();
   const searchQuery = useTimelineStore((s) => s.searchQuery);
-  const utilizationFilter = useTimelineStore((s) => s.utilizationFilter);
+  const occupancyFilter = useTimelineStore((s) => s.occupancyFilter);
   const currentUser = useAuthStore((s) => s.user);
   const isViewer = currentUser?.role === "viewer";
   const isAdmin = currentUser?.role === "admin";
@@ -410,11 +410,11 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
 
   const displayedEmployees = useMemo(() => {
     const employees = data?.employees ?? [];
-    if (!utilizationFilter) return employees;
-    const { dateFrom, dateTo, minPct, maxPct } = utilizationFilter;
+    if (!occupancyFilter) return employees;
+    const { dateFrom, dateTo, minPct, maxPct } = occupancyFilter;
     if (minPct === null && maxPct === null) return employees;
     return employees.filter((emp) => {
-      const pct = calcUtilizationInRange(
+      const pct = calcOccupancyInRange(
         emp.assignments,
         emp.vacations ?? [],
         holidayMap,
@@ -427,7 +427,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       if (maxPct !== null && pct > maxPct) return false;
       return true;
     });
-  }, [data, utilizationFilter, startDate, endDate, holidayMap]);
+  }, [data, occupancyFilter, startDate, endDate, holidayMap]);
 
   return (
     <div>
@@ -556,7 +556,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     team={emp.team}
                     assignments={emp.assignments}
                     vacations={emp.vacations}
-                    utilization={emp.utilization}
+                    occupancy={emp.occupancy}
                     months={months}
                     weeks={weeks}
                     allDays={allDays}

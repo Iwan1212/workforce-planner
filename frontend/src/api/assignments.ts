@@ -6,10 +6,12 @@ export function fetchTimeline(
   endDate: string,
   teams?: string[],
   search?: string,
+  granularity: "monthly" | "weekly" = "monthly",
 ): Promise<TimelineData> {
   const params = new URLSearchParams({
     start_date: startDate,
     end_date: endDate,
+    granularity,
   });
   if (teams && teams.length > 0) {
     params.set("teams", teams.join(","));

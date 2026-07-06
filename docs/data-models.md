@@ -109,7 +109,7 @@ AppSettings (standalone — stores Calamari config etc.)
 
 ### Overbooking
 
-- Utilization > 100% FTE = red highlight on timeline
+- Occupancy > 100% FTE = red highlight on timeline
 - System does **NOT** block overbooking — it only warns visually
 
 ### Tentative Assignments
@@ -124,8 +124,8 @@ AppSettings (standalone — stores Calamari config etc.)
 ### Vacation Integration
 
 - Vacations synced from Calamari API (manual or scheduled sync)
-- Vacation days reduce available hours in utilization calculations
-- `vacation_days` field in per-month utilization shows working days covered by vacations
+- Vacation days reduce net available hours in occupancy calculations
+- Percentage allocations skip vacation days entirely; hours-based commitments stay fixed, so vacations can push occupancy above 100%
 
 ### Deletion Rules
 
