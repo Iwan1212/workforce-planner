@@ -1,59 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "./useDebouncedValue";
-import {
-  addMonths,
-  addDays,
-  addWeeks,
-  format,
-  getISOWeek,
-  getDay,
-  parseISO,
-} from "date-fns";
+import { addMonths, addWeeks, format, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
 import { fetchTimeline } from "@/api/assignments";
 import { useTimelineStore } from "@/stores/timelineStore";
+import { generateWeeks } from "@/lib/timelineLayout";
 import type { DayInfo, WeekInfo } from "@/types/timeline";
 
 const MONTHS_VISIBLE = 7;
 const WEEKS_VISIBLE = 6;
-const DAY_LABELS = ["Nd", "Pn", "Wt", "Śr", "Czw", "Pt", "Sb"];
-
-function generateWeeks(start: Date, count: number): WeekInfo[] {
-  const weeks: WeekInfo[] = [];
-  let current = new Date(start);
-
-  for (let w = 0; w < count; w++) {
-    const weekStart = current;
-    const weekEnd = addDays(weekStart, 6);
-    const weekNum = getISOWeek(weekStart);
-
-    const days: DayInfo[] = [];
-    for (let d = 0; d < 7; d++) {
-      const day = addDays(weekStart, d);
-      const dow = getDay(day); // 0=Sun, 1=Mon, ...
-      days.push({
-        date: day,
-        key: format(day, "yyyy-MM-dd"),
-        dayOfWeek: dow === 0 ? 7 : dow, // ISO: 1=Mon, 7=Sun
-        label: DAY_LABELS[dow],
-        isWeekend: dow === 0 || dow === 6,
-      });
-    }
-
-    const startLabel = format(weekStart, "d", { locale: pl });
-    const endLabel = format(weekEnd, "d MMM", { locale: pl });
-
-    weeks.push({
-      weekNumber: weekNum,
-      label: `${startLabel}-${endLabel}`,
-      days,
-    });
-
-    current = addWeeks(current, 1);
-  }
-
-  return weeks;
-}
 
 export function useTimeline() {
   const { startDate, selectedTeams, searchQuery, viewMode, occupancyFilter } =

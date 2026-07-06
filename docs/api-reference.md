@@ -47,6 +47,7 @@ On successful deletion: `{"deleted": true}` (200).
 
 ```
 GET    /api/projects                        # List projects (200)
+GET    /api/projects/timeline               # Timeline grouped by project (200, see below)
 POST   /api/projects                        # Create project, unique name (201)
 PATCH  /api/projects/{id}                   # Update project (200)
 DELETE /api/projects/{id}                   # Delete with cascade (200, see below)
@@ -220,6 +221,91 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 |---|---|---|
 | `last_synced_at` | datetime\|null | Last successful sync timestamp |
 | `is_configured` | bool | Whether Calamari integration is configured |
+
+## Project Timeline Endpoint
+
+Timeline data grouped by project (instead of by employee). Powers the Project Timeline view.
+
+### Request
+
+```
+GET /api/projects/timeline?start_date=2026-01-01&end_date=2026-06-30&search=Alpha
+```
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `start_date` | date | yes | Range start (YYYY-MM-DD) |
+| `end_date` | date | yes | Range end (YYYY-MM-DD) |
+| `search` | string | no | Filter projects by name (case-insensitive substring) |
+
+### Response
+
+```json
+{
+  "projects": [
+    {
+      "id": 5,
+      "name": "Projekt Alpha",
+      "color": "#3B82F6",
+      "assignments": [
+        {
+          "id": 10,
+          "employee_id": 1,
+          "employee_name": "Kowalski Jan",
+          "employee_team": "Frontend",
+          "start_date": "2026-01-15",
+          "end_date": "2026-03-31",
+          "allocation_type": "percentage",
+          "allocation_value": 50,
+          "note": "Lead developer",
+          "is_tentative": false,
+          "daily_hours": 4.0
+        }
+      ]
+    }
+  ],
+  "holidays": [
+    {"date": "2026-01-01", "name": "Nowy Rok"},
+    {"date": "2026-01-06", "name": "Trzech Króli"}
+  ],
+  "working_days_per_month": {
+    "2026-01": 21,
+    "2026-02": 20,
+    "2026-03": 22
+  }
+}
+```
+
+### Response Fields
+
+**Project object:**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | int | Project ID |
+| `name` | string | Project name |
+| `color` | string | Hex color |
+| `assignments` | array | Assignments within requested date range (deleted employees excluded) |
+
+Non-deleted projects are always returned (sorted by name), even when they have no assignments in the range.
+
+**Assignment object (in project timeline):**
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | int | Assignment ID |
+| `employee_id` | int | Employee ID |
+| `employee_name` | string | "Last First" format |
+| `employee_team` | string\|null | Team enum value |
+| `start_date` | date | Assignment start |
+| `end_date` | date | Assignment end |
+| `allocation_type` | enum | `percentage`, `monthly_hours`, or `total_hours` |
+| `allocation_value` | decimal | The raw allocation value |
+| `note` | string\|null | Optional note |
+| `is_tentative` | bool | Whether assignment is tentative |
+| `daily_hours` | float | Computed daily hours |
+
+`holidays` and `working_days_per_month` have the same shape as in the employee timeline endpoint. This endpoint does not return `utilization` or `vacation_sync_status`.
 
 ## HTTP Status Codes
 

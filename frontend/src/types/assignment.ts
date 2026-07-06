@@ -69,6 +69,7 @@ export interface AssignmentModalProps {
   onClose: () => void;
   assignment?: TimelineAssignment | null;
   defaultEmployeeId?: number | null;
+  defaultProjectId?: number | null;
   defaultStartDate?: string | null;
 }
 

@@ -101,14 +101,20 @@ async def create_assignment(
     if not emp.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Validate project exists
+    # Validate project exists and is not archived
     proj = await db.execute(
         select(Project).where(
             Project.id == body.project_id, Project.is_deleted == False
         )
     )
-    if not proj.scalar_one_or_none():
+    project = proj.scalar_one_or_none()
+    if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    if project.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nie można przypisać pracownika do zarchiwizowanego projektu",
+        )
 
     assignment = Assignment(
         employee_id=body.employee_id,
@@ -154,8 +160,14 @@ async def update_assignment(
                 Project.id == body.project_id, Project.is_deleted == False
             )
         )
-        if not proj.scalar_one_or_none():
+        project = proj.scalar_one_or_none()
+        if not project:
             raise HTTPException(status_code=404, detail="Project not found")
+        if project.is_archived:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Nie można przypisać pracownika do zarchiwizowanego projektu",
+            )
         assignment.project_id = body.project_id
 
     if body.start_date is not None:

@@ -13,4 +13,5 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     color: Mapped[str] = mapped_column(String(7), nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

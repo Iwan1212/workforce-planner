@@ -21,6 +21,7 @@ export function AssignmentModal({
   onClose,
   assignment,
   defaultEmployeeId,
+  defaultProjectId,
   defaultStartDate,
 }: AssignmentModalProps) {
   const queryClient = useQueryClient();
@@ -42,11 +43,29 @@ export function AssignmentModal({
     enabled: open,
   });
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => fetchProjects(),
+  const { data: allProjects = [], status: activeProjectsStatus } = useQuery({
+    queryKey: ["projects", "active"],
+    queryFn: () => fetchProjects(undefined, "active"),
     enabled: open,
   });
+
+  const currentProjectId = assignment?.project_id;
+  const isCurrentProjectActive = allProjects.some((p) => p.id === currentProjectId);
+
+  // Only fetch archived projects when editing and the assigned project is not in the active list
+  const { data: archivedProjects = [] } = useQuery({
+    queryKey: ["projects", "archived"],
+    queryFn: () => fetchProjects(undefined, "archived"),
+    enabled:
+      open && isEditing && activeProjectsStatus === "success" && !isCurrentProjectActive,
+  });
+
+  const projects = isEditing
+    ? [
+        ...allProjects,
+        ...archivedProjects.filter((p) => p.id === currentProjectId),
+      ]
+    : allProjects;
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +80,7 @@ export function AssignmentModal({
       setIsTentative(assignment.is_tentative);
     } else {
       setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
-      setProjectId("");
+      setProjectId(defaultProjectId ? String(defaultProjectId) : "");
       setStartDate(defaultStartDate ?? "");
       setEndDate("");
       setAllocationType("percentage");
@@ -70,12 +89,13 @@ export function AssignmentModal({
       setIsTentative(false);
     }
     setShowDeleteConfirm(false);
-  }, [open, assignment, defaultEmployeeId, defaultStartDate]);
+  }, [open, assignment, defaultEmployeeId, defaultProjectId, defaultStartDate]);
 
   const createMutation = useMutation({
     mutationFn: createAssignment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment utworzony");
       onClose();
     },
@@ -87,6 +107,7 @@ export function AssignmentModal({
       updateAssignment(data[0], data[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment zaktualizowany");
       onClose();
     },
@@ -97,6 +118,7 @@ export function AssignmentModal({
     mutationFn: deleteAssignment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["project-timeline"] });
       toast.success("Assignment usunięty");
       onClose();
     },

@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { TeamFilterChips } from "@/components/common/TeamFilterChips";
 import { useTimelineStore } from "@/stores/timelineStore";
+import { pluralizePl } from "@/lib/pluralizePl";
 import type { ViewMode, OccupancyFilter } from "@/types/timeline";
 
-export function TimelineFilters() {
+export function TimelineFilters({ count }: { count?: number }) {
   const {
     viewMode,
     setViewMode,
@@ -151,6 +152,13 @@ export function TimelineFilters() {
             <ChevronDown className="h-3 w-3" />
           )}
         </button>
+
+        {count !== undefined && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {count}{" "}
+            {pluralizePl(count, ["pracownik", "pracownicy", "pracowników"])}
+          </span>
+        )}
       </div>
 
       {/* Occupancy filter panel */}
