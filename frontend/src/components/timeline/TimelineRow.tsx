@@ -6,18 +6,16 @@ import {
   parseISO,
   max as dateMax,
   min as dateMin,
-  isWithinInterval,
   addDays,
   format,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import type { TimelineAssignment, VacationInfo } from "@/types/assignment";
+import type { TimelineAssignment } from "@/types/assignment";
 import type {
   TimelineRowProps,
   MonthDef,
   DateRange,
   DayInfo,
-  WeekInfo,
 } from "@/types/timeline";
 import { TEAM_LABELS, LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
 import { TimelineBar } from "./TimelineBar";
