@@ -12,6 +12,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TeamFilterChips } from "@/components/common/TeamFilterChips";
+import { pluralizePl } from "@/lib/pluralizePl";
 import {
   createEmployee,
   deleteEmployee,
@@ -126,11 +127,11 @@ export function EmployeeList() {
         {!isLoading && (
           <span className="ml-auto text-sm text-muted-foreground tabular-nums">
             {employees.length}{" "}
-            {employees.length === 1
-              ? "pracownik"
-              : employees.length >= 2 && employees.length <= 4
-                ? "pracownicy"
-                : "pracowników"}
+            {pluralizePl(employees.length, [
+              "pracownik",
+              "pracownicy",
+              "pracowników",
+            ])}
           </span>
         )}
       </div>

@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
+import { pluralizePl } from "@/lib/pluralizePl";
 import {
   archiveProject,
   createProject,
@@ -152,11 +153,7 @@ export function ProjectList() {
         {!isLoading && (
           <span className="ml-auto text-sm text-muted-foreground tabular-nums">
             {projects.length}{" "}
-            {projects.length === 1
-              ? "projekt"
-              : projects.length >= 2 && projects.length <= 4
-                ? "projekty"
-                : "projektów"}
+            {pluralizePl(projects.length, ["projekt", "projekty", "projektów"])}
           </span>
         )}
       </div>
