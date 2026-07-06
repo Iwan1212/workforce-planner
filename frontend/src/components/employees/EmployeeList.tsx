@@ -12,6 +12,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TeamFilterChips } from "@/components/common/TeamFilterChips";
+import { pluralizePl } from "@/lib/pluralizePl";
 import {
   createEmployee,
   deleteEmployee,
@@ -123,6 +124,16 @@ export function EmployeeList() {
           onToggleTeam={toggleTeam}
           onSelectAll={selectAllTeams}
         />
+        {!isLoading && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {employees.length}{" "}
+            {pluralizePl(employees.length, [
+              "pracownik",
+              "pracownicy",
+              "pracowników",
+            ])}
+          </span>
+        )}
       </div>
 
       <DataTable<Employee>

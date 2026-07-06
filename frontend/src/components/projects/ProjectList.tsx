@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
+import { pluralizePl } from "@/lib/pluralizePl";
 import {
   archiveProject,
   createProject,
@@ -149,6 +150,12 @@ export function ProjectList() {
             </button>
           ))}
         </div>
+        {!isLoading && (
+          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+            {projects.length}{" "}
+            {pluralizePl(projects.length, ["projekt", "projekty", "projektów"])}
+          </span>
+        )}
       </div>
 
       <DataTable<Project>

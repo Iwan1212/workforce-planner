@@ -465,7 +465,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
           </div>
         </div>
 
-        <TimelineFilters />
+        <TimelineFilters count={isLoading ? undefined : displayedEmployees.length} />
       </div>
 
       {/* Body content */}
