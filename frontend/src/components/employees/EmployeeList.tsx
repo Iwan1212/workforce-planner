@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCrudList } from "@/hooks/useCrudList";
+import { useClickOutside } from "@/hooks/useClickOutside";
 import { useTeams } from "@/hooks/useTeams";
 import { useTechnologies } from "@/hooks/useTechnologies";
 import { Pencil, Plus, Trash2, Users, Code2, X } from "lucide-react";
@@ -73,6 +74,8 @@ export function EmployeeList() {
   const [openPanel, setOpenPanel] = useState<"teams" | "technologies" | null>(
     null,
   );
+  const filterRef = useRef<HTMLDivElement>(null);
+  useClickOutside(filterRef, () => setOpenPanel(null), openPanel !== null);
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: technologies = [], isLoading: technologiesLoading } =
     useTechnologies();
@@ -141,7 +144,7 @@ export function EmployeeList() {
         }
       />
 
-      <div className="mb-4 space-y-2">
+      <div className="mb-4 space-y-2" ref={filterRef}>
         <div className="flex items-center gap-3">
           <SearchInput
             className="w-64"

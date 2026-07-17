@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Percent, Users, Code2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { FilterButton } from "@/components/common/FilterButton";
 import { FilterChipPanel } from "@/components/common/FilterChipPanel";
 import { useTeams } from "@/hooks/useTeams";
 import { useTechnologies } from "@/hooks/useTechnologies";
+import { useClickOutside } from "@/hooks/useClickOutside";
 import { useTimelineStore } from "@/stores/timelineStore";
 import { pluralizePl } from "@/lib/pluralizePl";
 import type { ViewMode, OccupancyFilter } from "@/types/timeline";
@@ -35,6 +36,8 @@ export function TimelineFilters({ count }: { count?: number }) {
     useTechnologies();
 
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+  useClickOutside(filterRef, () => setOpenPanel(null), openPanel !== null);
   const [draftDateFrom, setDraftDateFrom] = useState("");
   const [draftDateTo, setDraftDateTo] = useState("");
   const [draftMinPct, setDraftMinPct] = useState("");
@@ -134,6 +137,8 @@ export function TimelineFilters({ count }: { count?: number }) {
         </div>
       </div>
 
+      {/* Filter cluster: click outside closes the open panel */}
+      <div className="space-y-2" ref={filterRef}>
       {/* Row 2: Search + filters */}
       <div className="flex items-center gap-3">
         <SearchInput
@@ -272,6 +277,7 @@ export function TimelineFilters({ count }: { count?: number }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
