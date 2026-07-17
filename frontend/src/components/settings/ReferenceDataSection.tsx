@@ -26,6 +26,8 @@ interface ReferenceDataSectionProps<T extends RefItem> {
   remove: (id: number) => Promise<unknown>;
   /** Whether the current user may delete (admin-only on the backend). */
   canDelete: boolean;
+  /** Empty-state message shown when there are no items. */
+  emptyContent: string;
 }
 
 export function ReferenceDataSection<T extends RefItem>({
@@ -37,6 +39,7 @@ export function ReferenceDataSection<T extends RefItem>({
   update,
   remove,
   canDelete,
+  emptyContent,
 }: ReferenceDataSectionProps<T>) {
   const { data: items = [], isLoading } = useQuery({
     queryKey: [queryKey],
@@ -111,7 +114,7 @@ export function ReferenceDataSection<T extends RefItem>({
             </>
           )}
           isLoading={isLoading}
-          emptyContent={`Brak. Dodaj pierwszy wpis.`}
+          emptyContent={emptyContent}
         />
       </div>
 

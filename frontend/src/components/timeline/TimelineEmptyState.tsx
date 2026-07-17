@@ -17,10 +17,10 @@ export function TimelineEmptyState({
 
   const title = isSearch
     ? `Brak wyników dla „${trimmed}”`
-    : "Brak pracowników dla wybranych zespołów";
+    : "Brak pracowników dla wybranych filtrów.";
 
   const description = isSearch
-    ? "Spróbuj innej frazy albo wyczyść wyszukiwanie. Jeśli katalog jest pusty, najpierw dodaj pracowników."
+    ? "Spróbuj innej frazy albo wyczyść wyszukiwanie. Jeśli kalendarz jest pusty, najpierw dodaj pracowników."
     : "Dodaj pracowników i przypisania do projektów, aby zobaczyć plan obłożenia w tym widoku.";
 
   const Icon = isSearch ? Search : Users;

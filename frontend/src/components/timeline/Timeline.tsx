@@ -443,14 +443,14 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
               <div className="flex items-center gap-2">
                 {data.vacation_sync_status.last_synced_at && (
                   <span className="text-xs text-muted-foreground">
-                    Sync:{" "}
+                    Ostatnia synchronizacja:{" "}
                     {new Date(
                       data.vacation_sync_status.last_synced_at,
                     ).toLocaleString("pl-PL")}
                   </span>
                 )}
                 <RefreshButton
-                  label="Sync urlopów"
+                  label="Synchronizuj urlopy"
                   onClick={() => syncVacationsMutation.mutate()}
                   isPending={syncVacationsMutation.isPending}
                 />

@@ -100,7 +100,7 @@ export function UserFormDialog({
       }}
     >
       <div className="space-y-2">
-        <Label htmlFor="user-form-name">Imię i nazwisko</Label>
+        <Label htmlFor="user-form-name">Nazwa użytkownika</Label>
         <Input
           id="user-form-name"
           value={fullName}

@@ -6,8 +6,8 @@ import { useAuthStore } from "@/stores/authStore";
 import type { SidebarProps } from "@/types/layout";
 
 const NAV_ITEMS = [
-  { path: "/", label: "Timeline", icon: Calendar, viewerAllowed: true },
-  { path: "/project-timeline", label: "Project Timeline", icon: GanttChart, viewerAllowed: true },
+  { path: "/", label: "Kalendarz - pracownicy", icon: Calendar, viewerAllowed: true },
+  { path: "/project-timeline", label: "Kalendarz - projekty", icon: GanttChart, viewerAllowed: true },
   { path: "/employees", label: "Pracownicy", icon: Users, viewerAllowed: false },
   { path: "/projects", label: "Projekty", icon: FolderKanban, viewerAllowed: false },
 ] as const;

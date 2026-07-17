@@ -132,7 +132,7 @@ export function EmployeeForm({
           onChange={(ids) => setForm((f) => ({ ...f, technologyIds: ids }))}
           placeholder="Wybierz technologie..."
           isLoading={technologiesLoading}
-          emptyLabel="Brak technologii — dodaj je w Ustawieniach"
+          emptyLabel="Brak technologii. Dodaj w Ustawieniach"
         />
       </div>
     </DialogWrapper>

@@ -77,10 +77,11 @@ export function SettingsPage() {
           <>
             <CollapsibleSection
               title="Zespoły"
-              description="Zarządzaj listą zespołów przypisywanych pracownikom"
+              description="Zarządzaj listą zespołów przypisywanych do pracowników"
             >
               <ReferenceDataSection
                 entityLabel="zespół"
+                emptyContent="Brak zespołów. Dodaj pierwszy zespół."
                 addButtonLabel="Dodaj zespół"
                 queryKey="teams"
                 fetchAll={fetchTeams}
@@ -93,10 +94,11 @@ export function SettingsPage() {
 
             <CollapsibleSection
               title="Technologie"
-              description="Zarządzaj listą technologii przypisywanych pracownikom"
+              description="Zarządzaj listą technologii przypisywanych do pracowników"
             >
               <ReferenceDataSection
                 entityLabel="technologię"
+                emptyContent="Brak technologii. Dodaj pierwszą technologię."
                 addButtonLabel="Dodaj technologię"
                 queryKey="technologies"
                 fetchAll={fetchTechnologies}
