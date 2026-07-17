@@ -38,13 +38,6 @@ export type PasswordInputProps = Omit<
   "type"
 >;
 
-export interface TeamFilterChipsProps {
-  selectedTeams: string[];
-  onToggleTeam: (team: string) => void;
-  onSelectAll: () => void;
-  className?: string;
-}
-
 export interface DataTableColumn<T> {
   id: string;
   header: string;

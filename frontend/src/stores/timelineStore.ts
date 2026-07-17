@@ -18,7 +18,8 @@ function snapToMode(date: Date, mode: ViewMode): Date {
 export const useTimelineStore = create<TimelineState>((set) => ({
   viewMode: "monthly",
   startDate: subMonths(startOfMonth(new Date()), 1),
-  selectedTeams: [],
+  selectedTeamIds: [],
+  selectedTechnologyIds: [],
   searchQuery: "",
 
   setViewMode: (mode) =>
@@ -28,7 +29,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     })),
   setStartDate: (date) =>
     set((state) => ({ startDate: snapToMode(date, state.viewMode) })),
-  setSelectedTeams: (teams) => set({ selectedTeams: teams }),
+  setSelectedTeamIds: (ids) => set({ selectedTeamIds: ids }),
+  setSelectedTechnologyIds: (ids) => set({ selectedTechnologyIds: ids }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   occupancyFilter: null,
   setOccupancyFilter: (filter) => set({ occupancyFilter: filter }),

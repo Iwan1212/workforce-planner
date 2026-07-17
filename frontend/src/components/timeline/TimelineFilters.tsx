@@ -1,19 +1,26 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Percent } from "lucide-react";
+import { ChevronLeft, ChevronRight, Percent, Users, Code2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { TeamFilterChips } from "@/components/common/TeamFilterChips";
+import { FilterButton } from "@/components/common/FilterButton";
+import { FilterChipPanel } from "@/components/common/FilterChipPanel";
+import { useTeams } from "@/hooks/useTeams";
+import { useTechnologies } from "@/hooks/useTechnologies";
 import { useTimelineStore } from "@/stores/timelineStore";
 import { pluralizePl } from "@/lib/pluralizePl";
 import type { ViewMode, OccupancyFilter } from "@/types/timeline";
+
+type OpenPanel = "teams" | "technologies" | "occupancy" | null;
 
 export function TimelineFilters({ count }: { count?: number }) {
   const {
     viewMode,
     setViewMode,
-    selectedTeams,
-    setSelectedTeams,
+    selectedTeamIds,
+    setSelectedTeamIds,
+    selectedTechnologyIds,
+    setSelectedTechnologyIds,
     searchQuery,
     setSearchQuery,
     scrollBack,
@@ -23,37 +30,42 @@ export function TimelineFilters({ count }: { count?: number }) {
     setOccupancyFilter,
   } = useTimelineStore();
 
-  const [panelOpen, setPanelOpen] = useState(false);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: technologies = [], isLoading: technologiesLoading } =
+    useTechnologies();
+
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [draftDateFrom, setDraftDateFrom] = useState("");
   const [draftDateTo, setDraftDateTo] = useState("");
   const [draftMinPct, setDraftMinPct] = useState("");
   const [draftMaxPct, setDraftMaxPct] = useState("");
 
-  const toggleTeam = (team: string) => {
-    if (selectedTeams.includes(team)) {
-      setSelectedTeams(selectedTeams.filter((t) => t !== team));
-    } else {
-      setSelectedTeams([...selectedTeams, team]);
-    }
-  };
-
-  const selectAllTeams = () => setSelectedTeams([]);
-
-  const isFilterActive =
+  const isOccupancyActive =
     occupancyFilter !== null &&
     (occupancyFilter.dateFrom !== null ||
       occupancyFilter.dateTo !== null ||
       occupancyFilter.minPct !== null ||
       occupancyFilter.maxPct !== null);
 
-  const handleTogglePanel = () => {
-    if (!panelOpen) {
+  const anyFilterActive =
+    selectedTeamIds.length > 0 ||
+    selectedTechnologyIds.length > 0 ||
+    isOccupancyActive ||
+    searchQuery.trim() !== "";
+
+  const togglePanel = (panel: Exclude<OpenPanel, null>) =>
+    setOpenPanel((p) => (p === panel ? null : panel));
+
+  const toggleOccupancyPanel = () => {
+    if (openPanel !== "occupancy") {
       setDraftDateFrom(occupancyFilter?.dateFrom ?? "");
       setDraftDateTo(occupancyFilter?.dateTo ?? "");
       setDraftMinPct(occupancyFilter?.minPct?.toString() ?? "");
       setDraftMaxPct(occupancyFilter?.maxPct?.toString() ?? "");
+      setOpenPanel("occupancy");
+    } else {
+      setOpenPanel(null);
     }
-    setPanelOpen((v) => !v);
   };
 
   const handleApply = () => {
@@ -68,16 +80,24 @@ export function TimelineFilters({ count }: { count?: number }) {
       const filter: OccupancyFilter = { dateFrom, dateTo, minPct, maxPct };
       setOccupancyFilter(filter);
     }
-    setPanelOpen(false);
+    setOpenPanel(null);
   };
 
-  const handleClear = () => {
+  const handleClearOccupancy = () => {
     setDraftDateFrom("");
     setDraftDateTo("");
     setDraftMinPct("");
     setDraftMaxPct("");
     setOccupancyFilter(null);
-    setPanelOpen(false);
+    setOpenPanel(null);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTeamIds([]);
+    setSelectedTechnologyIds([]);
+    setOccupancyFilter(null);
+    setSearchQuery("");
+    setOpenPanel(null);
   };
 
   return (
@@ -114,7 +134,7 @@ export function TimelineFilters({ count }: { count?: number }) {
         </div>
       </div>
 
-      {/* Row 2: Search + Team filter + Occupancy filter button */}
+      {/* Row 2: Search + filters */}
       <div className="flex items-center gap-3">
         <SearchInput
           className="w-56"
@@ -123,35 +143,46 @@ export function TimelineFilters({ count }: { count?: number }) {
           onChange={setSearchQuery}
         />
 
-        <TeamFilterChips
-          selectedTeams={selectedTeams}
-          onToggleTeam={toggleTeam}
-          onSelectAll={selectAllTeams}
+        <FilterButton
+          label="Zespoły"
+          icon={Users}
+          count={selectedTeamIds.length}
+          active={selectedTeamIds.length > 0}
+          open={openPanel === "teams"}
+          onClick={() => togglePanel("teams")}
+        />
+
+        <FilterButton
+          label="Technologie"
+          icon={Code2}
+          count={selectedTechnologyIds.length}
+          active={selectedTechnologyIds.length > 0}
+          open={openPanel === "technologies"}
+          onClick={() => togglePanel("technologies")}
         />
 
         {/* Divider */}
         <div className="h-5 w-px bg-border" />
 
-        {/* Occupancy filter button */}
-        <button
-          onClick={handleTogglePanel}
-          className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-            isFilterActive
-              ? "border-primary bg-primary text-primary-foreground"
-              : panelOpen
-                ? "bg-muted"
-                : "text-muted-foreground hover:bg-muted"
-          }`}
-          aria-pressed={panelOpen}
-        >
-          <Percent className="h-3 w-3" />
-          Obłożenie
-          {panelOpen ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
-          )}
-        </button>
+        <FilterButton
+          label="Obłożenie"
+          icon={Percent}
+          active={isOccupancyActive}
+          open={openPanel === "occupancy"}
+          onClick={toggleOccupancyPanel}
+        />
+
+        {anyFilterActive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground"
+            onClick={clearAllFilters}
+          >
+            <X className="mr-1 h-3 w-3" />
+            Wyczyść
+          </Button>
+        )}
 
         {count !== undefined && (
           <span className="ml-auto text-sm text-muted-foreground tabular-nums">
@@ -161,8 +192,26 @@ export function TimelineFilters({ count }: { count?: number }) {
         )}
       </div>
 
-      {/* Occupancy filter panel */}
-      {panelOpen && (
+      {/* Expandable panels */}
+      {openPanel === "teams" && (
+        <FilterChipPanel
+          options={teams}
+          selectedIds={selectedTeamIds}
+          onChange={setSelectedTeamIds}
+          isLoading={teamsLoading}
+          emptyLabel="Brak zespołów"
+        />
+      )}
+      {openPanel === "technologies" && (
+        <FilterChipPanel
+          options={technologies}
+          selectedIds={selectedTechnologyIds}
+          onChange={setSelectedTechnologyIds}
+          isLoading={technologiesLoading}
+          emptyLabel="Brak technologii"
+        />
+      )}
+      {openPanel === "occupancy" && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border bg-muted/40 px-4 py-3">
           {/* Date range */}
           <div className="flex items-center gap-2">
@@ -212,7 +261,12 @@ export function TimelineFilters({ count }: { count?: number }) {
             <Button size="sm" className="h-7 text-xs" onClick={handleApply}>
               Zastosuj
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleClear}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={handleClearOccupancy}
+            >
               Wyczyść
             </Button>
           </div>

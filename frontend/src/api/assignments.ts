@@ -4,7 +4,8 @@ import type { TimelineData, AssignmentCreateData } from "@/types/assignment";
 export function fetchTimeline(
   startDate: string,
   endDate: string,
-  teams?: string[],
+  teamIds?: number[],
+  technologyIds?: number[],
   search?: string,
   granularity: "monthly" | "weekly" = "monthly",
 ): Promise<TimelineData> {
@@ -13,8 +14,11 @@ export function fetchTimeline(
     end_date: endDate,
     granularity,
   });
-  if (teams && teams.length > 0) {
-    params.set("teams", teams.join(","));
+  if (teamIds && teamIds.length > 0) {
+    params.set("team_ids", teamIds.join(","));
+  }
+  if (technologyIds && technologyIds.length > 0) {
+    params.set("technology_ids", technologyIds.join(","));
   }
   if (search) {
     params.set("search", search);

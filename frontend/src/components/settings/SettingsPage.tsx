@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/button";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleSection } from "@/components/settings/CollapsibleSection";
+import { ReferenceDataSection } from "@/components/settings/ReferenceDataSection";
 import type { ThemeCardProps } from "@/types/settings";
 import { updateTheme } from "@/api/auth";
+import { createTeam, deleteTeam, fetchTeams, updateTeam } from "@/api/teams";
+import {
+  createTechnology,
+  deleteTechnology,
+  fetchTechnologies,
+  updateTechnology,
+} from "@/api/technologies";
 import { useAuthStore } from "@/stores/authStore";
 import {
   fetchCalamariConfig,
@@ -22,6 +30,7 @@ export function SettingsPage() {
   const { user, setUser } = useAuthStore();
   const currentTheme = user?.theme ?? "light";
   const isAdmin = user?.role === "admin";
+  const isViewer = user?.role === "viewer";
 
   const mutation = useMutation({
     mutationFn: (theme: "light" | "dark") => updateTheme(theme),
@@ -40,36 +49,75 @@ export function SettingsPage() {
     <div className="p-6">
       <PageHeader title="Ustawienia" />
 
-      <section className="max-w-2xl">
-        <p className="mb-1 text-base font-semibold text-foreground">Wygląd</p>
-        <p className="mb-4 text-sm text-muted-foreground">Wybierz schemat kolorystyczny aplikacji</p>
+      <div className="space-y-3">
+        <CollapsibleSection
+          title="Wygląd"
+          description="Wybierz schemat kolorystyczny aplikacji"
+          defaultOpen
+        >
+          <div className="flex gap-6">
+            <ThemeCard
+              theme="light"
+              label="Jasny"
+              selected={currentTheme === "light"}
+              disabled={mutation.isPending}
+              onSelect={handleSelect}
+            />
+            <ThemeCard
+              theme="dark"
+              label="Ciemny"
+              selected={currentTheme === "dark"}
+              disabled={mutation.isPending}
+              onSelect={handleSelect}
+            />
+          </div>
+        </CollapsibleSection>
 
-        <div className="flex gap-6">
-          <ThemeCard
-            theme="light"
-            label="Jasny"
-            selected={currentTheme === "light"}
-            disabled={mutation.isPending}
-            onSelect={handleSelect}
-          />
-          <ThemeCard
-            theme="dark"
-            label="Ciemny"
-            selected={currentTheme === "dark"}
-            disabled={mutation.isPending}
-            onSelect={handleSelect}
-          />
-        </div>
-      </section>
+        {!isViewer && (
+          <>
+            <CollapsibleSection
+              title="Zespoły"
+              description="Zarządzaj listą zespołów przypisywanych pracownikom"
+            >
+              <ReferenceDataSection
+                entityLabel="zespół"
+                addButtonLabel="Dodaj zespół"
+                queryKey="teams"
+                fetchAll={fetchTeams}
+                create={createTeam}
+                update={({ id, data }) => updateTeam(id, data)}
+                remove={deleteTeam}
+                canDelete={isAdmin}
+              />
+            </CollapsibleSection>
 
-      {isAdmin && (
-        <>
-          <Separator className="my-6" />
-          <section>
+            <CollapsibleSection
+              title="Technologie"
+              description="Zarządzaj listą technologii przypisywanych pracownikom"
+            >
+              <ReferenceDataSection
+                entityLabel="technologię"
+                addButtonLabel="Dodaj technologię"
+                queryKey="technologies"
+                fetchAll={fetchTechnologies}
+                create={createTechnology}
+                update={({ id, data }) => updateTechnology(id, data)}
+                remove={deleteTechnology}
+                canDelete={isAdmin}
+              />
+            </CollapsibleSection>
+          </>
+        )}
+
+        {isAdmin && (
+          <CollapsibleSection
+            title="Integracja Calamari"
+            description="Automatyczne pobieranie zatwierdzonych urlopów z Calamari HR"
+          >
             <CalamariSection />
-          </section>
-        </>
-      )}
+          </CollapsibleSection>
+        )}
+      </div>
     </div>
   );
 }
@@ -122,11 +170,6 @@ function CalamariSection() {
 
   return (
     <>
-      <p className="mb-1 text-base font-semibold text-foreground">Integracja Calamari</p>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Podłącz Calamari HR, aby automatycznie pobierać zatwierdzone urlopy pracowników
-      </p>
-
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Ładowanie...</p>
       ) : isConfigured ? (

@@ -1,8 +1,12 @@
+import type { Team } from "./team";
+import type { Technology } from "./technology";
+
 export interface Employee {
   id: number;
   first_name: string;
   last_name: string;
-  team: string | null;
+  team: Team | null;
+  technologies: Technology[];
   email: string | null;
   is_deleted: boolean;
   created_at: string;
@@ -11,7 +15,8 @@ export interface Employee {
 export interface EmployeeCreateData {
   first_name: string;
   last_name: string;
-  team: string | null;
+  team_id: number | null;
+  technology_ids: number[];
   email?: string | null;
 }
 

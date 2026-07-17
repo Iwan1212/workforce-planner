@@ -9,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ALL_TEAMS, TEAM_LABELS } from "@/lib/constants";
+import { MultiSelectField } from "@/components/common/MultiSelectField";
+import { useTeams } from "@/hooks/useTeams";
+import { useTechnologies } from "@/hooks/useTechnologies";
 import type { Employee, EmployeeFormProps } from "@/types/employee";
 
 function initialFormState(employee: Employee | null | undefined) {
@@ -17,14 +19,16 @@ function initialFormState(employee: Employee | null | undefined) {
     return {
       firstName: "",
       lastName: "",
-      team: "none",
+      teamId: "none",
+      technologyIds: [] as number[],
       email: "",
     };
   }
   return {
     firstName: employee.first_name,
     lastName: employee.last_name,
-    team: employee.team ?? "none",
+    teamId: employee.team ? String(employee.team.id) : "none",
+    technologyIds: employee.technologies.map((t) => t.id),
     email: employee.email ?? "",
   };
 }
@@ -37,6 +41,9 @@ export function EmployeeForm({
   isSubmitting,
 }: EmployeeFormProps) {
   const [form, setForm] = useState(() => initialFormState(employee));
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: technologies = [], isLoading: technologiesLoading } =
+    useTechnologies();
 
   useEffect(() => {
     setForm(initialFormState(employee));
@@ -48,7 +55,8 @@ export function EmployeeForm({
     onSubmit({
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
-      team: form.team === "none" ? null : form.team,
+      team_id: form.teamId === "none" ? null : Number(form.teamId),
+      technology_ids: form.technologyIds,
       email: form.email.trim() || null,
     });
   };
@@ -100,21 +108,32 @@ export function EmployeeForm({
       <div className="space-y-2">
         <Label>Zespół</Label>
         <Select
-          value={form.team}
-          onValueChange={(v) => setForm((f) => ({ ...f, team: v }))}
+          value={form.teamId}
+          onValueChange={(v) => setForm((f) => ({ ...f, teamId: v }))}
         >
           <SelectTrigger className="w-full">
-            <SelectValue />
+            <SelectValue placeholder={teamsLoading ? "Ładowanie..." : undefined} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">— Brak —</SelectItem>
-            {ALL_TEAMS.map((t) => (
-              <SelectItem key={t} value={t}>
-                {TEAM_LABELS[t]}
+            {teams.map((t) => (
+              <SelectItem key={t.id} value={String(t.id)}>
+                {t.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Technologie</Label>
+        <MultiSelectField
+          options={technologies}
+          selectedIds={form.technologyIds}
+          onChange={(ids) => setForm((f) => ({ ...f, technologyIds: ids }))}
+          placeholder="Wybierz technologie..."
+          isLoading={technologiesLoading}
+          emptyLabel="Brak technologii — dodaj je w Ustawieniach"
+        />
       </div>
     </DialogWrapper>
   );

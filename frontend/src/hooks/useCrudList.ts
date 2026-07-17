@@ -12,6 +12,8 @@ export interface UseCrudListConfig<
   updateMutationFn: (params: { id: number; data: TUpdateData }) => Promise<TItem>;
   deleteMutationFn: (id: number) => Promise<unknown>;
   successMessages: { create: string; update: string; delete: string };
+  /** Extra query keys to invalidate after any successful mutation. */
+  additionalInvalidateKeys?: string[][];
 }
 
 export function useCrudList<
@@ -24,16 +26,24 @@ export function useCrudList<
   updateMutationFn,
   deleteMutationFn,
   successMessages,
+  additionalInvalidateKeys,
 }: UseCrudListConfig<TItem, TCreateData, TUpdateData>) {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TItem | null>(null);
 
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey });
+    additionalInvalidateKeys?.forEach((key) =>
+      queryClient.invalidateQueries({ queryKey: key }),
+    );
+  }, [queryClient, queryKey, additionalInvalidateKeys]);
+
   const createMutation = useMutation({
     mutationFn: createMutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAll();
       setFormOpen(false);
       toast.success(successMessages.create);
     },
@@ -43,7 +53,7 @@ export function useCrudList<
   const updateMutation = useMutation({
     mutationFn: updateMutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAll();
       setFormOpen(false);
       setEditingItem(null);
       toast.success(successMessages.update);
@@ -54,7 +64,7 @@ export function useCrudList<
   const deleteMutation = useMutation({
     mutationFn: deleteMutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      invalidateAll();
       setDeleteTarget(null);
       toast.success(successMessages.delete);
     },

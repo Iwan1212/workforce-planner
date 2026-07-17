@@ -9,16 +9,61 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
 from app.models.assignment import Assignment
-from app.models.employee import Employee, Team
+from app.models.employee import Employee, Team, Technology
 from app.models.user import User
 from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
 
 router = APIRouter(prefix="/api/employees", tags=["employees"])
 
 
+def _parse_id_csv(raw: str) -> list[int]:
+    """Parse a comma-separated list of integer ids, raising 400 on bad input."""
+    ids: list[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.append(int(part))
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid id value: {part}")
+    return ids
+
+
+async def _resolve_technologies(
+    db: AsyncSession, technology_ids: list[int]
+) -> list[Technology]:
+    """Load non-deleted Technology rows for the given ids, 400 if any is missing."""
+    if not technology_ids:
+        return []
+    unique_ids = list(dict.fromkeys(technology_ids))
+    result = await db.execute(
+        select(Technology).where(Technology.id.in_(unique_ids))
+    )
+    techs = result.scalars().all()
+    found_ids = {t.id for t in techs}
+    missing = [tid for tid in unique_ids if tid not in found_ids]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid technology id(s): {', '.join(map(str, missing))}",
+        )
+    return list(techs)
+
+
+async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
+    """Ensure a team_id references an existing, non-deleted team (None is allowed)."""
+    if team_id is None:
+        return
+    result = await db.execute(select(Team).where(Team.id == team_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Invalid team_id")
+
+
 @router.get("", response_model=list[EmployeeResponse])
 async def list_employees(
-    teams: Optional[str] = Query(None),
+    team_ids: Optional[str] = Query(None),
+    technology_ids: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     include_deleted: bool = Query(False),
     db: AsyncSession = Depends(get_db),
@@ -27,13 +72,16 @@ async def list_employees(
     query = select(Employee)
     if not include_deleted:
         query = query.where(Employee.is_deleted == False)
-    if teams:
-        team_list = [t.strip() for t in teams.split(",") if t.strip()]
-        valid_teams = {t.value for t in Team}
-        for t in team_list:
-            if t not in valid_teams:
-                raise HTTPException(status_code=400, detail=f"Invalid team value: {t}")
-        query = query.where(Employee.team.in_(team_list))
+    if team_ids:
+        ids = _parse_id_csv(team_ids)
+        if ids:
+            query = query.where(Employee.team_id.in_(ids))
+    if technology_ids:
+        ids = _parse_id_csv(technology_ids)
+        if ids:
+            query = query.where(
+                Employee.technologies.any(Technology.id.in_(ids))
+            )
     if search:
         pattern = f"%{search}%"
         query = query.where(
@@ -52,8 +100,8 @@ async def create_employee(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_editor),
 ):
-    if body.team and body.team not in [t.value for t in Team]:
-        raise HTTPException(status_code=400, detail="Invalid team value")
+    await _validate_team_id(db, body.team_id)
+    technologies = await _resolve_technologies(db, body.technology_ids)
 
     existing = await db.execute(
         select(Employee).where(
@@ -71,8 +119,9 @@ async def create_employee(
     employee = Employee(
         first_name=body.first_name,
         last_name=body.last_name,
-        team=body.team,
+        team_id=body.team_id,
         email=body.email,
+        technologies=technologies,
     )
     db.add(employee)
     await db.commit()
@@ -96,10 +145,11 @@ async def update_employee(
         employee.first_name = body.first_name
     if body.last_name is not None:
         employee.last_name = body.last_name
-    if body.team is not None:
-        if body.team and body.team not in [t.value for t in Team]:
-            raise HTTPException(status_code=400, detail="Invalid team value")
-        employee.team = body.team if body.team else None
+    if "team_id" in body.model_fields_set:
+        await _validate_team_id(db, body.team_id)
+        employee.team_id = body.team_id
+    if body.technology_ids is not None:
+        employee.technologies = await _resolve_technologies(db, body.technology_ids)
     if body.email is not None:
         employee.email = body.email if body.email else None
 

@@ -17,12 +17,14 @@ export interface OccupancyFilter {
 export interface TimelineState {
   viewMode: ViewMode;
   startDate: Date;
-  selectedTeams: string[];
+  selectedTeamIds: number[];
+  selectedTechnologyIds: number[];
   searchQuery: string;
   occupancyFilter: OccupancyFilter | null;
   setViewMode: (mode: ViewMode) => void;
   setStartDate: (date: Date) => void;
-  setSelectedTeams: (teams: string[]) => void;
+  setSelectedTeamIds: (ids: number[]) => void;
+  setSelectedTechnologyIds: (ids: number[]) => void;
   setSearchQuery: (query: string) => void;
   setOccupancyFilter: (filter: OccupancyFilter | null) => void;
   scrollForward: () => void;
