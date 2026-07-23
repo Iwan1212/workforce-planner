@@ -70,7 +70,9 @@ export function AssignmentModal({
   useEffect(() => {
     if (!open) return;
     if (assignment) {
-      setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
+      // When editing, a null defaultEmployeeId means this is a placeholder
+      // assignment (no employee yet) — show the "Nieprzypisane" option.
+      setEmployeeId(defaultEmployeeId != null ? String(defaultEmployeeId) : "none");
       setProjectId(String(assignment.project_id));
       setStartDate(assignment.start_date);
       setEndDate(assignment.end_date);
@@ -128,7 +130,9 @@ export function AssignmentModal({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = {
-      employee_id: Number(employeeId),
+      // "none" or empty => placeholder assignment (no employee).
+      employee_id:
+        employeeId && employeeId !== "none" ? Number(employeeId) : null,
       project_id: Number(projectId),
       start_date: startDate,
       end_date: endDate,

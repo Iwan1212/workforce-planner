@@ -5,9 +5,14 @@ import {
   differenceInCalendarDays,
   format,
 } from "date-fns";
+import { ChevronDown, ChevronRight, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineRowProps, DateRange } from "@/types/timeline";
-import { LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
+import {
+  LEAVE_TYPE_LABELS,
+  getUtilColor,
+  TIMELINE_LEFT_PANEL_WIDTH,
+} from "@/lib/constants";
 import {
   getDateFromMonthlyPixelPosition,
   computeBarPositionMonthly,
@@ -31,6 +36,9 @@ export function TimelineRow({
   allDays,
   viewMode,
   holidayMap,
+  isPlaceholderRow = false,
+  collapsed = false,
+  onToggleCollapse,
   onAssignmentClick,
   onVacationClick,
   onEmptyClick,
@@ -43,6 +51,8 @@ export function TimelineRow({
     id: `employee-${employeeId}`,
     data: { employeeId },
   });
+
+  const showBars = !isPlaceholderRow || !collapsed;
 
   const isWeekly = viewMode === "weekly";
 
@@ -89,7 +99,16 @@ export function TimelineRow({
     allBars.length > 0 ? Math.max(...allBars.map((b) => b.row)) + 1 : 1;
   const utilRowHeight = 18;
   const barRowHeight = 32;
-  const rowHeight = Math.max(38, maxRows * barRowHeight + 6 + utilRowHeight);
+  // Placeholder row has no per-period occupancy strip, so instead of the wide
+  // top offset used by employee rows it gets a symmetric 8px top/bottom padding
+  // (same as project rows): 8px top + 28px bar + 8px bottom = maxRows*32 + 12,
+  // constant regardless of how many bars stack.
+  const barTopBase = isPlaceholderRow ? 8 : utilRowHeight;
+  const rowHeight = isPlaceholderRow
+    ? collapsed
+      ? 44
+      : Math.max(44, maxRows * barRowHeight + 12)
+    : Math.max(38, maxRows * barRowHeight + 6 + utilRowHeight);
 
   const totalWidth = isWeekly
     ? allDays.length * DAY_WIDTH
@@ -137,29 +156,50 @@ export function TimelineRow({
         title: undefined as string | undefined,
       }));
 
-  const LEFT_PANEL_WIDTH = 250;
-
   return (
     <div
       className={`flex border-b ${isOdd ? "bg-muted/20" : ""} ${
         isOver ? "ring-2 ring-inset ring-primary/50" : ""
       }`}
-      style={{ minWidth: LEFT_PANEL_WIDTH + totalWidth }}
+      style={{ minWidth: TIMELINE_LEFT_PANEL_WIDTH + totalWidth }}
     >
       {/* Sticky left panel */}
-      <div
-        className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r bg-background px-3 py-2"
-        style={{ width: LEFT_PANEL_WIDTH, minHeight: rowHeight }}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{name}</div>
-          {team && (
-            <Badge variant="secondary" className="mt-0.5 text-[10px]">
-              {team}
-            </Badge>
+      {isPlaceholderRow ? (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-expanded={!collapsed}
+          className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r bg-background px-3 py-2 text-left hover:bg-muted/50"
+          style={{ width: TIMELINE_LEFT_PANEL_WIDTH, minHeight: rowHeight }}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
+          <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {name}
+          </span>
+          <Badge variant="secondary" className="shrink-0 text-[10px]">
+            {assignments.length}
+          </Badge>
+        </button>
+      ) : (
+        <div
+          className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r bg-background px-3 py-2"
+          style={{ width: TIMELINE_LEFT_PANEL_WIDTH, minHeight: rowHeight }}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">{name}</div>
+            {team && (
+              <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                {team}
+              </Badge>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Timeline area */}
       <div
@@ -170,7 +210,8 @@ export function TimelineRow({
           minHeight: rowHeight,
         }}
       >
-        {/* Per-period occupancy indicators */}
+        {/* Per-period occupancy indicators (not shown for the placeholder row) */}
+        {!isPlaceholderRow && (
         <div
           className="absolute top-0 left-0 z-1 flex bg-transparent"
           style={{ height: utilRowHeight }}
@@ -187,6 +228,7 @@ export function TimelineRow({
             </div>
           ))}
         </div>
+        )}
 
         {/* Separators */}
         {separatorColumns.map((col) => (
@@ -222,7 +264,8 @@ export function TimelineRow({
         ))}
 
         {/* Assignment bars */}
-        {bars.map((bar) => {
+        {showBars &&
+          bars.map((bar) => {
           const resizeVis = getResizeHandleVisibility(
             bar.assignment,
             isWeekly,
@@ -234,7 +277,7 @@ export function TimelineRow({
               key={bar.assignment.id}
               className="absolute"
               style={{
-                top: bar.row * barRowHeight + 2 + utilRowHeight,
+                top: bar.row * barRowHeight + 2 + barTopBase,
               }}
             >
               <TimelineBar
@@ -272,13 +315,15 @@ export function TimelineRow({
                 readOnly={readOnly}
                 showResizeLeft={resizeVis.showResizeLeft}
                 showResizeRight={resizeVis.showResizeRight}
+                isPlaceholder={isPlaceholderRow}
               />
             </div>
           );
         })}
 
         {/* Vacation bars */}
-        {vacationBars.map((vbar, i) => {
+        {showBars &&
+          vacationBars.map((vbar, i) => {
           const label =
             LEAVE_TYPE_LABELS[vbar.vacation.leave_type] ??
             vbar.vacation.leave_type;
@@ -289,7 +334,7 @@ export function TimelineRow({
               tabIndex={0}
               className="absolute flex cursor-pointer items-center overflow-hidden rounded bg-slate-400/80 text-xs text-white shadow-sm select-none dark:bg-slate-500/80"
               style={{
-                top: vbar.row * barRowHeight + 2 + utilRowHeight,
+                top: vbar.row * barRowHeight + 2 + barTopBase,
                 left: vbar.left,
                 width: Math.max(vbar.width, 20),
                 height: 28,

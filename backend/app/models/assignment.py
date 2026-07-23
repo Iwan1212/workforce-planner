@@ -21,8 +21,10 @@ class Assignment(Base):
     __tablename__ = "assignments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    employee_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("employees.id"), nullable=False, index=True
+    # Nullable: a NULL employee_id marks a "placeholder" assignment — work that is
+    # planned on a project but not yet allocated to a specific person.
+    employee_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("employees.id"), nullable=True, index=True
     )
     project_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("projects.id"), nullable=False, index=True

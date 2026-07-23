@@ -40,7 +40,10 @@ import { triggerVacationSync } from "@/api/settings";
 import { VacationDialog } from "./VacationDialog";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import type { VacationRange } from "@/types/timeline";
-import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
+import {
+  TIMELINE_LEFT_PANEL_WIDTH,
+  PLACEHOLDER_EMPLOYEE_ID,
+} from "@/lib/constants";
 import { TimelineBarDragPreview } from "./TimelineBarDragPreview";
 
 type TimelineProps = {
@@ -129,6 +132,9 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(
     null,
   );
+  const [placeholderCollapsed, setPlaceholderCollapsed] = useState(false);
+
+  const placeholders = data?.placeholders ?? [];
 
   const [dragPreview, setDragPreview] = useState<{
     assignment: TimelineAssignment;
@@ -303,13 +309,22 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
       if (!dragData || !dropData) return;
       if (dragData.employeeId === dropData.employeeId) return;
 
+      // Dropping onto the synthetic placeholder row un-assigns the assignment.
+      const isPlaceholderTarget =
+        dropData.employeeId === PLACEHOLDER_EMPLOYEE_ID;
+      const newEmployeeId = isPlaceholderTarget ? null : dropData.employeeId;
+
       patchMutation.mutate(
         {
           id: dragData.assignment.id,
-          data: { employee_id: dropData.employeeId },
+          data: { employee_id: newEmployeeId },
         },
         {
           onSuccess: () => {
+            if (isPlaceholderTarget) {
+              toast.success("Assignment przeniesiony do nieprzypisanych");
+              return;
+            }
             const targetName =
               data?.employees.find((e) => e.id === dropData.employeeId)?.name ??
               "innego pracownika";
@@ -334,11 +349,16 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     (assignmentId: number, edge: "left" | "right", deltaPx: number) => {
       if (!data) return;
 
-      // Find the assignment in data
+      // Find the assignment in data (employee rows or the placeholder row)
       let assignment: TimelineAssignment | undefined;
       for (const emp of data.employees) {
         assignment = emp.assignments.find((a) => a.id === assignmentId);
         if (assignment) break;
+      }
+      if (!assignment) {
+        assignment = (data.placeholders ?? []).find(
+          (a) => a.id === assignmentId,
+        );
       }
       if (!assignment) return;
 
@@ -382,16 +402,22 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
 
   const handleAssignmentClick = (
     assignment: TimelineAssignment,
-    employeeId: number,
+    employeeId: number | null,
   ) => {
     setEditingAssignment(assignment);
-    setDefaultEmployeeId(employeeId);
+    // null (placeholder row) => modal shows the assignment as unassigned.
+    setDefaultEmployeeId(
+      employeeId === PLACEHOLDER_EMPLOYEE_ID ? null : employeeId,
+    );
     setModalOpen(true);
   };
 
   const handleEmptyClick = (employeeId: number, dateKey: string) => {
     setEditingAssignment(null);
-    setDefaultEmployeeId(employeeId);
+    // Clicking an empty cell in the placeholder row creates a new placeholder.
+    setDefaultEmployeeId(
+      employeeId === PLACEHOLDER_EMPLOYEE_ID ? null : employeeId,
+    );
     setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
     setModalOpen(true);
   };
@@ -548,6 +574,33 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     />
                   </div>
                 </div>
+                {placeholders.length > 0 && (
+                  <TimelineRow
+                    key="placeholder-row"
+                    employeeId={PLACEHOLDER_EMPLOYEE_ID}
+                    name="Nieprzypisane"
+                    team={null}
+                    assignments={placeholders}
+                    occupancy={{}}
+                    months={months}
+                    weeks={weeks}
+                    allDays={allDays}
+                    viewMode={viewMode}
+                    holidayMap={holidayMap}
+                    isPlaceholderRow
+                    collapsed={placeholderCollapsed}
+                    onToggleCollapse={() =>
+                      setPlaceholderCollapsed((v) => !v)
+                    }
+                    onAssignmentClick={(a) => handleAssignmentClick(a, null)}
+                    onVacationClick={handleVacationClick}
+                    onEmptyClick={handleEmptyClick}
+                    onResizeEnd={handleResizeEnd}
+                    onBarContextMenu={handleBarContextMenu}
+                    readOnly={isViewer}
+                    isOdd={false}
+                  />
+                )}
                 {displayedEmployees.map((emp, idx) => (
                   <TimelineRow
                     key={emp.id}

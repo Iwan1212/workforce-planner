@@ -12,3 +12,10 @@ export function getUtilColor(pct: number): string {
 }
 
 export const TIMELINE_LEFT_PANEL_WIDTH = 250;
+
+/**
+ * Sentinel employee id used by the synthetic "Nieprzypisane" (placeholder) row
+ * in the timeline. Dropping an assignment onto this row un-assigns it (sets
+ * employee_id to null); dragging a placeholder bar onto a real row assigns it.
+ */
+export const PLACEHOLDER_EMPLOYEE_ID = -1;

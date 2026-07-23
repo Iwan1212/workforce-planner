@@ -48,13 +48,16 @@ export interface VacationSyncStatus {
 
 export interface TimelineData {
   employees: TimelineEmployee[];
+  /** Assignments not yet allocated to any employee (employee_id IS NULL). */
+  placeholders?: TimelineAssignment[];
   holidays: HolidayInfo[];
   working_days_per_month: Record<string, number>;
   vacation_sync_status?: VacationSyncStatus;
 }
 
 export interface AssignmentCreateData {
-  employee_id: number;
+  /** null => placeholder assignment (not yet allocated to a person). */
+  employee_id: number | null;
   project_id: number;
   start_date: string;
   end_date: string;

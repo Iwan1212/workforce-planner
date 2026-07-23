@@ -25,6 +25,9 @@ export function AssignmentFormEmployeeProject({
             <SelectValue placeholder="Wybierz pracownika" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="none">
+              — Nieprzypisane (placeholder) —
+            </SelectItem>
             {employees.map((emp) => (
               <SelectItem key={emp.id} value={String(emp.id)}>
                 {emp.last_name} {emp.first_name}

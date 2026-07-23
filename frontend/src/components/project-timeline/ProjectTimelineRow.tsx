@@ -80,7 +80,7 @@ export function ProjectTimelineRow({
     const adapted: TimelineAssignment = {
       id: assignment.id,
       project_id: project.id,
-      project_name: assignment.employee_name,
+      project_name: assignment.employee_name ?? "Nieprzypisane",
       project_color: project.color,
       start_date: assignment.start_date,
       end_date: assignment.end_date,
@@ -95,7 +95,9 @@ export function ProjectTimelineRow({
 
   const maxRows = bars.length > 0 ? Math.max(...bars.map((b) => b.row)) + 1 : 1;
   const barRowHeight = 32;
-  const rowHeight = Math.max(38, maxRows * barRowHeight + 6);
+  // 8px top offset (see bar `top` below) + 28px bar + 8px bottom padding, held
+  // constant regardless of how many bars stack: rowHeight = maxRows*32 + 12.
+  const rowHeight = Math.max(44, maxRows * barRowHeight + 12);
 
   const totalWidth = isWeekly ? allDays.length * DAY_WIDTH : months.length * MONTH_WIDTH;
 
@@ -175,7 +177,7 @@ export function ProjectTimelineRow({
             <div
               key={bar.adapted.id}
               className="absolute"
-              style={{ top: bar.row * barRowHeight + 2 }}
+              style={{ top: bar.row * barRowHeight + 8 }}
             >
               <TimelineBar
                 assignment={bar.adapted}
@@ -203,6 +205,7 @@ export function ProjectTimelineRow({
                 readOnly={readOnly}
                 showResizeLeft={resizeVis.showResizeLeft}
                 showResizeRight={resizeVis.showResizeRight}
+                isPlaceholder={bar.original.employee_id == null}
               />
             </div>
           );

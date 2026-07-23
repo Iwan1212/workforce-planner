@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { addDays, format, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CircleHelp, StickyNote } from "lucide-react";
+import { CircleHelp, StickyNote, UserPlus } from "lucide-react";
 import type { TimelineBarProps } from "@/types/timeline";
 import { getContrastTextClass } from "@/lib/utils";
 import { TIMELINE_LEFT_PANEL_WIDTH } from "@/lib/constants";
@@ -31,7 +31,12 @@ export function TimelineBar({
   showResizeDateTooltip = false,
   showResizeLeft = true,
   showResizeRight = true,
+  isPlaceholder = false,
 }: TimelineBarProps) {
+  // Placeholder bars look identical to normal (filled) bars — they are only
+  // distinguished by the UserPlus icon and by living in the "Nieprzypisane"
+  // section. The outlined style is reserved for tentative assignments.
+  const outlined = assignment.is_tentative;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `assignment-${assignment.id}`,
     data: { assignment, employeeId, barWidth: width, showDailyHours },
@@ -164,7 +169,7 @@ export function TimelineBar({
         ? `${assignment.allocation_value}h/m (${assignment.daily_hours}h/d)`
         : `${assignment.allocation_value}h tot. (${assignment.daily_hours}h/d)`;
 
-  const textColorClass = assignment.is_tentative
+  const textColorClass = outlined
     ? ""
     : getContrastTextClass(assignment.project_color);
 
@@ -179,7 +184,7 @@ export function TimelineBar({
   }
   adjustedWidth = Math.max(adjustedWidth, 20);
 
-  const style: React.CSSProperties = assignment.is_tentative
+  const style: React.CSSProperties = outlined
     ? {
         left: adjustedLeft,
         width: adjustedWidth,
@@ -259,11 +264,14 @@ export function TimelineBar({
             position: "sticky",
             left: TIMELINE_LEFT_PANEL_WIDTH,
             top: 0,
-            backgroundColor: assignment.is_tentative
+            backgroundColor: outlined
               ? "var(--background)"
               : assignment.project_color,
           }}
         >
+          {isPlaceholder && (
+            <UserPlus size={12} className="shrink-0 opacity-75" />
+          )}
           <span className="min-w-0 flex-1 truncate">
             {showDailyHours
               ? `${assignment.project_name} · (${assignment.daily_hours}h/d)`
