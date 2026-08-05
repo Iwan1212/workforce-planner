@@ -1,27 +1,3 @@
-export const ALL_TEAMS = [
-  "BA",
-  "Backend",
-  "DevOps",
-  "Frontend",
-  "ML",
-  "Mobile",
-  "PM",
-  "QA",
-  "UX_UI_Designer",
-] as const;
-
-export const TEAM_LABELS: Record<string, string> = {
-  BA: "BA",
-  Backend: "Backend",
-  DevOps: "DevOps",
-  Frontend: "Frontend",
-  ML: "ML",
-  Mobile: "Mobile",
-  PM: "PM",
-  QA: "QA",
-  UX_UI_Designer: "UX/UI",
-};
-
 export const LEAVE_TYPE_LABELS: Record<string, string> = {
   urlop: "Urlop",
   chorobowe: "Chorobowe",

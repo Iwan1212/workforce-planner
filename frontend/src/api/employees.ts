@@ -2,9 +2,15 @@ import { apiFetch } from "./client";
 import type { Employee, EmployeeCreateData, ImportResult } from "@/types/employee";
 import type { DeleteResponse } from "@/types/common";
 
-export function fetchEmployees(teams?: string[], search?: string): Promise<Employee[]> {
+export function fetchEmployees(
+  teamIds?: number[],
+  technologyIds?: number[],
+  search?: string,
+): Promise<Employee[]> {
   const params = new URLSearchParams();
-  if (teams && teams.length > 0) params.set("teams", teams.join(","));
+  if (teamIds && teamIds.length > 0) params.set("team_ids", teamIds.join(","));
+  if (technologyIds && technologyIds.length > 0)
+    params.set("technology_ids", technologyIds.join(","));
   if (search) params.set("search", search);
   const qs = params.toString();
   return apiFetch<Employee[]>(`/api/employees${qs ? `?${qs}` : ""}`);

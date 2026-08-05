@@ -5,11 +5,15 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
+from app.schemas.team import TeamResponse
+from app.schemas.technology import TechnologyResponse
+
 
 class EmployeeCreate(BaseModel):
     first_name: str
     last_name: str
-    team: Optional[str] = None
+    team_id: Optional[int] = None
+    technology_ids: list[int] = []
     email: Optional[str] = None
 
     @field_validator("first_name", "last_name")
@@ -23,7 +27,8 @@ class EmployeeCreate(BaseModel):
 class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    team: Optional[str] = None
+    team_id: Optional[int] = None
+    technology_ids: Optional[list[int]] = None
     email: Optional[str] = None
 
     @field_validator("first_name", "last_name")
@@ -38,7 +43,8 @@ class EmployeeResponse(BaseModel):
     id: int
     first_name: str
     last_name: str
-    team: Optional[str] = None
+    team: Optional[TeamResponse] = None
+    technologies: list[TechnologyResponse] = []
     email: Optional[str] = None
     is_deleted: bool
     created_at: datetime

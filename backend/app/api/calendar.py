@@ -5,13 +5,13 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin
 from app.models.assignment import AllocationType, Assignment
-from app.models.employee import Employee, Team
+from app.models.employee import Employee, Technology
 from app.models.user import User
 from app.models.vacation import Vacation
 from app.services.assignment_service import calculate_daily_hours
@@ -22,6 +22,7 @@ from app.services.vacation_sync_service import (
     sync_vacations,
 )
 from app.utils.polish_holidays import get_holiday_name, get_polish_holidays
+from app.utils.query_params import parse_id_csv
 from app.utils.working_days import get_working_days, get_working_days_in_month
 
 router = APIRouter(tags=["calendar"])
@@ -31,7 +32,8 @@ router = APIRouter(tags=["calendar"])
 async def get_timeline(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    teams: Optional[str] = Query(None),
+    team_ids: Optional[str] = Query(None),
+    technology_ids: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     granularity: Literal["monthly", "weekly"] = Query("monthly"),
     db: AsyncSession = Depends(get_db),
@@ -40,17 +42,16 @@ async def get_timeline(
     """Return timeline data as per CLAUDE.md contract."""
     # Build employee query
     emp_query = select(Employee).where(Employee.is_deleted == False)
-    if teams:
-        team_list = [t.strip() for t in teams.split(",") if t.strip()]
-        valid_teams = {t.value for t in Team}
-        invalid = [t for t in team_list if t not in valid_teams]
-        if invalid:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid team value(s): {', '.join(invalid)}. Valid: {', '.join(sorted(valid_teams))}",
+    if team_ids:
+        ids = parse_id_csv(team_ids)
+        if ids:
+            emp_query = emp_query.where(Employee.team_id.in_(ids))
+    if technology_ids:
+        ids = parse_id_csv(technology_ids)
+        if ids:
+            emp_query = emp_query.where(
+                Employee.technologies.any(Technology.id.in_(ids))
             )
-        if team_list:
-            emp_query = emp_query.where(Employee.team.in_(team_list))
     if search and search.strip():
         q = f"%{search.strip()}%"
         emp_query = emp_query.where(
@@ -184,7 +185,8 @@ async def get_timeline(
             {
                 "id": emp.id,
                 "name": f"{emp.last_name} {emp.first_name}",
-                "team": emp.team.value if emp.team else None,
+                "team": emp.team.name if emp.team else None,
+                "technologies": [t.name for t in emp.technologies],
                 "assignments": assignment_list,
                 "vacations": vacation_list,
                 "occupancy": occupancy,

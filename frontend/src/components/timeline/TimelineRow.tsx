@@ -7,7 +7,7 @@ import {
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { TimelineRowProps, DateRange } from "@/types/timeline";
-import { TEAM_LABELS, LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
+import { LEAVE_TYPE_LABELS, getUtilColor } from "@/lib/constants";
 import {
   getDateFromMonthlyPixelPosition,
   computeBarPositionMonthly,
@@ -155,7 +155,7 @@ export function TimelineRow({
           <div className="truncate text-sm font-medium">{name}</div>
           {team && (
             <Badge variant="secondary" className="mt-0.5 text-[10px]">
-              {TEAM_LABELS[team] ?? team}
+              {team}
             </Badge>
           )}
         </div>

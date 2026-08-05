@@ -11,8 +11,14 @@ const MONTHS_VISIBLE = 7;
 const WEEKS_VISIBLE = 6;
 
 export function useTimeline() {
-  const { startDate, selectedTeams, searchQuery, viewMode, occupancyFilter } =
-    useTimelineStore();
+  const {
+    startDate,
+    selectedTeamIds,
+    selectedTechnologyIds,
+    searchQuery,
+    viewMode,
+    occupancyFilter,
+  } = useTimelineStore();
 
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
 
@@ -39,9 +45,24 @@ export function useTimeline() {
   const granularity = viewMode === "weekly" ? "weekly" : "monthly";
 
   const query = useQuery({
-    queryKey: ["timeline", startStr, endStr, selectedTeams, debouncedSearch, viewMode],
+    queryKey: [
+      "timeline",
+      startStr,
+      endStr,
+      selectedTeamIds,
+      selectedTechnologyIds,
+      debouncedSearch,
+      viewMode,
+    ],
     queryFn: () =>
-      fetchTimeline(startStr, endStr, selectedTeams, debouncedSearch || undefined, granularity),
+      fetchTimeline(
+        startStr,
+        endStr,
+        selectedTeamIds.length > 0 ? selectedTeamIds : undefined,
+        selectedTechnologyIds.length > 0 ? selectedTechnologyIds : undefined,
+        debouncedSearch || undefined,
+        granularity,
+      ),
   });
 
   // Generate list of months for monthly header

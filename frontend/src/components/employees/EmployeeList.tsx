@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useCrudList } from "@/hooks/useCrudList";
-import { useTeamSelection } from "@/hooks/useTeamSelection";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useClickOutside } from "@/hooks/useClickOutside";
+import { useTeams } from "@/hooks/useTeams";
+import { useTechnologies } from "@/hooks/useTechnologies";
+import { Pencil, Plus, Trash2, Users, Code2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/DataTable";
@@ -11,7 +13,8 @@ import type { DataTableColumn } from "@/types/ui";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { TeamFilterChips } from "@/components/common/TeamFilterChips";
+import { FilterButton } from "@/components/common/FilterButton";
+import { FilterChipPanel } from "@/components/common/FilterChipPanel";
 import { pluralizePl } from "@/lib/pluralizePl";
 import {
   createEmployee,
@@ -20,7 +23,6 @@ import {
   updateEmployee,
 } from "@/api/employees";
 import type { Employee, EmployeeCreateData } from "@/types/employee";
-import { TEAM_LABELS } from "@/lib/constants";
 import { EmployeeForm } from "./EmployeeForm";
 
 const EMPLOYEE_COLUMNS: DataTableColumn<Employee>[] = [
@@ -41,7 +43,23 @@ const EMPLOYEE_COLUMNS: DataTableColumn<Employee>[] = [
     header: "Zespół",
     cell: (emp) =>
       emp.team ? (
-        <Badge variant="secondary">{TEAM_LABELS[emp.team] ?? emp.team}</Badge>
+        <Badge variant="secondary">{emp.team.name}</Badge>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      ),
+  },
+  {
+    id: "technologies",
+    header: "Technologie",
+    cell: (emp) =>
+      emp.technologies.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {emp.technologies.map((t) => (
+            <Badge key={t.id} variant="outline">
+              {t.name}
+            </Badge>
+          ))}
+        </div>
       ) : (
         <span className="text-muted-foreground">—</span>
       ),
@@ -49,8 +67,18 @@ const EMPLOYEE_COLUMNS: DataTableColumn<Employee>[] = [
 ];
 
 export function EmployeeList() {
-  const { selectedTeams, toggleTeam, selectAllTeams } = useTeamSelection();
-  const noneSelected = selectedTeams.length === 0;
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
+  const [selectedTechnologyIds, setSelectedTechnologyIds] = useState<number[]>(
+    [],
+  );
+  const [openPanel, setOpenPanel] = useState<"teams" | "technologies" | null>(
+    null,
+  );
+  const filterRef = useRef<HTMLDivElement>(null);
+  useClickOutside(filterRef, () => setOpenPanel(null), openPanel !== null);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: technologies = [], isLoading: technologiesLoading } =
+    useTechnologies();
 
   const crud = useCrudList<
     Employee,
@@ -71,21 +99,25 @@ export function EmployeeList() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
 
+  const hasFilters =
+    selectedTeamIds.length > 0 || selectedTechnologyIds.length > 0;
+
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees", selectedTeams, debouncedSearch],
+    queryKey: [
+      "employees",
+      selectedTeamIds,
+      selectedTechnologyIds,
+      debouncedSearch,
+    ],
     queryFn: () =>
       fetchEmployees(
-        noneSelected ? undefined : selectedTeams,
+        selectedTeamIds.length > 0 ? selectedTeamIds : undefined,
+        selectedTechnologyIds.length > 0 ? selectedTechnologyIds : undefined,
         debouncedSearch || undefined,
       ),
   });
 
-  const handleFormSubmit = (data: {
-    first_name: string;
-    last_name: string;
-    team: string | null;
-    email?: string | null;
-  }) => {
+  const handleFormSubmit = (data: EmployeeCreateData) => {
     if (crud.editingItem) {
       crud.updateMutation.mutate({ id: crud.editingItem.id, data });
     } else {
@@ -95,8 +127,8 @@ export function EmployeeList() {
 
   const emptyContent =
     employees.length === 0
-      ? debouncedSearch || !noneSelected
-        ? `Brak wyników${debouncedSearch ? ` dla „${searchQuery}"` : ""}${!noneSelected ? " w wybranych zespołach" : ""}`
+      ? debouncedSearch || hasFilters
+        ? `Brak wyników${debouncedSearch ? ` dla „${searchQuery}"` : ""}${hasFilters ? " dla wybranych filtrów" : ""}`
         : "Brak pracowników. Dodaj pierwszego."
       : undefined;
 
@@ -112,27 +144,81 @@ export function EmployeeList() {
         }
       />
 
-      <div className="mb-4 flex items-center gap-3">
-        <SearchInput
-          className="w-64"
-          placeholder="Szukaj pracownika..."
-          value={searchQuery}
-          onChange={setSearchQuery}
-        />
-        <TeamFilterChips
-          selectedTeams={selectedTeams}
-          onToggleTeam={toggleTeam}
-          onSelectAll={selectAllTeams}
-        />
-        {!isLoading && (
-          <span className="ml-auto text-sm text-muted-foreground tabular-nums">
-            {employees.length}{" "}
-            {pluralizePl(employees.length, [
-              "pracownik",
-              "pracownicy",
-              "pracowników",
-            ])}
-          </span>
+      <div className="mb-4 space-y-2" ref={filterRef}>
+        <div className="flex items-center gap-3">
+          <SearchInput
+            className="w-64"
+            placeholder="Szukaj pracownika..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+          <FilterButton
+            label="Zespoły"
+            icon={Users}
+            count={selectedTeamIds.length}
+            active={selectedTeamIds.length > 0}
+            open={openPanel === "teams"}
+            onClick={() =>
+              setOpenPanel((p) => (p === "teams" ? null : "teams"))
+            }
+          />
+          <FilterButton
+            label="Technologie"
+            icon={Code2}
+            count={selectedTechnologyIds.length}
+            active={selectedTechnologyIds.length > 0}
+            open={openPanel === "technologies"}
+            onClick={() =>
+              setOpenPanel((p) =>
+                p === "technologies" ? null : "technologies",
+              )
+            }
+          />
+          {(hasFilters || searchQuery.trim() !== "") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground"
+              onClick={() => {
+                setSelectedTeamIds([]);
+                setSelectedTechnologyIds([]);
+                setSearchQuery("");
+                setOpenPanel(null);
+              }}
+            >
+              <X className="mr-1 h-3 w-3" />
+              Wyczyść
+            </Button>
+          )}
+          {!isLoading && (
+            <span className="ml-auto text-sm text-muted-foreground tabular-nums">
+              {employees.length}{" "}
+              {pluralizePl(employees.length, [
+                "pracownik",
+                "pracownicy",
+                "pracowników",
+              ])}
+            </span>
+          )}
+        </div>
+
+        {openPanel === "teams" && (
+          <FilterChipPanel
+            options={teams}
+            selectedIds={selectedTeamIds}
+            onChange={setSelectedTeamIds}
+            isLoading={teamsLoading}
+            emptyLabel="Brak zespołów"
+          />
+        )}
+        {openPanel === "technologies" && (
+          <FilterChipPanel
+            options={technologies}
+            selectedIds={selectedTechnologyIds}
+            onChange={setSelectedTechnologyIds}
+            isLoading={technologiesLoading}
+            emptyLabel="Brak technologii"
+          />
         )}
       </div>
 

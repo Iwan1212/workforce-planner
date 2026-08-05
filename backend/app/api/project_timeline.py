@@ -96,7 +96,7 @@ async def get_project_timeline(
                     "id": a.id,
                     "employee_id": emp.id,
                     "employee_name": f"{emp.last_name} {emp.first_name}",
-                    "employee_team": emp.team.value if emp.team else None,
+                    "employee_team": emp.team.name if emp.team else None,
                     "start_date": a.start_date.isoformat(),
                     "end_date": a.end_date.isoformat(),
                     "allocation_type": a.allocation_type.value,

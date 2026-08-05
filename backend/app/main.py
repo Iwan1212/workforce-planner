@@ -15,6 +15,8 @@ from app.api.employees import router as employees_router
 from app.api.project_timeline import router as project_timeline_router
 from app.api.projects import router as projects_router
 from app.api.settings import router as settings_router
+from app.api.teams import router as teams_router
+from app.api.technologies import router as technologies_router
 from app.api.users import router as users_router
 from app.config import settings
 from app.database import engine
@@ -54,6 +56,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(employees_router)
+app.include_router(teams_router)
+app.include_router(technologies_router)
 app.include_router(projects_router)
 app.include_router(assignments_router)
 app.include_router(calendar_router)
