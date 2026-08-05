@@ -2,8 +2,9 @@ import type { HolidayInfo } from "./assignment";
 
 export interface ProjectTimelineAssignment {
   id: number;
-  employee_id: number;
-  employee_name: string;
+  /** null => placeholder assignment (not yet allocated to a person). */
+  employee_id: number | null;
+  employee_name: string | null;
   employee_team: string | null;
   start_date: string;
   end_date: string;

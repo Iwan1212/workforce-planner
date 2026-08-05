@@ -23,11 +23,13 @@ export function AssignmentModal({
   defaultEmployeeId,
   defaultProjectId,
   defaultStartDate,
+  defaultUnassigned,
 }: AssignmentModalProps) {
   const queryClient = useQueryClient();
   const isEditing = !!assignment;
 
   const [employeeId, setEmployeeId] = useState("");
+  const [employeeError, setEmployeeError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -70,7 +72,9 @@ export function AssignmentModal({
   useEffect(() => {
     if (!open) return;
     if (assignment) {
-      setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
+      // When editing, a null defaultEmployeeId means this is a placeholder
+      // assignment (no employee yet) — show the "Nieprzypisane" option.
+      setEmployeeId(defaultEmployeeId != null ? String(defaultEmployeeId) : "none");
       setProjectId(String(assignment.project_id));
       setStartDate(assignment.start_date);
       setEndDate(assignment.end_date);
@@ -79,7 +83,16 @@ export function AssignmentModal({
       setNote(assignment.note ?? "");
       setIsTentative(assignment.is_tentative);
     } else {
-      setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
+      // Create mode: no preselected employee means "nothing selected" ("").
+      // Creating a placeholder requires explicitly picking the "none" option,
+      // unless the caller already expressed that intent (placeholder row).
+      setEmployeeId(
+        defaultEmployeeId != null
+          ? String(defaultEmployeeId)
+          : defaultUnassigned
+            ? "none"
+            : "",
+      );
       setProjectId(defaultProjectId ? String(defaultProjectId) : "");
       setStartDate(defaultStartDate ?? "");
       setEndDate("");
@@ -88,8 +101,16 @@ export function AssignmentModal({
       setNote("");
       setIsTentative(false);
     }
+    setEmployeeError(null);
     setShowDeleteConfirm(false);
-  }, [open, assignment, defaultEmployeeId, defaultProjectId, defaultStartDate]);
+  }, [
+    open,
+    assignment,
+    defaultEmployeeId,
+    defaultProjectId,
+    defaultStartDate,
+    defaultUnassigned,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: createAssignment,
@@ -127,8 +148,16 @@ export function AssignmentModal({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // The field is required: an empty selection is a validation error. Only the
+    // explicit "none" option ("Nieprzypisane") creates a placeholder assignment.
+    if (!employeeId) {
+      setEmployeeError(
+        "Wybierz pracownika lub opcję „Nieprzypisane (placeholder)”",
+      );
+      return;
+    }
     const data = {
-      employee_id: Number(employeeId),
+      employee_id: employeeId === "none" ? null : Number(employeeId),
       project_id: Number(projectId),
       start_date: startDate,
       end_date: endDate,
@@ -161,10 +190,14 @@ export function AssignmentModal({
           <AssignmentFormEmployeeProject
             employeeId={employeeId}
             projectId={projectId}
-            onEmployeeChange={setEmployeeId}
+            onEmployeeChange={(value) => {
+              setEmployeeId(value);
+              setEmployeeError(null);
+            }}
             onProjectChange={setProjectId}
             employees={employees}
             projects={projects}
+            employeeError={employeeError}
           />
 
           <AssignmentFormDates

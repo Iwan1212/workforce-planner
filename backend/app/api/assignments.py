@@ -92,14 +92,15 @@ async def create_assignment(
             status_code=400, detail="Assignment must contain at least 1 working day"
         )
 
-    # Validate employee exists
-    emp = await db.execute(
-        select(Employee).where(
-            Employee.id == body.employee_id, Employee.is_deleted == False
+    # Validate employee exists (skipped for placeholder assignments, employee_id is None)
+    if body.employee_id is not None:
+        emp = await db.execute(
+            select(Employee).where(
+                Employee.id == body.employee_id, Employee.is_deleted == False
+            )
         )
-    )
-    if not emp.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Employee not found")
+        if not emp.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Employee not found")
 
     # Validate project exists and is not archived
     proj = await db.execute(
@@ -144,15 +145,19 @@ async def update_assignment(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    if body.employee_id is not None:
-        emp = await db.execute(
-            select(Employee).where(
-                Employee.id == body.employee_id, Employee.is_deleted == False
+    if "employee_id" in body.model_fields_set:
+        if body.employee_id is None:
+            # Explicitly un-assign: turn the assignment back into a placeholder.
+            assignment.employee_id = None
+        else:
+            emp = await db.execute(
+                select(Employee).where(
+                    Employee.id == body.employee_id, Employee.is_deleted == False
+                )
             )
-        )
-        if not emp.scalar_one_or_none():
-            raise HTTPException(status_code=404, detail="Employee not found")
-        assignment.employee_id = body.employee_id
+            if not emp.scalar_one_or_none():
+                raise HTTPException(status_code=404, detail="Employee not found")
+            assignment.employee_id = body.employee_id
 
     if body.project_id is not None:
         proj = await db.execute(
@@ -264,13 +269,15 @@ async def duplicate_assignment(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     # Validate employee and project are not soft-deleted
-    emp = await db.execute(
-        select(Employee).where(
-            Employee.id == assignment.employee_id, Employee.is_deleted == False
+    # (placeholder assignments have no employee, so skip the employee check)
+    if assignment.employee_id is not None:
+        emp = await db.execute(
+            select(Employee).where(
+                Employee.id == assignment.employee_id, Employee.is_deleted == False
+            )
         )
-    )
-    if not emp.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
+        if not emp.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
 
     proj = await db.execute(
         select(Project).where(

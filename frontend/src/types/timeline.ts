@@ -89,6 +89,12 @@ export interface TimelineRowProps {
   weeks: WeekInfo[];
   allDays: DayInfo[];
   viewMode: ViewMode;
+  /** Renders this as the synthetic "Nieprzypisane" (placeholder) row. */
+  isPlaceholderRow?: boolean;
+  /** Whether the placeholder row is collapsed (bars hidden). */
+  collapsed?: boolean;
+  /** Toggle handler shown in the placeholder row's left panel. */
+  onToggleCollapse?: () => void;
   onAssignmentClick: (assignment: TimelineAssignment) => void;
   onVacationClick: (vacation: VacationInfo) => void;
   onEmptyClick: (employeeId: number, dateKey: string) => void;
@@ -135,6 +141,8 @@ export interface TimelineBarProps {
   showResizeDateTooltip?: boolean;
   showResizeLeft?: boolean;
   showResizeRight?: boolean;
+  /** Render as an unassigned placeholder bar (dashed outline). */
+  isPlaceholder?: boolean;
 }
 
 export interface DaySummary {

@@ -48,13 +48,16 @@ export interface VacationSyncStatus {
 
 export interface TimelineData {
   employees: TimelineEmployee[];
+  /** Assignments not yet allocated to any employee (employee_id IS NULL). */
+  placeholders?: TimelineAssignment[];
   holidays: HolidayInfo[];
   working_days_per_month: Record<string, number>;
   vacation_sync_status?: VacationSyncStatus;
 }
 
 export interface AssignmentCreateData {
-  employee_id: number;
+  /** null => placeholder assignment (not yet allocated to a person). */
+  employee_id: number | null;
   project_id: number;
   start_date: string;
   end_date: string;
@@ -71,6 +74,8 @@ export interface AssignmentModalProps {
   defaultEmployeeId?: number | null;
   defaultProjectId?: number | null;
   defaultStartDate?: string | null;
+  /** Preselect "Nieprzypisane" in create mode (e.g. click in the placeholder row). */
+  defaultUnassigned?: boolean;
 }
 
 export interface AssignmentEmployeeOption {
@@ -92,6 +97,8 @@ export interface AssignmentFormEmployeeProjectProps {
   onProjectChange: (value: string) => void;
   employees: AssignmentEmployeeOption[];
   projects: AssignmentProjectOption[];
+  /** Validation error for the employee field (required in create mode). */
+  employeeError?: string | null;
 }
 
 export interface AssignmentFormDatesProps {

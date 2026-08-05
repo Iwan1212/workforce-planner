@@ -8,7 +8,8 @@ from pydantic import BaseModel, field_validator, model_validator
 
 
 class AssignmentCreate(BaseModel):
-    employee_id: int
+    # None => placeholder assignment (planned work not yet allocated to a person).
+    employee_id: Optional[int] = None
     project_id: int
     start_date: date
     end_date: date
@@ -72,7 +73,7 @@ class AssignmentUpdate(BaseModel):
 
 class AssignmentResponse(BaseModel):
     id: int
-    employee_id: int
+    employee_id: Optional[int] = None
     project_id: int
     project_name: str
     project_color: str

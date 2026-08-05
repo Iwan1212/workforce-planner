@@ -15,16 +15,24 @@ export function AssignmentFormEmployeeProject({
   onProjectChange,
   employees,
   projects,
+  employeeError,
 }: AssignmentFormEmployeeProjectProps) {
   return (
     <>
       <div className="space-y-2">
         <Label htmlFor="assignment-employee">Pracownik</Label>
         <Select value={employeeId} onValueChange={onEmployeeChange}>
-          <SelectTrigger id="assignment-employee" className="w-full">
+          <SelectTrigger
+            id="assignment-employee"
+            className="w-full"
+            aria-invalid={!!employeeError}
+          >
             <SelectValue placeholder="Wybierz pracownika" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="none">
+              — Nieprzypisane (placeholder) —
+            </SelectItem>
             {employees.map((emp) => (
               <SelectItem key={emp.id} value={String(emp.id)}>
                 {emp.last_name} {emp.first_name}
@@ -32,6 +40,11 @@ export function AssignmentFormEmployeeProject({
             ))}
           </SelectContent>
         </Select>
+        {employeeError && (
+          <p className="text-sm text-destructive" role="alert">
+            {employeeError}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

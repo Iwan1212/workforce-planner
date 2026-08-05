@@ -69,7 +69,10 @@ async def get_project_timeline(
                 Assignment.project_id.in_(project_ids),
                 Assignment.start_date <= end_date,
                 Assignment.end_date >= start_date,
-                Assignment.employee_id.in_(active_employee_ids),
+                # Include placeholder assignments (employee_id IS NULL) alongside
+                # assignments held by active (non-deleted) employees.
+                Assignment.employee_id.in_(active_employee_ids)
+                | Assignment.employee_id.is_(None),
             )
             .order_by(Assignment.start_date)
         )
@@ -94,9 +97,9 @@ async def get_project_timeline(
             assignment_list.append(
                 {
                     "id": a.id,
-                    "employee_id": emp.id,
-                    "employee_name": f"{emp.last_name} {emp.first_name}",
-                    "employee_team": emp.team.name if emp.team else None,
+                    "employee_id": emp.id if emp else None,
+                    "employee_name": f"{emp.last_name} {emp.first_name}" if emp else None,
+                    "employee_team": emp.team.name if emp and emp.team else None,
                     "start_date": a.start_date.isoformat(),
                     "end_date": a.end_date.isoformat(),
                     "allocation_type": a.allocation_type.value,

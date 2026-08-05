@@ -28,6 +28,36 @@ from app.utils.working_days import get_working_days, get_working_days_in_month
 router = APIRouter(tags=["calendar"])
 
 
+def _serialize_timeline_assignment(a: Assignment, range_start: date) -> dict:
+    """Serialize an assignment for the timeline response.
+
+    daily_hours is computed for the first month of the assignment visible in
+    the requested range (assignments starting before the range use range_start).
+    """
+    first_month_date = max(a.start_date, range_start)
+    daily = calculate_daily_hours(
+        a.allocation_type.value,
+        a.allocation_value,
+        first_month_date.year,
+        first_month_date.month,
+        start_date=a.start_date,
+        end_date=a.end_date,
+    )
+    return {
+        "id": a.id,
+        "project_id": a.project_id,
+        "project_name": a.project.name if a.project else "",
+        "project_color": a.project.color if a.project else "#000000",
+        "start_date": a.start_date.isoformat(),
+        "end_date": a.end_date.isoformat(),
+        "allocation_type": a.allocation_type.value,
+        "allocation_value": float(a.allocation_value),
+        "note": a.note,
+        "is_tentative": a.is_tentative,
+        "daily_hours": float(round(daily, 2)),
+    }
+
+
 @router.get("/api/assignments/timeline")
 async def get_timeline(
     start_date: date = Query(...),
@@ -115,6 +145,20 @@ async def get_timeline(
         for a in a_result.scalars().all():
             assignments_by_employee[a.employee_id].append(a)
 
+    # Fetch placeholder assignments (no employee yet) in range. These are shown
+    # in a synthetic "unassigned" row on the frontend, independent of employee
+    # filters (they belong to no team/employee).
+    ph_result = await db.execute(
+        select(Assignment)
+        .where(
+            Assignment.employee_id.is_(None),
+            Assignment.start_date <= end_date,
+            Assignment.end_date >= start_date,
+        )
+        .order_by(Assignment.start_date)
+    )
+    placeholder_assignments = ph_result.scalars().all()
+
     # Get vacation sync status
     sync_status = await _get_vacation_sync_status(db)
 
@@ -123,33 +167,9 @@ async def get_timeline(
     for emp in employees:
         assignments = assignments_by_employee[emp.id]
 
-        assignment_list = []
-        for a in assignments:
-            # Use first month of assignment for daily_hours display
-            first_month_year = max(a.start_date, start_date)
-            daily = calculate_daily_hours(
-                a.allocation_type.value,
-                a.allocation_value,
-                first_month_year.year,
-                first_month_year.month,
-                start_date=a.start_date,
-                end_date=a.end_date,
-            )
-            assignment_list.append(
-                {
-                    "id": a.id,
-                    "project_id": a.project_id,
-                    "project_name": a.project.name if a.project else "",
-                    "project_color": a.project.color if a.project else "#000000",
-                    "start_date": a.start_date.isoformat(),
-                    "end_date": a.end_date.isoformat(),
-                    "allocation_type": a.allocation_type.value,
-                    "allocation_value": float(a.allocation_value),
-                    "note": a.note,
-                    "is_tentative": a.is_tentative,
-                    "daily_hours": float(round(daily, 2)),
-                }
-            )
+        assignment_list = [
+            _serialize_timeline_assignment(a, start_date) for a in assignments
+        ]
 
         # Employee vacations
         emp_vacations = vacations_by_employee.get(emp.id, [])
@@ -193,8 +213,15 @@ async def get_timeline(
             }
         )
 
+    # Build placeholder (unassigned) assignments list
+    placeholder_list = [
+        _serialize_timeline_assignment(a, start_date)
+        for a in placeholder_assignments
+    ]
+
     return {
         "employees": employee_data,
+        "placeholders": placeholder_list,
         "holidays": [
             {"date": d.isoformat(), "name": get_holiday_name(d)}
             for d in holidays_in_range
