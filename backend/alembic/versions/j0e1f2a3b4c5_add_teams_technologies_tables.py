@@ -66,12 +66,18 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["technology_id"], ["technologies.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("employee_id", "technology_id"),
     )
+    op.create_index(
+        "ix_employee_technologies_technology_id",
+        "employee_technologies",
+        ["technology_id"],
+    )
 
     # 2. New FK column on employees
     op.add_column("employees", sa.Column("team_id", sa.Integer(), nullable=True))
     op.create_foreign_key(
         "fk_employees_team_id_teams", "employees", "teams", ["team_id"], ["id"]
     )
+    op.create_index("ix_employees_team_id", "employees", ["team_id"])
 
     # 3. Seed the canonical teams as managed rows
     teams_table = sa.table(
@@ -121,8 +127,12 @@ def downgrade() -> None:
         """
     )
 
+    op.drop_index("ix_employees_team_id", table_name="employees")
     op.drop_constraint("fk_employees_team_id_teams", "employees", type_="foreignkey")
     op.drop_column("employees", "team_id")
+    op.drop_index(
+        "ix_employee_technologies_technology_id", table_name="employee_technologies"
+    )
     op.drop_table("employee_technologies")
     op.drop_table("technologies")
     op.drop_table("teams")

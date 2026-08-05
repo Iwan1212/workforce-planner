@@ -12,28 +12,15 @@ from app.models.assignment import Assignment
 from app.models.employee import Employee, Team, Technology
 from app.models.user import User
 from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
+from app.utils.query_params import parse_id_csv
 
 router = APIRouter(prefix="/api/employees", tags=["employees"])
-
-
-def _parse_id_csv(raw: str) -> list[int]:
-    """Parse a comma-separated list of integer ids, raising 400 on bad input."""
-    ids: list[int] = []
-    for part in raw.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        try:
-            ids.append(int(part))
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid id value: {part}")
-    return ids
 
 
 async def _resolve_technologies(
     db: AsyncSession, technology_ids: list[int]
 ) -> list[Technology]:
-    """Load non-deleted Technology rows for the given ids, 400 if any is missing."""
+    """Load Technology rows for the given ids, 400 if any is missing."""
     if not technology_ids:
         return []
     unique_ids = list(dict.fromkeys(technology_ids))
@@ -52,7 +39,7 @@ async def _resolve_technologies(
 
 
 async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
-    """Ensure a team_id references an existing, non-deleted team (None is allowed)."""
+    """Ensure a team_id references an existing team (None is allowed)."""
     if team_id is None:
         return
     result = await db.execute(select(Team).where(Team.id == team_id))
@@ -73,11 +60,11 @@ async def list_employees(
     if not include_deleted:
         query = query.where(Employee.is_deleted == False)
     if team_ids:
-        ids = _parse_id_csv(team_ids)
+        ids = parse_id_csv(team_ids)
         if ids:
             query = query.where(Employee.team_id.in_(ids))
     if technology_ids:
-        ids = _parse_id_csv(technology_ids)
+        ids = parse_id_csv(technology_ids)
         if ids:
             query = query.where(
                 Employee.technologies.any(Technology.id.in_(ids))

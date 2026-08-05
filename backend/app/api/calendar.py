@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +22,7 @@ from app.services.vacation_sync_service import (
     sync_vacations,
 )
 from app.utils.polish_holidays import get_holiday_name, get_polish_holidays
+from app.utils.query_params import parse_id_csv
 from app.utils.working_days import get_working_days, get_working_days_in_month
 
 router = APIRouter(tags=["calendar"])
@@ -57,20 +58,6 @@ def _serialize_timeline_assignment(a: Assignment, range_start: date) -> dict:
     }
 
 
-def _parse_id_csv(raw: str) -> list[int]:
-    """Parse a comma-separated list of integer ids, raising 400 on bad input."""
-    ids: list[int] = []
-    for part in raw.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        try:
-            ids.append(int(part))
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid id value: {part}")
-    return ids
-
-
 @router.get("/api/assignments/timeline")
 async def get_timeline(
     start_date: date = Query(...),
@@ -86,11 +73,11 @@ async def get_timeline(
     # Build employee query
     emp_query = select(Employee).where(Employee.is_deleted == False)
     if team_ids:
-        ids = _parse_id_csv(team_ids)
+        ids = parse_id_csv(team_ids)
         if ids:
             emp_query = emp_query.where(Employee.team_id.in_(ids))
     if technology_ids:
-        ids = _parse_id_csv(technology_ids)
+        ids = parse_id_csv(technology_ids)
         if ids:
             emp_query = emp_query.where(
                 Employee.technologies.any(Technology.id.in_(ids))
