@@ -20,7 +20,7 @@ function getUserColumns(currentUserId: number | undefined): DataTableColumn<User
   return [
     {
       id: "full_name",
-      header: "Nazwa użytkownika",
+      header: "Imię i nazwisko",
       cell: (user) => (
         <span className="font-medium">
           {user.full_name}

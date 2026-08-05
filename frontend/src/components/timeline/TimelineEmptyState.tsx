@@ -17,7 +17,7 @@ export function TimelineEmptyState({
 
   const title = isSearch
     ? `Brak wyników dla „${trimmed}”`
-    : "Brak pracowników dla wybranych filtrów.";
+    : "Brak pracowników dla wybranych filtrów";
 
   const description = isSearch
     ? "Spróbuj innej frazy albo wyczyść wyszukiwanie. Jeśli kalendarz jest pusty, najpierw dodaj pracowników."
