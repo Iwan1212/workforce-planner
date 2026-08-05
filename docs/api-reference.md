@@ -68,6 +68,8 @@ DELETE /api/assignments/{id}                # Delete assignment (204)
 
 Assignment response includes: `id`, `employee_id`, `project_id`, `project_name`, `project_color`, `start_date`, `end_date`, `allocation_type`, `allocation_value`, `daily_hours`, `note`, `is_tentative`, `created_at`.
 
+**Placeholder assignments:** `employee_id` is nullable (`int|null`) on create and in responses. `null` marks a *placeholder* — planned work on a project not yet allocated to a specific person. On PATCH, sending an explicit `"employee_id": null` un-assigns the employee (turns the assignment back into a placeholder); omitting the field leaves the employee unchanged.
+
 ## Users (Admin)
 
 ```
@@ -161,6 +163,21 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
       }
     }
   ],
+  "placeholders": [
+    {
+      "id": 12,
+      "project_id": 5,
+      "project_name": "Projekt Alpha",
+      "project_color": "#3B82F6",
+      "start_date": "2026-02-01",
+      "end_date": "2026-02-28",
+      "allocation_type": "percentage",
+      "allocation_value": 100,
+      "note": "Potrzebny drugi frontend developer",
+      "is_tentative": false,
+      "daily_hours": 8.0
+    }
+  ],
   "holidays": [
     {"date": "2026-01-01", "name": "Nowy Rok"},
     {"date": "2026-01-06", "name": "Trzech Króli"}
@@ -190,7 +207,11 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `vacations` | array | Vacations within requested date range |
 | `occupancy` | object | Per-period occupancy keyed by "YYYY-MM" (monthly) or "w-YYYY-WW" (weekly) |
 
-**Assignment object (in timeline):**
+**Placeholders:**
+
+`placeholders` is a list of placeholder assignments (`employee_id` is null — planned work not yet allocated to a person) within the requested date range. Each entry has the same shape as the assignment object below. Placeholders are returned regardless of employee filters (`teams`, `search`) since they belong to no employee.
+
+**Assignment object (in timeline and in `placeholders`):**
 
 | Field | Type | Description |
 |---|---|---|
@@ -285,7 +306,7 @@ GET /api/projects/timeline?start_date=2026-01-01&end_date=2026-06-30&search=Alph
 | `id` | int | Project ID |
 | `name` | string | Project name |
 | `color` | string | Hex color |
-| `assignments` | array | Assignments within requested date range (deleted employees excluded) |
+| `assignments` | array | Assignments within requested date range — held by non-deleted employees, plus placeholders (`employee_id` null), which ARE included; assignments of deleted employees are excluded |
 
 Non-deleted projects are always returned (sorted by name), even when they have no assignments in the range.
 
@@ -294,8 +315,8 @@ Non-deleted projects are always returned (sorted by name), even when they have n
 | Field | Type | Description |
 |---|---|---|
 | `id` | int | Assignment ID |
-| `employee_id` | int | Employee ID |
-| `employee_name` | string | "Last First" format |
+| `employee_id` | int\|null | Employee ID (`null` for placeholder assignments) |
+| `employee_name` | string\|null | "Last First" format (`null` for placeholder assignments) |
 | `employee_team` | string\|null | Team enum value |
 | `start_date` | date | Assignment start |
 | `end_date` | date | Assignment end |

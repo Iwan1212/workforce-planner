@@ -400,24 +400,21 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
     [data, months, viewMode, patchMutation],
   );
 
+  // Convention: the placeholder row passes `null` as employeeId directly;
+  // employee rows pass their numeric id.
   const handleAssignmentClick = (
     assignment: TimelineAssignment,
     employeeId: number | null,
   ) => {
     setEditingAssignment(assignment);
     // null (placeholder row) => modal shows the assignment as unassigned.
-    setDefaultEmployeeId(
-      employeeId === PLACEHOLDER_EMPLOYEE_ID ? null : employeeId,
-    );
+    setDefaultEmployeeId(employeeId);
     setModalOpen(true);
   };
 
-  const handleEmptyClick = (employeeId: number, dateKey: string) => {
+  const handleEmptyClick = (employeeId: number | null, dateKey: string) => {
     setEditingAssignment(null);
-    // Clicking an empty cell in the placeholder row creates a new placeholder.
-    setDefaultEmployeeId(
-      employeeId === PLACEHOLDER_EMPLOYEE_ID ? null : employeeId,
-    );
+    setDefaultEmployeeId(employeeId);
     setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
     setModalOpen(true);
   };
@@ -594,7 +591,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     }
                     onAssignmentClick={(a) => handleAssignmentClick(a, null)}
                     onVacationClick={handleVacationClick}
-                    onEmptyClick={handleEmptyClick}
+                    onEmptyClick={(_, dateKey) => handleEmptyClick(null, dateKey)}
                     onResizeEnd={handleResizeEnd}
                     onBarContextMenu={handleBarContextMenu}
                     readOnly={isViewer}

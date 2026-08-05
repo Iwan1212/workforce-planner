@@ -95,6 +95,8 @@ export interface AssignmentFormEmployeeProjectProps {
   onProjectChange: (value: string) => void;
   employees: AssignmentEmployeeOption[];
   projects: AssignmentProjectOption[];
+  /** Validation error for the employee field (required in create mode). */
+  employeeError?: string | null;
 }
 
 export interface AssignmentFormDatesProps {

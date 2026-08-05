@@ -28,6 +28,7 @@ export function AssignmentModal({
   const isEditing = !!assignment;
 
   const [employeeId, setEmployeeId] = useState("");
+  const [employeeError, setEmployeeError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -81,7 +82,9 @@ export function AssignmentModal({
       setNote(assignment.note ?? "");
       setIsTentative(assignment.is_tentative);
     } else {
-      setEmployeeId(defaultEmployeeId ? String(defaultEmployeeId) : "");
+      // Create mode: no preselected employee means "nothing selected" ("").
+      // Creating a placeholder requires explicitly picking the "none" option.
+      setEmployeeId(defaultEmployeeId != null ? String(defaultEmployeeId) : "");
       setProjectId(defaultProjectId ? String(defaultProjectId) : "");
       setStartDate(defaultStartDate ?? "");
       setEndDate("");
@@ -90,6 +93,7 @@ export function AssignmentModal({
       setNote("");
       setIsTentative(false);
     }
+    setEmployeeError(null);
     setShowDeleteConfirm(false);
   }, [open, assignment, defaultEmployeeId, defaultProjectId, defaultStartDate]);
 
@@ -129,10 +133,16 @@ export function AssignmentModal({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // The field is required: an empty selection is a validation error. Only the
+    // explicit "none" option ("Nieprzypisane") creates a placeholder assignment.
+    if (!employeeId) {
+      setEmployeeError(
+        "Wybierz pracownika lub opcję „Nieprzypisane (placeholder)”",
+      );
+      return;
+    }
     const data = {
-      // "none" or empty => placeholder assignment (no employee).
-      employee_id:
-        employeeId && employeeId !== "none" ? Number(employeeId) : null,
+      employee_id: employeeId === "none" ? null : Number(employeeId),
       project_id: Number(projectId),
       start_date: startDate,
       end_date: endDate,
@@ -165,10 +175,14 @@ export function AssignmentModal({
           <AssignmentFormEmployeeProject
             employeeId={employeeId}
             projectId={projectId}
-            onEmployeeChange={setEmployeeId}
+            onEmployeeChange={(value) => {
+              setEmployeeId(value);
+              setEmployeeError(null);
+            }}
             onProjectChange={setProjectId}
             employees={employees}
             projects={projects}
+            employeeError={employeeError}
           />
 
           <AssignmentFormDates
