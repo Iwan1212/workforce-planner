@@ -32,6 +32,7 @@ employee_technologies = Table(
         Integer,
         ForeignKey("technologies.id", ondelete="CASCADE"),
         primary_key=True,
+        index=True,
     ),
 )
 
@@ -63,7 +64,7 @@ class Employee(Base):
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     team_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("teams.id"), nullable=True
+        Integer, ForeignKey("teams.id"), nullable=True, index=True
     )
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)

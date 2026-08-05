@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.api.employees import _parse_id_csv
+from app.utils.query_params import parse_id_csv
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 from app.schemas.team import TeamCreate, TeamUpdate
 from app.schemas.technology import TechnologyCreate
@@ -66,14 +66,14 @@ class TestEmployeeSchemaWithTechnologies:
 
 class TestParseIdCsv:
     def test_basic(self):
-        assert _parse_id_csv("1,2,3") == [1, 2, 3]
+        assert parse_id_csv("1,2,3") == [1, 2, 3]
 
     def test_whitespace_and_empty_parts(self):
-        assert _parse_id_csv(" 1 , ,2, ") == [1, 2]
+        assert parse_id_csv(" 1 , ,2, ") == [1, 2]
 
     def test_invalid_value_raises(self):
         from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc:
-            _parse_id_csv("1,abc")
+            parse_id_csv("1,abc")
         assert exc.value.status_code == 400
