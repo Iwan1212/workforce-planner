@@ -74,6 +74,8 @@ export interface AssignmentModalProps {
   defaultEmployeeId?: number | null;
   defaultProjectId?: number | null;
   defaultStartDate?: string | null;
+  /** Preselect "Nieprzypisane" in create mode (e.g. click in the placeholder row). */
+  defaultUnassigned?: boolean;
 }
 
 export interface AssignmentEmployeeOption {

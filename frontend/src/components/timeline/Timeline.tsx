@@ -127,6 +127,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   const [defaultEmployeeId, setDefaultEmployeeId] = useState<number | null>(
     null,
   );
+  const [defaultUnassigned, setDefaultUnassigned] = useState(false);
   const [defaultStartDate, setDefaultStartDate] = useState<string | null>(null);
   const [vacationModalOpen, setVacationModalOpen] = useState(false);
   const [selectedVacation, setSelectedVacation] = useState<VacationInfo | null>(
@@ -415,6 +416,9 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   const handleEmptyClick = (employeeId: number | null, dateKey: string) => {
     setEditingAssignment(null);
     setDefaultEmployeeId(employeeId);
+    // Clicking in the placeholder row already expresses "unassigned" intent,
+    // so the modal preselects the "none" option there.
+    setDefaultUnassigned(employeeId === null);
     setDefaultStartDate(dateKey.length === 10 ? dateKey : `${dateKey}-01`);
     setModalOpen(true);
   };
@@ -696,6 +700,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
         }}
         assignment={editingAssignment}
         defaultEmployeeId={defaultEmployeeId}
+        defaultUnassigned={defaultUnassigned}
         defaultStartDate={defaultStartDate}
       />
     </div>

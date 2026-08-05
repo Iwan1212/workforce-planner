@@ -23,6 +23,7 @@ export function AssignmentModal({
   defaultEmployeeId,
   defaultProjectId,
   defaultStartDate,
+  defaultUnassigned,
 }: AssignmentModalProps) {
   const queryClient = useQueryClient();
   const isEditing = !!assignment;
@@ -83,8 +84,15 @@ export function AssignmentModal({
       setIsTentative(assignment.is_tentative);
     } else {
       // Create mode: no preselected employee means "nothing selected" ("").
-      // Creating a placeholder requires explicitly picking the "none" option.
-      setEmployeeId(defaultEmployeeId != null ? String(defaultEmployeeId) : "");
+      // Creating a placeholder requires explicitly picking the "none" option,
+      // unless the caller already expressed that intent (placeholder row).
+      setEmployeeId(
+        defaultEmployeeId != null
+          ? String(defaultEmployeeId)
+          : defaultUnassigned
+            ? "none"
+            : "",
+      );
       setProjectId(defaultProjectId ? String(defaultProjectId) : "");
       setStartDate(defaultStartDate ?? "");
       setEndDate("");
@@ -95,7 +103,14 @@ export function AssignmentModal({
     }
     setEmployeeError(null);
     setShowDeleteConfirm(false);
-  }, [open, assignment, defaultEmployeeId, defaultProjectId, defaultStartDate]);
+  }, [
+    open,
+    assignment,
+    defaultEmployeeId,
+    defaultProjectId,
+    defaultStartDate,
+    defaultUnassigned,
+  ]);
 
   const createMutation = useMutation({
     mutationFn: createAssignment,
