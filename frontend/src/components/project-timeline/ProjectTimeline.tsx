@@ -365,7 +365,7 @@ export function ProjectTimeline() {
           </h3>
           <p className="mt-2 max-w-md text-sm text-muted-foreground">
             {trimmedSearch
-              ? "Spróbuj innej frazy albo wyczyść wyszukiwanie."
+              ? "Spróbuj innej frazy albo wyczyść wyszukiwanie. Jeśli kalendarz jest pusty, najpierw dodaj projekty."
               : "Dodaj projekty i assignmenty, aby zobaczyć plan projektów w tym widoku."}
           </p>
         </div>
