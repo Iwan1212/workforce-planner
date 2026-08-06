@@ -42,6 +42,28 @@ async def _resolve_technologies(
     return list(techs)
 
 
+async def _ensure_email_available(
+    db: AsyncSession, email: Optional[str], exclude_id: Optional[int] = None
+) -> None:
+    """Reject an email already used by another employee, with 409 rather than 500.
+
+    `employees.email` is unique in the database, so without this check a
+    collision surfaces as an unhandled IntegrityError. Archived employees keep
+    their address reserved, since the constraint does not care about state.
+    """
+    if not email:
+        return
+    query = select(Employee).where(sa_func.lower(Employee.email) == email.lower())
+    if exclude_id is not None:
+        query = query.where(Employee.id != exclude_id)
+    result = await db.execute(query)
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Pracownik z tym adresem email już istnieje",
+        )
+
+
 async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
     """Ensure a team_id references an existing team (None is allowed)."""
     if team_id is None:
@@ -99,8 +121,9 @@ async def create_employee(
     await _validate_team_id(db, body.team_id)
     technologies = await _resolve_technologies(db, body.technology_ids)
 
-    # Archived employees still count as taken, mirroring project names. They are
-    # reachable under the "archived" list filter, so the conflict is diagnosable.
+    # Archived employees keep their name reserved, mirroring project names and
+    # the email rule below. They are reachable under the "archived" list filter,
+    # so the conflict is diagnosable and can be resolved by unarchiving.
     existing = await db.execute(
         select(Employee).where(
             sa_func.lower(Employee.first_name) == body.first_name.lower(),
@@ -112,6 +135,8 @@ async def create_employee(
             status_code=status.HTTP_409_CONFLICT,
             detail="Pracownik o tym imieniu i nazwisku już istnieje",
         )
+
+    await _ensure_email_available(db, body.email)
 
     employee = Employee(
         first_name=body.first_name,
@@ -148,6 +173,7 @@ async def update_employee(
     if body.technology_ids is not None:
         employee.technologies = await _resolve_technologies(db, body.technology_ids)
     if body.email is not None:
+        await _ensure_email_available(db, body.email, exclude_id=employee_id)
         employee.email = body.email if body.email else None
 
     await db.commit()
