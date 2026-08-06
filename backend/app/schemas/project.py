@@ -37,7 +37,6 @@ class ProjectResponse(BaseModel):
     id: int
     name: str
     color: str
-    is_deleted: bool
     is_archived: bool
     created_at: datetime
 

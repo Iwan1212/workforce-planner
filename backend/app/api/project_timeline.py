@@ -27,8 +27,13 @@ async def get_project_timeline(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    """Return timeline data grouped by project."""
-    proj_query = select(Project).where(Project.is_deleted == False)
+    """Return timeline data grouped by project.
+
+    Archived projects are excluded so the project-grouped view stays focused on
+    live work; their assignments remain visible in the employee timeline, which
+    is what preserves historical occupancy.
+    """
+    proj_query = select(Project).where(Project.is_archived == False)
     if search and search.strip():
         proj_query = proj_query.where(Project.name.ilike(f"%{search.strip()}%"))
     proj_query = proj_query.order_by(Project.name)

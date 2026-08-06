@@ -103,11 +103,7 @@ async def create_assignment(
             raise HTTPException(status_code=404, detail="Employee not found")
 
     # Validate project exists and is not archived
-    proj = await db.execute(
-        select(Project).where(
-            Project.id == body.project_id, Project.is_deleted == False
-        )
-    )
+    proj = await db.execute(select(Project).where(Project.id == body.project_id))
     project = proj.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -160,11 +156,7 @@ async def update_assignment(
             assignment.employee_id = body.employee_id
 
     if body.project_id is not None:
-        proj = await db.execute(
-            select(Project).where(
-                Project.id == body.project_id, Project.is_deleted == False
-            )
-        )
+        proj = await db.execute(select(Project).where(Project.id == body.project_id))
         project = proj.scalar_one_or_none()
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -268,7 +260,8 @@ async def duplicate_assignment(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    # Validate employee and project are not soft-deleted
+    # Duplicating creates a new assignment, so it is subject to the same guards
+    # as create: the employee must not be deleted and the project not archived.
     # (placeholder assignments have no employee, so skip the employee check)
     if assignment.employee_id is not None:
         emp = await db.execute(
@@ -280,12 +273,16 @@ async def duplicate_assignment(
             raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
 
     proj = await db.execute(
-        select(Project).where(
-            Project.id == assignment.project_id, Project.is_deleted == False
-        )
+        select(Project).where(Project.id == assignment.project_id)
     )
-    if not proj.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Cannot duplicate: project has been deleted")
+    project = proj.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if project.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nie można przypisać pracownika do zarchiwizowanego projektu",
+        )
 
     new_assignment = Assignment(
         employee_id=assignment.employee_id,

@@ -36,7 +36,7 @@
 | id | Integer | PK |
 | name | String | unique, not null |
 | color | String(7) | not null (hex color) |
-| is_deleted | Boolean | default false (soft delete) |
+| is_archived | Boolean | default false (wind-down state) |
 | created_at | DateTime | auto |
 
 ### Assignment
@@ -127,10 +127,16 @@ AppSettings (standalone — stores Calamari config etc.)
 - Vacation days reduce net available hours in occupancy calculations
 - Percentage allocations skip vacation days entirely; hours-based commitments stay fixed, so vacations can push occupancy above 100%
 
-### Deletion Rules
+### Lifecycle Rules
 
 | Entity | Behavior |
 |---|---|
 | **Employee** | Soft delete. Warning if active assignments exist. Future assignments removed, historical archived. |
-| **Project** | Soft delete. Cascade deletes all linked assignments (after confirmation). |
+| **Project** | Archive (reversible wind-down) or delete (permanent, takes all assignments). No soft-delete state. |
 | **Assignment** | Hard delete. Supports split and duplicate operations. |
+
+**Project archive vs delete.** Archiving winds a project down: past assignments are kept, ongoing ones are trimmed to end today, future ones are deleted, and no new assignments can be added (409). The project disappears from the project-grouped timeline but its assignments stay in the employee timeline, so per-person history survives. Unarchiving re-enables new assignments but does not restore what the wind-down removed.
+
+Deleting is permanent and removes the project together with **all** of its assignments, history included.
+
+The wind-down rules live in `app/services/lifecycle_service.py` and are shared with employee archiving.

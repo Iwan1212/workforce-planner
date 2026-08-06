@@ -224,9 +224,11 @@ export function ProjectList() {
           archiveTarget ? (
             <>
               Czy na pewno chcesz zarchiwizować projekt{" "}
-              <strong>{archiveTarget.name}</strong>? Istniejące assignmenty
-              pozostaną bez zmian, ale nie będzie można przypisać do niego
-              nowych.
+              <strong>{archiveTarget.name}</strong>? Zakończone przypisania
+              pozostaną w historii, trwające zostaną skrócone do dzisiaj, a
+              przyszłe — usunięte. Nie będzie można dodać nowych. Projekt
+              zniknie z kalendarza projektów, ale pozostanie widoczny w
+              kalendarzu pracowników.
             </>
           ) : (
             ""
@@ -246,9 +248,12 @@ export function ProjectList() {
         description={
           crud.deleteTarget ? (
             <>
-              Czy na pewno chcesz usunąć projekt{" "}
-              <strong>{crud.deleteTarget.name}</strong>? Przyszłe assignmenty
-              zostaną usunięte, a bieżące skrócone do dzisiaj.
+              Czy na pewno chcesz trwale usunąć projekt{" "}
+              <strong>{crud.deleteTarget.name}</strong>? Znikną wszystkie jego
+              przypisania — przeszłe, trwające i przyszłe — wraz z historią
+              obłożenia. Tej operacji nie da się cofnąć. Jeśli chcesz tylko
+              zakończyć projekt i zachować historię, zarchiwizuj go zamiast
+              usuwać.
             </>
           ) : (
             ""
