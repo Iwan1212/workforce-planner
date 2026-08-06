@@ -1,11 +1,6 @@
+import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import type { AssignmentFormEmployeeProjectProps } from "@/types/assignment";
 
 export function AssignmentFormEmployeeProject({
@@ -17,34 +12,50 @@ export function AssignmentFormEmployeeProject({
   projects,
   employeeError,
 }: AssignmentFormEmployeeProjectProps) {
+  const employeeOptions = useMemo(
+    () => [
+      { value: "none", label: "— Nieprzypisane (placeholder) —" },
+      ...employees.map((emp) => ({
+        value: String(emp.id),
+        label: `${emp.last_name} ${emp.first_name}`,
+        hint: emp.is_archived ? "(zarchiwizowany)" : undefined,
+      })),
+    ],
+    [employees],
+  );
+
+  const projectOptions = useMemo(
+    () =>
+      projects.map((proj) => ({
+        value: String(proj.id),
+        label: proj.name,
+        content: (
+          <span className="flex items-center gap-2 truncate">
+            <span
+              className="inline-block h-3 w-3 shrink-0 rounded-full ring-1 ring-border"
+              style={{ backgroundColor: proj.color }}
+            />
+            <span className="truncate">{proj.name}</span>
+          </span>
+        ),
+      })),
+    [projects],
+  );
+
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="assignment-employee">Pracownik</Label>
-        <Select value={employeeId} onValueChange={onEmployeeChange}>
-          <SelectTrigger
-            id="assignment-employee"
-            className="w-full"
-            aria-invalid={!!employeeError}
-          >
-            <SelectValue placeholder="Wybierz pracownika" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">
-              — Nieprzypisane (placeholder) —
-            </SelectItem>
-            {employees.map((emp) => (
-              <SelectItem key={emp.id} value={String(emp.id)}>
-                {emp.last_name} {emp.first_name}
-                {emp.is_archived && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    (zarchiwizowany)
-                  </span>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label id="assignment-employee-label">Pracownik</Label>
+        <SearchableSelect
+          id="assignment-employee"
+          labelId="assignment-employee-label"
+          options={employeeOptions}
+          value={employeeId}
+          onChange={onEmployeeChange}
+          placeholder="Wybierz pracownika"
+          searchPlaceholder="Szukaj pracownika..."
+          invalid={!!employeeError}
+        />
         {employeeError && (
           <p className="text-sm text-destructive" role="alert">
             {employeeError}
@@ -53,25 +64,16 @@ export function AssignmentFormEmployeeProject({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="assignment-project">Projekt</Label>
-        <Select value={projectId} onValueChange={onProjectChange}>
-          <SelectTrigger id="assignment-project" className="w-full">
-            <SelectValue placeholder="Wybierz projekt" />
-          </SelectTrigger>
-          <SelectContent>
-            {projects.map((proj) => (
-              <SelectItem key={proj.id} value={String(proj.id)}>
-                <span className="flex items-center gap-2">
-                  <span
-                    className="inline-block h-3 w-3 rounded-full ring-1 ring-border"
-                    style={{ backgroundColor: proj.color }}
-                  />
-                  {proj.name}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label id="assignment-project-label">Projekt</Label>
+        <SearchableSelect
+          id="assignment-project"
+          labelId="assignment-project-label"
+          options={projectOptions}
+          value={projectId}
+          onChange={onProjectChange}
+          placeholder="Wybierz projekt"
+          searchPlaceholder="Szukaj projektu..."
+        />
       </div>
     </>
   );

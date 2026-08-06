@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, X, Check } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { usePopoverPanel } from "@/hooks/usePopoverPanel";
 import { cn } from "@/lib/utils";
+
+/** Row height in px; rows are single-line, so the list height is predictable. */
+const ROW_HEIGHT = 32;
+const MAX_LIST_HEIGHT = 288;
+/** Search input plus the panel's own padding, on top of the list height. */
+const SEARCH_BOX_HEIGHT = 54;
 
 export interface MultiSelectOption {
   id: number;
@@ -14,6 +26,8 @@ interface MultiSelectFieldProps {
   placeholder?: string;
   isLoading?: boolean;
   emptyLabel?: string;
+  /** Id of the field's <Label>. See SearchableSelect for why not `htmlFor`. */
+  labelId?: string;
 }
 
 /**
@@ -27,22 +41,25 @@ export function MultiSelectField({
   placeholder = "Wybierz...",
   isLoading,
   emptyLabel = "Brak opcji",
+  labelId,
 }: MultiSelectFieldProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  const { triggerRef, container, side, preparePanel } = usePopoverPanel();
+
+  /** Height of the panel with nothing filtered out; decides where it opens. */
+  const panelHeight =
+    Math.min(Math.max(options.length, 1) * ROW_HEIGHT, MAX_LIST_HEIGHT) +
+    SEARCH_BOX_HEIGHT;
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
+      preparePanel(panelHeight);
+      setSearch("");
+    }
+  };
 
   const selectedOptions = useMemo(
     () => options.filter((o) => selectedIds.includes(o.id)),
@@ -62,12 +79,8 @@ export function MultiSelectField({
     );
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1.5 text-left text-sm shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger ref={triggerRef} aria-labelledby={labelId} className="flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1.5 text-left text-sm shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {selectedOptions.length === 0 ? (
           <span className="text-muted-foreground">{placeholder}</span>
         ) : (
@@ -93,54 +106,57 @@ export function MultiSelectField({
           ))
         )}
         <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-md border bg-background p-1 shadow-md">
-          <input
-            autoFocus
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Szukaj..."
-            className="mb-1 w-full rounded-sm border-b bg-transparent px-2 py-1.5 text-sm outline-none"
-          />
-          <div className="max-h-48 overflow-y-auto">
-            {isLoading ? (
-              <p className="px-2 py-2 text-xs text-muted-foreground">
-                Ładowanie...
-              </p>
-            ) : filtered.length === 0 ? (
-              <p className="px-2 py-2 text-xs text-muted-foreground">
-                {options.length === 0 ? emptyLabel : "Brak wyników"}
-              </p>
-            ) : (
-              filtered.map((o) => {
-                const isSelected = selectedIds.includes(o.id);
-                return (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => toggle(o.id)}
-                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+      <PopoverContent
+        container={container}
+        side={side}
+        className="flex max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) flex-col p-1"
+      >
+        <input
+          autoFocus
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Szukaj..."
+          aria-label="Szukaj"
+          className="mb-1 w-full shrink-0 rounded-sm border-b bg-transparent px-2 py-1.5 text-sm outline-none"
+        />
+        <div className="min-h-0 max-h-72 flex-1 overflow-y-auto">
+          {isLoading ? (
+            <p className="px-2 py-2 text-xs text-muted-foreground">
+              Ładowanie...
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="px-2 py-2 text-xs text-muted-foreground">
+              {options.length === 0 ? emptyLabel : "Brak wyników"}
+            </p>
+          ) : (
+            filtered.map((o) => {
+              const isSelected = selectedIds.includes(o.id);
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => toggle(o.id)}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input",
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input",
-                      )}
-                    >
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </span>
-                    {o.name}
-                  </button>
-                );
-              })
-            )}
-          </div>
+                    {isSelected && <Check className="h-3 w-3" />}
+                  </span>
+                  {o.name}
+                </button>
+              );
+            })
+          )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
