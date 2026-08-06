@@ -26,22 +26,29 @@ Login response includes `access_token`, `refresh_token`, and `token_type: "beare
 ## Employees
 
 ```
-GET    /api/employees                       # List employees (filter: ?team=Frontend&search=name)
+GET    /api/employees                       # List (?status=active|archived|all, default active; team_ids, technology_ids, search)
 POST   /api/employees                       # Create employee (201)
 PATCH  /api/employees/{id}                  # Update employee (200)
-DELETE /api/employees/{id}                  # Soft delete (200, see below)
+POST   /api/employees/{id}/archive          # Archive + wind down assignments (200, see below)
+POST   /api/employees/{id}/unarchive        # Re-enable for new assignments (200)
+DELETE /api/employees/{id}                  # Permanent delete with all assignments (200, see below)
 ```
 
-**Delete behavior:** If the employee has active assignments and `?confirm=true` is not passed, returns 200 with:
+An employee is either **active**, **archived**, or gone. There is no soft-deleted state. The lifecycle mirrors projects exactly; see the Projects section for the wind-down table, which is shared logic.
+
+**Archive** keeps past assignments, trims ongoing ones to end today, and deletes future ones. Archived employees are hidden from `GET /api/assignments/timeline` but their assignments still appear in `GET /api/projects/timeline`, so each project keeps the full record of who worked on it. Assigning an archived employee (create, patch or duplicate) returns 409.
+
+The visibility is deliberately the mirror image of projects: an archived **project** leaves the project timeline and stays in the employee one; an archived **employee** leaves the employee timeline and stays in the project one.
+
+**Unarchive** re-enables the employee for new assignments without restoring what the wind-down removed.
+
+**Delete** is permanent: the employee row and **all** of their assignments. Two-step confirmation — without `?confirm=true`, an employee with any assignments returns:
+
 ```json
-{
-  "has_active_assignments": true,
-  "active_assignments_count": 3,
-  "active_assignments": [{"id": 1, "project_id": 5, "start_date": "...", "end_date": "..."}],
-  "message": "Employee has active assignments. Pass ?confirm=true to proceed."
-}
+{"has_assignments": true, "assignments_count": 3, "message": "..."}
 ```
-On successful deletion: `{"deleted": true}` (200).
+
+With `?confirm=true` (or when they have none): `{"deleted": true, "deleted_assignments": 3}`.
 
 ## Projects
 

@@ -67,7 +67,9 @@ class Employee(Base):
         Integer, ForeignKey("teams.id"), nullable=True, index=True
     )
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -8,7 +8,7 @@ export interface Employee {
   team: Team | null;
   technologies: Technology[];
   email: string | null;
-  is_deleted: boolean;
+  is_archived: boolean;
   created_at: string;
 }
 

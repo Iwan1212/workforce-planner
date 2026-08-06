@@ -26,7 +26,7 @@
 | last_name | String | not null |
 | email | String | nullable, unique |
 | team | Enum | nullable — BA, Backend, DevOps, Frontend, ML, Mobile, PM, QA, UX_UI_Designer |
-| is_deleted | Boolean | default false (soft delete) |
+| is_archived | Boolean | default false (wind-down state) |
 | created_at | DateTime | auto |
 
 ### Project
@@ -131,12 +131,21 @@ AppSettings (standalone — stores Calamari config etc.)
 
 | Entity | Behavior |
 |---|---|
-| **Employee** | Soft delete. Warning if active assignments exist. Future assignments removed, historical archived. |
+| **Employee** | Archive (reversible wind-down) or delete (permanent, takes all assignments). No soft-delete state. |
 | **Project** | Archive (reversible wind-down) or delete (permanent, takes all assignments). No soft-delete state. |
 | **Assignment** | Hard delete. Supports split and duplicate operations. |
 
-**Project archive vs delete.** Archiving winds a project down: past assignments are kept, ongoing ones are trimmed to end today, future ones are deleted, and no new assignments can be added (409). The project disappears from the project-grouped timeline but its assignments stay in the employee timeline, so per-person history survives. Unarchiving re-enables new assignments but does not restore what the wind-down removed.
+**Archive vs delete.** Archiving winds an entity down: past assignments are kept, ongoing ones are trimmed to end today, future ones are deleted, and no new assignments can reference it (409). Unarchiving re-enables new assignments but does not restore what the wind-down removed.
 
-Deleting is permanent and removes the project together with **all** of its assignments, history included.
+Deleting is permanent and removes the entity together with **all** of its assignments, history included.
 
-The wind-down rules live in `app/services/lifecycle_service.py` and are shared with employee archiving.
+The rules live in `app/services/lifecycle_service.py` and are identical for both entities.
+
+**Visibility.** Archiving hides the entity from its own timeline while keeping it in the other one, so history is never lost from both views at once:
+
+| State | Employee timeline | Project timeline |
+|---|:--:|:--:|
+| Active project | shown | shown |
+| Archived project | shown | hidden |
+| Active employee | shown | shown |
+| Archived employee | hidden | shown |

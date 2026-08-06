@@ -67,17 +67,15 @@ async def get_project_timeline(
     project_ids = [p.id for p in projects]
     assignments_by_project: dict[int, list] = {pid: [] for pid in project_ids}
     if project_ids:
-        active_employee_ids = select(Employee.id).where(Employee.is_deleted == False)
+        # No employee-state filter: archived employees stay visible here, so a
+        # project keeps the full picture of who worked on it. Placeholder
+        # assignments (employee_id IS NULL) are included for the same reason.
         a_result = await db.execute(
             select(Assignment)
             .where(
                 Assignment.project_id.in_(project_ids),
                 Assignment.start_date <= end_date,
                 Assignment.end_date >= start_date,
-                # Include placeholder assignments (employee_id IS NULL) alongside
-                # assignments held by active (non-deleted) employees.
-                Assignment.employee_id.in_(active_employee_ids)
-                | Assignment.employee_id.is_(None),
             )
             .order_by(Assignment.start_date)
         )
