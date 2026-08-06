@@ -62,6 +62,13 @@ cd frontend && npm run test
 - CSS: exclusively Tailwind utility classes + shadcn/ui
 - Naming: PascalCase components, camelCase functions, SCREAMING_SNAKE constants
 
+### UI Copy (Polish)
+
+- **Never use an em dash (`—`) inside a sentence.** It reads as machine-written. Use a comma, a full stop, or a colon introducing a bulleted list instead.
+- The `—` glyph is still correct where it is a symbol rather than punctuation: empty-value placeholders in tables (`{value || "—"}`) and neutral select options such as `— Brak —`. Do not rewrite those.
+- In confirmation dialogs, split the consequences into a bulleted list rather than one long sentence, and bold the irreversible part.
+- Name the consequence, not just the action: say what happens to existing data, not only that something will be archived or deleted.
+
 ## Key Business Rules
 
 - 1 FTE = 100% = 8h/day x working days/month

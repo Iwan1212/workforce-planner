@@ -222,14 +222,23 @@ export function ProjectList() {
         title="Archiwizuj projekt"
         description={
           archiveTarget ? (
-            <>
-              Czy na pewno chcesz zarchiwizować projekt{" "}
-              <strong>{archiveTarget.name}</strong>? Zakończone przypisania
-              pozostaną w historii, trwające zostaną skrócone do dzisiaj, a
-              przyszłe — usunięte. Nie będzie można dodać nowych. Projekt
-              zniknie z kalendarza projektów, ale pozostanie widoczny w
-              kalendarzu pracowników.
-            </>
+            <div className="space-y-2">
+              <p>
+                Czy na pewno chcesz zarchiwizować projekt{" "}
+                <strong>{archiveTarget.name}</strong>?
+              </p>
+              <p>Oznacza to, że:</p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Zakończone assignmenty pozostaną w historii.</li>
+                <li>Trwające zostaną skrócone do dzisiaj.</li>
+                <li>Przyszłe zostaną usunięte.</li>
+              </ul>
+              <p>
+                Nie będzie można też do tego projektu dodać nowych
+                assignmentów. Projekt zniknie z kalendarza projektów, ale
+                pozostanie widoczny w kalendarzu pracowników.
+              </p>
+            </div>
           ) : (
             ""
           )
@@ -247,14 +256,18 @@ export function ProjectList() {
         title="Usuń projekt"
         description={
           crud.deleteTarget ? (
-            <>
-              Czy na pewno chcesz trwale usunąć projekt{" "}
-              <strong>{crud.deleteTarget.name}</strong>? Znikną wszystkie jego
-              przypisania — przeszłe, trwające i przyszłe — wraz z historią
-              obłożenia. Tej operacji nie da się cofnąć. Jeśli chcesz tylko
-              zakończyć projekt i zachować historię, zarchiwizuj go zamiast
-              usuwać.
-            </>
+            <div className="space-y-2">
+              <p>
+                Czy na pewno chcesz trwale usunąć projekt{" "}
+                <strong>{crud.deleteTarget.name}</strong>? Oznacza to, że
+                znikną też wszystkie assignmenty z nim związane. Jeśli chcesz
+                tylko zakończyć projekt i zachować historię, zarchiwizuj go
+                zamiast usuwać.
+              </p>
+              <p>
+                <strong>Tej operacji nie da się cofnąć.</strong>
+              </p>
+            </div>
           ) : (
             ""
           )
