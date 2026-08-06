@@ -82,6 +82,8 @@ export interface AssignmentEmployeeOption {
   id: number;
   last_name: string;
   first_name: string;
+  /** Only ever true for the employee already on the assignment being edited. */
+  is_archived?: boolean;
 }
 
 export interface AssignmentProjectOption {

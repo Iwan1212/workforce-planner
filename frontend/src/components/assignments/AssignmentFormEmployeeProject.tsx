@@ -36,6 +36,11 @@ export function AssignmentFormEmployeeProject({
             {employees.map((emp) => (
               <SelectItem key={emp.id} value={String(emp.id)}>
                 {emp.last_name} {emp.first_name}
+                {emp.is_archived && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    (zarchiwizowany)
+                  </span>
+                )}
               </SelectItem>
             ))}
           </SelectContent>
