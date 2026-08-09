@@ -54,7 +54,7 @@ async def update_team(
     result = await db.execute(select(Team).where(Team.id == team_id))
     team = result.scalar_one_or_none()
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono zespołu")
 
     existing = await db.execute(
         select(Team).where(
@@ -83,7 +83,7 @@ async def delete_team(
     result = await db.execute(select(Team).where(Team.id == team_id))
     team = result.scalar_one_or_none()
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono zespołu")
 
     # Hard delete: detach the team from any employees, then remove it entirely.
     await db.execute(

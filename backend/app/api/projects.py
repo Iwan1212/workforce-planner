@@ -74,7 +74,7 @@ async def update_project(
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
 
     if body.name is not None:
         # Check unique name (case-insensitive, excluding self)
@@ -115,7 +115,7 @@ async def delete_project(
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
 
     assignment_filter = Assignment.project_id == project_id
     assignments_count = await count_assignments(db, assignment_filter)
@@ -151,7 +151,7 @@ async def archive_project(
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
 
     project.is_archived = True
     await wind_down_assignments(db, Assignment.project_id == project_id)
@@ -175,7 +175,7 @@ async def unarchive_project(
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
 
     project.is_archived = False
     await db.commit()
