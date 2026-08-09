@@ -7,6 +7,9 @@ from app.models.assignment import AllocationType
 from app.utils.working_days import get_working_days, get_working_days_in_month
 
 
+FULL_TIME_DAILY_HOURS = Decimal("8")
+
+
 def calculate_daily_hours(
     allocation_type: str,
     allocation_value: Decimal | float,
@@ -14,19 +17,24 @@ def calculate_daily_hours(
     month: int,
     start_date: date | None = None,
     end_date: date | None = None,
+    base_daily_hours: Decimal | float = FULL_TIME_DAILY_HOURS,
 ) -> Decimal:
     """Calculate daily hours for an assignment in a given month.
 
-    For percentage: daily_hours = 8 * (allocation_value / 100)
+    For percentage: daily_hours = base_daily_hours * (allocation_value / 100)
     For monthly_hours: daily_hours = allocation_value / working_days_in_month
     For total_hours: daily_hours = allocation_value / working_days(start_date, end_date)
+
+    `base_daily_hours` is what 100% means for this assignment: a full-time day
+    by default, or the employee's contracted daily hours when they work part
+    time. Hours-based allocations are absolute and ignore it.
     """
     value = Decimal(str(allocation_value))
     if (
         allocation_type == AllocationType.percentage.value
         or allocation_type == AllocationType.percentage
     ):
-        return Decimal("8") * (value / Decimal("100"))
+        return Decimal(str(base_daily_hours)) * (value / Decimal("100"))
 
     if (
         allocation_type == AllocationType.total_hours.value

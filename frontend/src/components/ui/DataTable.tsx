@@ -25,6 +25,7 @@ export function DataTable<T>({
                   className={cn(
                     "px-4 py-3 text-sm font-medium",
                     col.align === "right" ? "text-right" : "text-left",
+                    col.className,
                   )}
                 >
                   {col.header}
@@ -44,6 +45,7 @@ export function DataTable<T>({
                     className={cn(
                       "px-4 py-3",
                       col.align === "right" ? "text-right" : "text-left",
+                      col.className,
                     )}
                   >
                     <div
@@ -106,6 +108,7 @@ export function DataTable<T>({
                   className={cn(
                     "px-4 py-3",
                     col.align === "right" ? "text-right" : "text-left",
+                    col.className,
                   )}
                 >
                   {col.cell(row)}

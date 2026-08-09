@@ -44,6 +44,8 @@ import {
   TIMELINE_LEFT_PANEL_WIDTH,
   PLACEHOLDER_EMPLOYEE_ID,
 } from "@/lib/constants";
+import { dailyCapacityHours } from "@/lib/capacity";
+import type { CapacityPeriod } from "@/types/employee";
 import { TimelineBarDragPreview } from "./TimelineBarDragPreview";
 
 type TimelineProps = {
@@ -58,19 +60,22 @@ function calcOccupancyInRange(
   dateTo: string | null,
   visibleStart: Date,
   visibleEnd: Date,
+  capacityPeriods: CapacityPeriod[] | undefined,
 ): number {
   const rangeStart = dateFrom ? parseISO(dateFrom) : visibleStart;
   const rangeEnd = dateTo ? parseISO(dateTo) : visibleEnd;
 
   let totalHours = 0;
-  let workingDays = 0;
+  // Measured against what the person is contracted for, so a part-timer with a
+  // full plate reads as 100% and survives a "busier than 80%" filter.
+  let availableHours = 0;
 
   let current = rangeStart;
   while (current <= rangeEnd) {
     const dow = getDay(current); // 0=Sun, 6=Sat
     const dateKey = format(current, "yyyy-MM-dd");
     if (dow !== 0 && dow !== 6 && !holidayMap[dateKey]) {
-      workingDays++;
+      availableHours += dailyCapacityHours(capacityPeriods, dateKey);
 
       const isOnVacation = vacations.some((v) => {
         const vStart = parseISO(v.start_date);
@@ -91,8 +96,8 @@ function calcOccupancyInRange(
     current = addDays(current, 1);
   }
 
-  if (workingDays === 0) return 0;
-  return Math.round((totalHours / (workingDays * 8)) * 100);
+  if (availableHours === 0) return 0;
+  return Math.round((totalHours / availableHours) * 100);
 }
 
 export function Timeline({ onNavigate }: TimelineProps = {}) {
@@ -452,6 +457,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
         dateTo,
         startDate,
         endDate,
+        emp.capacity_periods,
       );
       if (minPct !== null && pct < minPct) return false;
       if (maxPct !== null && pct > maxPct) return false;
@@ -611,6 +617,7 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
                     employeeId={emp.id}
                     name={emp.name}
                     team={emp.team}
+                    capacity={emp.capacity}
                     assignments={emp.assignments}
                     vacations={emp.vacations}
                     occupancy={emp.occupancy}

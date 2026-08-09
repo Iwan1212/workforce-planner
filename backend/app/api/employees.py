@@ -8,9 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
 from app.models.assignment import Assignment
-from app.models.employee import Employee, Team, Technology
+from app.models.employee import CapacityType, Employee, EmployeeCapacity, Team, Technology
 from app.models.user import User
-from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
+from app.schemas.employee import (
+    CapacityCreate,
+    CapacityResponse,
+    CapacityUpdate,
+    EmployeeCreate,
+    EmployeeResponse,
+    EmployeeUpdate,
+)
+from app.services.capacity_service import baseline_capacity
 from app.services.lifecycle_service import (
     count_assignments,
     delete_assignments,
@@ -71,6 +79,52 @@ async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
     result = await db.execute(select(Team).where(Team.id == team_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Invalid team_id")
+
+
+async def _get_employee(db: AsyncSession, employee_id: int) -> Employee:
+    """Load an employee or raise 404."""
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
+    return employee
+
+
+async def _reload_capacities(
+    db: AsyncSession, employee_id: int
+) -> list[EmployeeCapacity]:
+    """Return an employee's capacity entries, oldest first."""
+    result = await db.execute(
+        select(EmployeeCapacity)
+        .where(EmployeeCapacity.employee_id == employee_id)
+        .order_by(EmployeeCapacity.valid_from)
+    )
+    return list(result.scalars().all())
+
+
+async def _ensure_valid_from_available(
+    db: AsyncSession,
+    employee_id: int,
+    valid_from,
+    exclude_id: Optional[int] = None,
+) -> None:
+    """Reject a second capacity entry starting on the same day.
+
+    Two entries sharing a start date would make the one in force ambiguous, and
+    the database constraint would surface it as a 500.
+    """
+    query = select(EmployeeCapacity).where(
+        EmployeeCapacity.employee_id == employee_id,
+        EmployeeCapacity.valid_from == valid_from,
+    )
+    if exclude_id is not None:
+        query = query.where(EmployeeCapacity.id != exclude_id)
+    result = await db.execute(query)
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Okres zaczynający się w tym dniu już istnieje",
+        )
 
 
 @router.get("", response_model=list[EmployeeResponse])
@@ -138,12 +192,17 @@ async def create_employee(
 
     await _ensure_email_available(db, body.email)
 
+    # Start everyone full time from always. New records often describe people
+    # who have been here for years, so their existing assignments must count
+    # from day one; narrowing the first period is how an employment start gets
+    # recorded, and that is a deliberate act.
     employee = Employee(
         first_name=body.first_name,
         last_name=body.last_name,
         team_id=body.team_id,
         email=body.email,
         technologies=technologies,
+        capacities=[baseline_capacity()],
     )
     db.add(employee)
     await db.commit()
@@ -161,7 +220,7 @@ async def update_employee(
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
     if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
 
     if body.first_name is not None:
         employee.first_name = body.first_name
@@ -197,7 +256,7 @@ async def delete_employee(
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
     if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
 
     assignment_filter = Assignment.employee_id == employee_id
     assignments_count = await count_assignments(db, assignment_filter)
@@ -218,6 +277,122 @@ async def delete_employee(
     return {"deleted": True, "deleted_assignments": deleted_assignments}
 
 
+@router.get("/{employee_id}/capacities", response_model=list[CapacityResponse])
+async def list_capacities(
+    employee_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """List an employee's contracted capacity periods, oldest first.
+
+    Each entry stays in force until the next one starts. Time before the first
+    entry is intentionally uncovered and counts as zero availability.
+    """
+    await _get_employee(db, employee_id)
+    return await _reload_capacities(db, employee_id)
+
+
+@router.post(
+    "/{employee_id}/capacities",
+    response_model=list[CapacityResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_capacity(
+    employee_id: int,
+    body: CapacityCreate,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Add a capacity period, which ends the preceding one automatically.
+
+    Occupancy for the affected months is recomputed on the next timeline read;
+    earlier months keep the capacity that was in force back then.
+    """
+    await _get_employee(db, employee_id)
+    await _ensure_valid_from_available(db, employee_id, body.valid_from)
+
+    db.add(
+        EmployeeCapacity(
+            employee_id=employee_id,
+            valid_from=body.valid_from,
+            capacity_type=CapacityType(body.capacity_type),
+            capacity_value=body.capacity_value,
+        )
+    )
+    await db.commit()
+    return await _reload_capacities(db, employee_id)
+
+
+@router.patch(
+    "/{employee_id}/capacities/{capacity_id}", response_model=list[CapacityResponse]
+)
+async def update_capacity(
+    employee_id: int,
+    capacity_id: int,
+    body: CapacityUpdate,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Edit a capacity period, including its start date.
+
+    Moving the earliest period's start date is how an employment start is
+    recorded: everything before it becomes uncovered, hence unavailable.
+    """
+    await _get_employee(db, employee_id)
+    result = await db.execute(
+        select(EmployeeCapacity).where(
+            EmployeeCapacity.id == capacity_id,
+            EmployeeCapacity.employee_id == employee_id,
+        )
+    )
+    capacity = result.scalar_one_or_none()
+    if not capacity:
+        raise HTTPException(status_code=404, detail="Nie znaleziono okresu wymiaru etatu")
+
+    await _ensure_valid_from_available(
+        db, employee_id, body.valid_from, exclude_id=capacity_id
+    )
+
+    capacity.valid_from = body.valid_from
+    capacity.capacity_type = CapacityType(body.capacity_type)
+    capacity.capacity_value = body.capacity_value
+
+    await db.commit()
+    return await _reload_capacities(db, employee_id)
+
+
+@router.delete(
+    "/{employee_id}/capacities/{capacity_id}", response_model=list[CapacityResponse]
+)
+async def delete_capacity(
+    employee_id: int,
+    capacity_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Remove a capacity period; the preceding one extends over the gap.
+
+    The last remaining period cannot be removed — an employee with no periods
+    at all would have zero availability for all time, which no occupancy figure
+    could express meaningfully.
+    """
+    await _get_employee(db, employee_id)
+    capacities = await _reload_capacities(db, employee_id)
+
+    target = next((c for c in capacities if c.id == capacity_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="Nie znaleziono okresu wymiaru etatu")
+    if len(capacities) == 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nie można usunąć jedynego okresu wymiaru etatu",
+        )
+
+    await db.delete(target)
+    await db.commit()
+    return await _reload_capacities(db, employee_id)
+
+
 @router.post("/{employee_id}/archive", response_model=EmployeeResponse)
 async def archive_employee(
     employee_id: int,
@@ -233,7 +408,7 @@ async def archive_employee(
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
     if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
 
     employee.is_archived = True
     await wind_down_assignments(db, Assignment.employee_id == employee_id)
@@ -257,7 +432,7 @@ async def unarchive_employee(
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
     if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
 
     employee.is_archived = False
     await db.commit()

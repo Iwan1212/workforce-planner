@@ -1,3 +1,5 @@
+import type { CapacityPeriod, EmployeeCapacity } from "./employee";
+
 export interface TimelineAssignment {
   id: number;
   project_id: number;
@@ -34,6 +36,14 @@ export interface TimelineEmployee {
   assignments: TimelineAssignment[];
   vacations?: VacationInfo[];
   occupancy: Record<string, PeriodOccupancy>;
+  /**
+   * Contracted hours per working day across the requested range, split only
+   * where the figure actually changes. Lets the client size availability
+   * without re-deriving the capacity rules.
+   */
+  capacity_periods?: CapacityPeriod[];
+  /** Capacity in force today; null when the employee has not started yet. */
+  capacity?: EmployeeCapacity | null;
 }
 
 export interface HolidayInfo {

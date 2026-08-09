@@ -15,6 +15,12 @@ from app.models.employee import Employee, Technology
 from app.models.user import User
 from app.models.vacation import Vacation
 from app.services.assignment_service import calculate_daily_hours
+from app.services.capacity_service import (
+    assignment_base_daily_hours,
+    build_capacity_periods,
+    daily_capacity_hours,
+    serialize_capacity,
+)
 from app.services.vacation_sync_service import (
     get_calamari_config,
     get_default_sync_range,
@@ -28,11 +34,15 @@ from app.utils.working_days import get_working_days, get_working_days_in_month
 router = APIRouter(tags=["calendar"])
 
 
-def _serialize_timeline_assignment(a: Assignment, range_start: date) -> dict:
+def _serialize_timeline_assignment(
+    a: Assignment, range_start: date, capacities: list | None = None
+) -> dict:
     """Serialize an assignment for the timeline response.
 
     daily_hours is computed for the first month of the assignment visible in
     the requested range (assignments starting before the range use range_start).
+    Without capacities — placeholder assignments, which have no assignee — a
+    percentage means a share of a full-time day.
     """
     first_month_date = max(a.start_date, range_start)
     daily = calculate_daily_hours(
@@ -42,6 +52,7 @@ def _serialize_timeline_assignment(a: Assignment, range_start: date) -> dict:
         first_month_date.month,
         start_date=a.start_date,
         end_date=a.end_date,
+        base_daily_hours=assignment_base_daily_hours(capacities, first_month_date),
     )
     return {
         "id": a.id,
@@ -169,8 +180,11 @@ async def get_timeline(
     for emp in employees:
         assignments = assignments_by_employee[emp.id]
 
+        capacities = emp.capacities
+
         assignment_list = [
-            _serialize_timeline_assignment(a, start_date) for a in assignments
+            _serialize_timeline_assignment(a, start_date, capacities)
+            for a in assignments
         ]
 
         # Employee vacations
@@ -192,7 +206,12 @@ async def get_timeline(
             for week_start, week_end in _get_weeks_in_range(start_date, end_date):
                 key = _week_key(week_start)
                 occupancy[key] = _compute_occupancy_for_period(
-                    assignments, emp_vacations, week_start, week_end, holiday_dates,
+                    assignments,
+                    emp_vacations,
+                    week_start,
+                    week_end,
+                    holiday_dates,
+                    capacities,
                 )
         else:
             for y, m in months:
@@ -200,7 +219,12 @@ async def get_timeline(
                 period_start = date(y, m, 1)
                 period_end = date(y, m, cal_mod.monthrange(y, m)[1])
                 occupancy[key] = _compute_occupancy_for_period(
-                    assignments, emp_vacations, period_start, period_end, holiday_dates,
+                    assignments,
+                    emp_vacations,
+                    period_start,
+                    period_end,
+                    holiday_dates,
+                    capacities,
                 )
 
         employee_data.append(
@@ -212,12 +236,20 @@ async def get_timeline(
                 "assignments": assignment_list,
                 "vacations": vacation_list,
                 "occupancy": occupancy,
+                # Run-length encoded contracted hours, so the frontend can size
+                # its own per-day availability figures without re-implementing
+                # the capacity rules.
+                "capacity_periods": build_capacity_periods(
+                    capacities, start_date, end_date
+                ),
+                "capacity": serialize_capacity(emp.current_capacity),
             }
         )
 
-    # Build placeholder (unassigned) assignments list
+    # Placeholder assignments belong to nobody, so percentages fall back to the
+    # full-time norm until the work is given to a person.
     placeholder_list = [
-        _serialize_timeline_assignment(a, start_date)
+        _serialize_timeline_assignment(a, start_date, None)
         for a in placeholder_assignments
     ]
 
@@ -261,16 +293,24 @@ def _compute_occupancy_for_period(
     period_start: date,
     period_end: date,
     holiday_dates: set,
+    capacities: list | None = None,
 ) -> dict:
     """Compute occupancy metrics for a period (week or month).
 
-    Denominator: net_available = (working_days - vacation_days) * 8
+    Denominator: the employee's contracted hours summed over non-vacation
+    working days. That is a full-time day for the full-time majority, and their
+    own shorter day for part-timers, so vacation always removes what the person
+    would actually have worked rather than a flat eight hours.
+
     Numerator:
       - percentage allocations: hours only on non-vacation working days
       - hours-based allocations: full committed hours across all working days
-        (vacation reduces net_available, not the commitment)
+        (vacation reduces the denominator, not the commitment)
+
+    Zero availability with hours booked (work planned before someone joins) is
+    reported as overbooked rather than as 0%, since the ratio is undefined.
     """
-    net_available_days = 0
+    net_available = Decimal("0")
     hours_numerator = Decimal("0")
 
     d = period_start
@@ -282,7 +322,11 @@ def _compute_occupancy_for_period(
         is_vacation = any(v.start_date <= d <= v.end_date for v in vacations)
 
         if not is_vacation:
-            net_available_days += 1
+            net_available += (
+                daily_capacity_hours(capacities, d)
+                if capacities is not None
+                else Decimal("8")
+            )
 
         for a in assignments:
             if not (a.start_date <= d <= a.end_date):
@@ -294,6 +338,7 @@ def _compute_occupancy_for_period(
                 d.month,
                 start_date=a.start_date,
                 end_date=a.end_date,
+                base_daily_hours=assignment_base_daily_hours(capacities, d),
             )
             if a.allocation_type == AllocationType.percentage:
                 if not is_vacation:
@@ -303,18 +348,18 @@ def _compute_occupancy_for_period(
 
         d += timedelta(days=1)
 
-    net_available = Decimal(str(net_available_days)) * Decimal("8")
-
     if net_available == 0:
         pct = 0.0
+        overbooked = hours_numerator > 0
     else:
         pct = float(round(hours_numerator / net_available * Decimal("100"), 1))
+        overbooked = pct > 100
 
     return {
         "percentage": pct,
         "hours": float(round(hours_numerator, 1)),
         "available_hours": float(round(net_available, 1)),
-        "is_overbooked": pct > 100,
+        "is_overbooked": overbooked,
     }
 
 

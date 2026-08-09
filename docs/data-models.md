@@ -29,6 +29,21 @@
 | is_archived | Boolean | default false (wind-down state) |
 | created_at | DateTime | auto |
 
+### EmployeeCapacity (contracted capacity, effective-dated)
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | Integer | PK |
+| employee_id | Integer | FK -> Employee, ON DELETE CASCADE, indexed |
+| valid_from | Date | not null, unique together with employee_id |
+| capacity_type | Enum | `percentage` \| `monthly_hours` |
+| capacity_value | Numeric(7,2) | not null, > 0 |
+| created_at | DateTime | auto |
+
+Rows carry a **start date only**: each stays in force until the next one
+begins, so the timeline is gap-free and overlaps are impossible. Returning to
+full time is just another row.
+
 ### Project
 
 | Column | Type | Constraints |
@@ -81,6 +96,7 @@
 ```
 User (standalone — login accounts, not linked to Employee)
 
+Employee  1 ──→ N  EmployeeCapacity  (cascade delete)
 Employee  1 ──→ N  Assignment
 Project   1 ──→ N  Assignment
 
@@ -99,13 +115,50 @@ AppSettings (standalone — stores Calamari config etc.)
 - Working days: Mon-Fri, excluding Polish public holidays
 - Week starts on Monday (ISO standard)
 
+### Contracted Capacity (part time)
+
+Every employee has one or more `EmployeeCapacity` periods. Capacity sets the
+**denominator** of every occupancy figure and the **meaning of 100%** for that
+person.
+
+| Capacity type | Daily hours formula |
+|---|---|
+| Percentage | `8 x (percentage / 100)` — fixed daily hours |
+| Monthly hours | `monthly_hours / working_days_in_month` — fixed monthly total, daily hours move with the calendar |
+
+The two are genuinely different contracts: 25% is always 2h/day (40–46h per
+month), while 40h/month is always 40h (1.7–2.0h/day). Both are offered because
+part-time employment contracts behave like the first and hour-capped B2B
+arrangements like the second.
+
+**Days outside any period count as zero availability**, which is how an
+employment start is recorded: move the earliest period's `valid_from` to the
+joining date and everything before it is uncovered. Consequences:
+
+- A period whose availability is zero but which has hours booked is reported as
+  **overbooked**, not as a quiet 0% — the ratio is undefined and hiding it would
+  hide mis-planned work.
+- Percentage allocations fall back to the full-time norm on uncovered days, so
+  those hours stay visible instead of evaporating to zero.
+- The last remaining period of an employee cannot be deleted.
+
 ### Allocation Calculation
 
 | Type | Daily hours formula |
 |---|---|
-| Percentage | `8 x (percentage / 100)` |
+| Percentage | `base_daily_hours x (percentage / 100)` |
 | Monthly hours | `monthly_hours / working_days_in_month` |
+| Total hours | `total_hours / working_days(start_date, end_date)` |
 | Partial month | Hours proportional to working days in the assignment's overlap with that month |
+
+`base_daily_hours` is the assignee's contracted daily hours, i.e. a full-time
+day for the full-time majority. **A percentage is a share of that person's own
+time**, so 100% means a full plate whether they work 8h or 2h a day. Two
+consequences worth knowing:
+
+- Moving a percentage assignment between employees changes its hours; hours-based
+  allocations are absolute and do not change.
+- Placeholder assignments (no assignee) use the full-time norm.
 
 ### Overbooking
 
@@ -124,7 +177,8 @@ AppSettings (standalone — stores Calamari config etc.)
 ### Vacation Integration
 
 - Vacations synced from Calamari API (manual or scheduled sync)
-- Vacation days reduce net available hours in occupancy calculations
+- Vacation days reduce net available hours in occupancy calculations, by the
+  employee's own contracted hours rather than a flat 8h
 - Percentage allocations skip vacation days entirely; hours-based commitments stay fixed, so vacations can push occupancy above 100%
 
 ### Lifecycle Rules
