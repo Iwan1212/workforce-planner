@@ -1,15 +1,9 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { DialogWrapper } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { MultiSelectField } from "@/components/common/MultiSelectField";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import { useTeams } from "@/hooks/useTeams";
 import { useTechnologies } from "@/hooks/useTechnologies";
 import type { Employee, EmployeeFormProps } from "@/types/employee";
@@ -48,6 +42,14 @@ export function EmployeeForm({
   useEffect(() => {
     setForm(initialFormState(employee));
   }, [employee]);
+
+  const teamOptions = useMemo(
+    () => [
+      { value: "none", label: "— Brak —" },
+      ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+    ],
+    [teams],
+  );
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -106,27 +108,22 @@ export function EmployeeForm({
         </p>
       </div>
       <div className="space-y-2">
-        <Label>Zespół</Label>
-        <Select
+        <Label id="employee-team-label">Zespół</Label>
+        <SearchableSelect
+          id="employee-team"
+          labelId="employee-team-label"
+          options={teamOptions}
           value={form.teamId}
-          onValueChange={(v) => setForm((f) => ({ ...f, teamId: v }))}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={teamsLoading ? "Ładowanie..." : undefined} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">— Brak —</SelectItem>
-            {teams.map((t) => (
-              <SelectItem key={t.id} value={String(t.id)}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(v) => setForm((f) => ({ ...f, teamId: v }))}
+          isLoading={teamsLoading}
+          searchPlaceholder="Szukaj zespołu..."
+          emptyLabel="Brak zespołów. Dodaj je w Ustawieniach"
+        />
       </div>
       <div className="space-y-2">
-        <Label>Technologie</Label>
+        <Label id="employee-technologies-label">Technologie</Label>
         <MultiSelectField
+          labelId="employee-technologies-label"
           options={technologies}
           selectedIds={form.technologyIds}
           onChange={(ids) => setForm((f) => ({ ...f, technologyIds: ids }))}
