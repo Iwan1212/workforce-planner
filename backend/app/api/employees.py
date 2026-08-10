@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func as sa_func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
@@ -62,6 +63,25 @@ async def _ensure_email_available(
             status_code=status.HTTP_409_CONFLICT,
             detail="Pracownik z tym adresem email już istnieje",
         )
+
+
+async def _commit_handling_email_conflict(db: AsyncSession) -> None:
+    """Commit, translating a concurrent email-uniqueness violation into 409.
+
+    _ensure_email_available checks first, but two parallel requests can both
+    pass that SELECT; the unique constraint is the last line of defense and
+    would otherwise surface as a 500 with the session left in a broken state.
+    """
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "email" in str(exc.orig).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Pracownik z tym adresem email już istnieje",
+            ) from exc
+        raise
 
 
 async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
@@ -146,7 +166,7 @@ async def create_employee(
         technologies=technologies,
     )
     db.add(employee)
-    await db.commit()
+    await _commit_handling_email_conflict(db)
     await db.refresh(employee)
     return employee
 
@@ -176,7 +196,7 @@ async def update_employee(
         await _ensure_email_available(db, body.email, exclude_id=employee_id)
         employee.email = body.email if body.email else None
 
-    await db.commit()
+    await _commit_handling_email_conflict(db)
     await db.refresh(employee)
     return employee
 
