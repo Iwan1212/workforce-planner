@@ -425,6 +425,7 @@ function CapacityEditor({
             id="capacity-value"
             type="number"
             min="0.01"
+            max={isPercentage ? "100" : "744"}
             step={isPercentage ? "1" : "0.5"}
             placeholder={isPercentage ? "100" : "40"}
             value={draft.capacityValue}

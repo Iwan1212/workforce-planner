@@ -307,3 +307,25 @@ def test_periods_start_with_zero_before_employment():
         {"from": "2026-03-01", "daily_hours": 0.0},
         {"from": "2026-03-16", "daily_hours": 8.0},
     ]
+
+
+def test_capacity_value_rejects_values_beyond_type_bounds():
+    from pydantic import ValidationError
+
+    from app.schemas.employee import CapacityCreate
+
+    with pytest.raises(ValidationError):
+        CapacityCreate(
+            valid_from=MARCH_START, capacity_type="percentage", capacity_value=500
+        )
+    with pytest.raises(ValidationError):
+        CapacityCreate(
+            valid_from=MARCH_START, capacity_type="monthly_hours", capacity_value=1600
+        )
+    # Boundary values stay accepted.
+    CapacityCreate(
+        valid_from=MARCH_START, capacity_type="percentage", capacity_value=100
+    )
+    CapacityCreate(
+        valid_from=MARCH_START, capacity_type="monthly_hours", capacity_value=744
+    )

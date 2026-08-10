@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.schemas.team import TeamResponse
 from app.schemas.technology import TechnologyResponse
@@ -35,6 +35,17 @@ class CapacityBase(BaseModel):
         if v <= 0:
             raise ValueError("must be greater than 0")
         return round(v, 2)
+
+    @model_validator(mode="after")
+    def value_within_type_bounds(self) -> "CapacityBase":
+        """Catch order-of-magnitude typos: capacity scales the occupancy
+        denominator for every assignment the person has, so a stray zero
+        distorts the whole timeline, not one entry."""
+        if self.capacity_type == "percentage" and self.capacity_value > 100:
+            raise ValueError("percentage capacity cannot exceed 100")
+        if self.capacity_type == "monthly_hours" and self.capacity_value > 744:
+            raise ValueError("monthly hours cannot exceed 744")
+        return self
 
 
 class CapacityCreate(CapacityBase):
