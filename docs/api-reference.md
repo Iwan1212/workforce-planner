@@ -46,14 +46,38 @@ On successful deletion: `{"deleted": true}` (200).
 ## Projects
 
 ```
-GET    /api/projects                        # List projects (200)
+GET    /api/projects                        # List projects (200, ?status=active|archived|all, default active)
 GET    /api/projects/timeline               # Timeline grouped by project (200, see below)
 POST   /api/projects                        # Create project, unique name (201)
 PATCH  /api/projects/{id}                   # Update project (200)
-DELETE /api/projects/{id}                   # Delete with cascade (200, see below)
+POST   /api/projects/{id}/archive           # Archive + wind down assignments (200, see below)
+POST   /api/projects/{id}/unarchive         # Re-enable for new assignments (200)
+DELETE /api/projects/{id}                   # Permanent delete with all assignments (200, see below)
 ```
 
-**Delete behavior:** Same two-step pattern as employees — returns active assignment info if `?confirm=true` is not passed.
+A project is either **active**, **archived**, or gone. There is no soft-deleted state.
+
+**Archive** is a reversible wind-down. Every assignment on the project is classified relative to today:
+
+| Category | Condition | Action |
+|---|---|---|
+| Past | `end_date < today` | kept untouched — historical occupancy is preserved |
+| Ongoing | `start_date <= today <= end_date` | `end_date` trimmed to today |
+| Future | `start_date > today` | deleted |
+
+Boundary rules: an assignment with `start_date == today` is *ongoing* (trimmed to a single day), not future; one with `end_date == today` is ongoing and needs no change.
+
+Archived projects are hidden from `GET /api/projects/timeline` but their assignments still appear in `GET /api/assignments/timeline`, so per-person history stays intact. Creating or patching an assignment onto an archived project returns 409, as does duplicating one.
+
+**Unarchive** re-enables the project for new assignments. It does **not** restore assignments that archiving trimmed or deleted.
+
+**Delete** is permanent: the project row and **all** of its assignments (past, ongoing and future) are removed. Two-step confirmation — without `?confirm=true`, a project that has any assignments returns them for confirmation instead of deleting:
+
+```json
+{"has_assignments": true, "assignments_count": 12, "message": "..."}
+```
+
+With `?confirm=true` (or when the project has no assignments): `{"deleted": true, "deleted_assignments": 12}`.
 
 ## Assignments
 

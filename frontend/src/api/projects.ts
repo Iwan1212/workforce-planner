@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 import type { Project, ProjectCreateData } from "@/types/project";
-import type { DeleteResponse } from "@/types/common";
+import type { ProjectDeleteResponse } from "@/types/common";
 
 export function fetchProjects(
   search?: string,
@@ -32,9 +32,9 @@ export function updateProject(
 export function deleteProject(
   id: number,
   confirm = false,
-): Promise<DeleteResponse> {
+): Promise<ProjectDeleteResponse> {
   const params = confirm ? "?confirm=true" : "";
-  return apiFetch<DeleteResponse>(`/api/projects/${id}${params}`, {
+  return apiFetch<ProjectDeleteResponse>(`/api/projects/${id}${params}`, {
     method: "DELETE",
   });
 }

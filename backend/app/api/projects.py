@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,6 +12,11 @@ from app.models.assignment import Assignment
 from app.models.project import Project
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.services.lifecycle_service import (
+    count_assignments,
+    delete_assignments,
+    wind_down_assignments,
+)
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -20,14 +24,11 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 @router.get("", response_model=list[ProjectResponse])
 async def list_projects(
     search: Optional[str] = Query(None),
-    include_deleted: bool = Query(False),
     project_status: Literal["active", "archived", "all"] = Query("active", alias="status"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     query = select(Project)
-    if not include_deleted:
-        query = query.where(Project.is_deleted == False)
     if project_status == "active":
         query = query.where(Project.is_archived == False)
     elif project_status == "archived":
@@ -105,42 +106,34 @@ async def delete_project(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_admin),
 ):
+    """Permanently delete a project together with every one of its assignments.
+
+    Irreversible, and it drops past, ongoing and future assignments alike.
+    Archiving is the reversible alternative: it winds the project down while
+    preserving history.
+    """
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check for active assignments
-    today = date.today()
-    active_query = select(Assignment).where(
-        Assignment.project_id == project_id,
-        Assignment.end_date >= today,
-    )
-    active_result = await db.execute(active_query)
-    active_assignments = active_result.scalars().all()
+    assignment_filter = Assignment.project_id == project_id
+    assignments_count = await count_assignments(db, assignment_filter)
 
-    if active_assignments and not confirm:
+    if assignments_count and not confirm:
         return {
-            "has_active_assignments": True,
-            "active_assignments_count": len(active_assignments),
-            "message": "Project has active assignments. Pass ?confirm=true to proceed.",
+            "has_assignments": True,
+            "assignments_count": assignments_count,
+            "message": (
+                "Project has assignments that will be permanently deleted. "
+                "Pass ?confirm=true to proceed."
+            ),
         }
 
-    # Soft delete project
-    project.is_deleted = True
-
-    # Handle assignments like employee deletion:
-    # - Future assignments: remove
-    # - Ongoing assignments: trim end date to today
-    # - Historical assignments: preserve
-    for a in active_assignments:
-        if a.start_date >= today:
-            await db.delete(a)
-        else:
-            a.end_date = today
-
+    deleted_assignments = await delete_assignments(db, assignment_filter)
+    await db.delete(project)
     await db.commit()
-    return {"deleted": True}
+    return {"deleted": True, "deleted_assignments": deleted_assignments}
 
 
 @router.post("/{project_id}/archive", response_model=ProjectResponse)
@@ -149,14 +142,20 @@ async def archive_project(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_editor),
 ):
+    """Archive a project and wind down its assignments.
+
+    Past assignments are preserved, ongoing ones are trimmed to end today, and
+    future ones are deleted. The project stays in the database and its history
+    remains visible in the employee timeline.
+    """
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if project.is_deleted:
-        raise HTTPException(status_code=400, detail="Cannot archive a deleted project")
 
     project.is_archived = True
+    await wind_down_assignments(db, Assignment.project_id == project_id)
+
     await db.commit()
     await db.refresh(project)
     return project
@@ -168,13 +167,15 @@ async def unarchive_project(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_editor),
 ):
+    """Re-enable an archived project for new assignments.
+
+    Does not restore assignments that archiving trimmed or deleted — archiving
+    is a wind-down, not a freeze.
+    """
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    if project.is_deleted:
-        raise HTTPException(status_code=400, detail="Cannot unarchive a deleted project")
 
     project.is_archived = False
     await db.commit()

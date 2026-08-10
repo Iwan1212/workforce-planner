@@ -2,7 +2,6 @@ export interface Project {
   id: number;
   name: string;
   color: string;
-  is_deleted: boolean;
   is_archived: boolean;
   created_at: string;
 }
