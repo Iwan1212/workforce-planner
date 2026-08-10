@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func as sa_func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_admin, require_editor
@@ -12,6 +12,11 @@ from app.models.assignment import Assignment
 from app.models.employee import Employee, Team, Technology
 from app.models.user import User
 from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
+from app.services.lifecycle_service import (
+    count_assignments,
+    delete_assignments,
+    wind_down_assignments,
+)
 from app.utils.query_params import parse_id_csv
 
 router = APIRouter(prefix="/api/employees", tags=["employees"])
@@ -38,6 +43,47 @@ async def _resolve_technologies(
     return list(techs)
 
 
+async def _ensure_email_available(
+    db: AsyncSession, email: Optional[str], exclude_id: Optional[int] = None
+) -> None:
+    """Reject an email already used by another employee, with 409 rather than 500.
+
+    `employees.email` is unique in the database, so without this check a
+    collision surfaces as an unhandled IntegrityError. Archived employees keep
+    their address reserved, since the constraint does not care about state.
+    """
+    if not email:
+        return
+    query = select(Employee).where(sa_func.lower(Employee.email) == email.lower())
+    if exclude_id is not None:
+        query = query.where(Employee.id != exclude_id)
+    result = await db.execute(query)
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Pracownik z tym adresem email już istnieje",
+        )
+
+
+async def _commit_handling_email_conflict(db: AsyncSession) -> None:
+    """Commit, translating a concurrent email-uniqueness violation into 409.
+
+    _ensure_email_available checks first, but two parallel requests can both
+    pass that SELECT; the unique constraint is the last line of defense and
+    would otherwise surface as a 500 with the session left in a broken state.
+    """
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if "email" in str(exc.orig).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Pracownik z tym adresem email już istnieje",
+            ) from exc
+        raise
+
+
 async def _validate_team_id(db: AsyncSession, team_id: Optional[int]) -> None:
     """Ensure a team_id references an existing team (None is allowed)."""
     if team_id is None:
@@ -52,13 +98,18 @@ async def list_employees(
     team_ids: Optional[str] = Query(None),
     technology_ids: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    include_deleted: bool = Query(False),
+    employee_status: Literal["active", "archived", "all"] = Query(
+        "active", alias="status"
+    ),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     query = select(Employee)
-    if not include_deleted:
-        query = query.where(Employee.is_deleted == False)
+    if employee_status == "active":
+        query = query.where(Employee.is_archived == False)
+    elif employee_status == "archived":
+        query = query.where(Employee.is_archived == True)
+    # "all" — no filter
     if team_ids:
         ids = parse_id_csv(team_ids)
         if ids:
@@ -90,11 +141,13 @@ async def create_employee(
     await _validate_team_id(db, body.team_id)
     technologies = await _resolve_technologies(db, body.technology_ids)
 
+    # Archived employees keep their name reserved, mirroring project names and
+    # the email rule below. They are reachable under the "archived" list filter,
+    # so the conflict is diagnosable and can be resolved by unarchiving.
     existing = await db.execute(
         select(Employee).where(
             sa_func.lower(Employee.first_name) == body.first_name.lower(),
             sa_func.lower(Employee.last_name) == body.last_name.lower(),
-            Employee.is_deleted == False,
         )
     )
     if existing.scalar_one_or_none():
@@ -102,6 +155,8 @@ async def create_employee(
             status_code=status.HTTP_409_CONFLICT,
             detail="Pracownik o tym imieniu i nazwisku już istnieje",
         )
+
+    await _ensure_email_available(db, body.email)
 
     employee = Employee(
         first_name=body.first_name,
@@ -111,7 +166,7 @@ async def create_employee(
         technologies=technologies,
     )
     db.add(employee)
-    await db.commit()
+    await _commit_handling_email_conflict(db)
     await db.refresh(employee)
     return employee
 
@@ -138,9 +193,10 @@ async def update_employee(
     if body.technology_ids is not None:
         employee.technologies = await _resolve_technologies(db, body.technology_ids)
     if body.email is not None:
+        await _ensure_email_available(db, body.email, exclude_id=employee_id)
         employee.email = body.email if body.email else None
 
-    await db.commit()
+    await _commit_handling_email_conflict(db)
     await db.refresh(employee)
     return employee
 
@@ -152,46 +208,78 @@ async def delete_employee(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_admin),
 ):
+    """Permanently delete an employee together with every one of their assignments.
+
+    Irreversible, and it drops past, ongoing and future assignments alike.
+    Archiving is the reversible alternative: it winds the employee down while
+    preserving history.
+    """
     result = await db.execute(select(Employee).where(Employee.id == employee_id))
     employee = result.scalar_one_or_none()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Check for active assignments (end_date >= today)
-    today = date.today()
-    active_query = select(Assignment).where(
-        Assignment.employee_id == employee_id,
-        Assignment.end_date >= today,
-    )
-    active_result = await db.execute(active_query)
-    active_assignments = active_result.scalars().all()
+    assignment_filter = Assignment.employee_id == employee_id
+    assignments_count = await count_assignments(db, assignment_filter)
 
-    if active_assignments and not confirm:
+    if assignments_count and not confirm:
         return {
-            "has_active_assignments": True,
-            "active_assignments_count": len(active_assignments),
-            "active_assignments": [
-                {
-                    "id": a.id,
-                    "project_id": a.project_id,
-                    "start_date": a.start_date.isoformat(),
-                    "end_date": a.end_date.isoformat(),
-                }
-                for a in active_assignments
-            ],
-            "message": "Employee has active assignments. Pass ?confirm=true to proceed.",
+            "has_assignments": True,
+            "assignments_count": assignments_count,
+            "message": (
+                "Employee has assignments that will be permanently deleted. "
+                "Pass ?confirm=true to proceed."
+            ),
         }
 
-    # Soft delete employee
-    employee.is_deleted = True
+    deleted_assignments = await delete_assignments(db, assignment_filter)
+    await db.delete(employee)
+    await db.commit()
+    return {"deleted": True, "deleted_assignments": deleted_assignments}
 
-    # Delete future assignments
-    for a in active_assignments:
-        if a.start_date >= today:
-            await db.delete(a)
-        else:
-            # Trim ongoing assignment to today
-            a.end_date = today
+
+@router.post("/{employee_id}/archive", response_model=EmployeeResponse)
+async def archive_employee(
+    employee_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Archive an employee and wind down their assignments.
+
+    Past assignments are preserved, ongoing ones are trimmed to end today, and
+    future ones are deleted. The employee stays in the database and their
+    history remains visible in the project timeline.
+    """
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    employee.is_archived = True
+    await wind_down_assignments(db, Assignment.employee_id == employee_id)
 
     await db.commit()
-    return {"deleted": True}
+    await db.refresh(employee)
+    return employee
+
+
+@router.post("/{employee_id}/unarchive", response_model=EmployeeResponse)
+async def unarchive_employee(
+    employee_id: int,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_editor),
+):
+    """Re-enable an archived employee for new assignments.
+
+    Does not restore assignments that archiving trimmed or deleted — archiving
+    is a wind-down, not a freeze.
+    """
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    employee.is_archived = False
+    await db.commit()
+    await db.refresh(employee)
+    return employee

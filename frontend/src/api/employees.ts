@@ -6,14 +6,15 @@ export function fetchEmployees(
   teamIds?: number[],
   technologyIds?: number[],
   search?: string,
+  status: "active" | "archived" | "all" = "active",
 ): Promise<Employee[]> {
   const params = new URLSearchParams();
   if (teamIds && teamIds.length > 0) params.set("team_ids", teamIds.join(","));
   if (technologyIds && technologyIds.length > 0)
     params.set("technology_ids", technologyIds.join(","));
   if (search) params.set("search", search);
-  const qs = params.toString();
-  return apiFetch<Employee[]>(`/api/employees${qs ? `?${qs}` : ""}`);
+  params.set("status", status);
+  return apiFetch<Employee[]>(`/api/employees?${params.toString()}`);
 }
 
 export function createEmployee(data: EmployeeCreateData): Promise<Employee> {
@@ -40,6 +41,16 @@ export function deleteEmployee(
   const params = confirm ? "?confirm=true" : "";
   return apiFetch<DeleteResponse>(`/api/employees/${id}${params}`, {
     method: "DELETE",
+  });
+}
+
+export function archiveEmployee(id: number): Promise<Employee> {
+  return apiFetch<Employee>(`/api/employees/${id}/archive`, { method: "POST" });
+}
+
+export function unarchiveEmployee(id: number): Promise<Employee> {
+  return apiFetch<Employee>(`/api/employees/${id}/unarchive`, {
+    method: "POST",
   });
 }
 

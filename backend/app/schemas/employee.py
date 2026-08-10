@@ -46,7 +46,7 @@ class EmployeeResponse(BaseModel):
     team: Optional[TeamResponse] = None
     technologies: list[TechnologyResponse] = []
     email: Optional[str] = None
-    is_deleted: bool
+    is_archived: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -62,11 +62,12 @@ async def sync_vacations(db: AsyncSession, start_date: date, end_date: date) -> 
         logger.debug("Calamari not configured, skipping sync")
         return 0
 
-    # Get all employees with email set
+    # Get all employees with email set. Archived employees are wound down, so
+    # there is no point pulling fresh vacations for them.
     emp_result = await db.execute(
         select(Employee.id, Employee.email).where(
             Employee.email.isnot(None),
-            Employee.is_deleted == False,
+            Employee.is_archived == False,
         )
     )
     email_to_id: dict[str, int] = {}

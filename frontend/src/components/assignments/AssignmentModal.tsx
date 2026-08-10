@@ -39,9 +39,9 @@ export function AssignmentModal({
   const [isTentative, setIsTentative] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => fetchEmployees(),
+  const { data: activeEmployees = [], status: activeEmployeesStatus } = useQuery({
+    queryKey: ["employees", "active"],
+    queryFn: () => fetchEmployees(undefined, undefined, undefined, "active"),
     enabled: open,
   });
 
@@ -68,6 +68,32 @@ export function AssignmentModal({
         ...archivedProjects.filter((p) => p.id === currentProjectId),
       ]
     : allProjects;
+
+  // Same treatment for the assigned employee: archived people are not offered
+  // for new work, but the one already on this assignment has to stay visible,
+  // otherwise editing it from the project timeline shows an empty field.
+  const currentEmployeeId = isEditing ? (defaultEmployeeId ?? null) : null;
+  const isCurrentEmployeeActive = activeEmployees.some(
+    (e) => e.id === currentEmployeeId,
+  );
+
+  const { data: archivedEmployees = [] } = useQuery({
+    queryKey: ["employees", "archived"],
+    queryFn: () => fetchEmployees(undefined, undefined, undefined, "archived"),
+    enabled:
+      open &&
+      isEditing &&
+      currentEmployeeId !== null &&
+      activeEmployeesStatus === "success" &&
+      !isCurrentEmployeeActive,
+  });
+
+  const employees = isEditing
+    ? [
+        ...activeEmployees,
+        ...archivedEmployees.filter((e) => e.id === currentEmployeeId),
+      ]
+    : activeEmployees;
 
   useEffect(() => {
     if (!open) return;

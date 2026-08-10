@@ -71,7 +71,9 @@ async def get_timeline(
 ):
     """Return timeline data as per CLAUDE.md contract."""
     # Build employee query
-    emp_query = select(Employee).where(Employee.is_deleted == False)
+    # Archived employees leave this view; their assignments stay visible in the
+    # project timeline, which is what preserves the projects' history.
+    emp_query = select(Employee).where(Employee.is_archived == False)
     if team_ids:
         ids = parse_id_csv(team_ids)
         if ids:

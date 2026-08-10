@@ -92,15 +92,20 @@ async def create_assignment(
             status_code=400, detail="Assignment must contain at least 1 working day"
         )
 
-    # Validate employee exists (skipped for placeholder assignments, employee_id is None)
+    # Validate employee exists and is not archived
+    # (skipped for placeholder assignments, employee_id is None)
     if body.employee_id is not None:
         emp = await db.execute(
-            select(Employee).where(
-                Employee.id == body.employee_id, Employee.is_deleted == False
-            )
+            select(Employee).where(Employee.id == body.employee_id)
         )
-        if not emp.scalar_one_or_none():
+        employee = emp.scalar_one_or_none()
+        if not employee:
             raise HTTPException(status_code=404, detail="Employee not found")
+        if employee.is_archived:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Nie można przypisać zarchiwizowanego pracownika",
+            )
 
     # Validate project exists and is not archived
     proj = await db.execute(select(Project).where(Project.id == body.project_id))
@@ -147,12 +152,16 @@ async def update_assignment(
             assignment.employee_id = None
         else:
             emp = await db.execute(
-                select(Employee).where(
-                    Employee.id == body.employee_id, Employee.is_deleted == False
-                )
+                select(Employee).where(Employee.id == body.employee_id)
             )
-            if not emp.scalar_one_or_none():
+            employee = emp.scalar_one_or_none()
+            if not employee:
                 raise HTTPException(status_code=404, detail="Employee not found")
+            if employee.is_archived:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Nie można przypisać zarchiwizowanego pracownika",
+                )
             assignment.employee_id = body.employee_id
 
     if body.project_id is not None:
@@ -261,16 +270,20 @@ async def duplicate_assignment(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     # Duplicating creates a new assignment, so it is subject to the same guards
-    # as create: the employee must not be deleted and the project not archived.
+    # as create: neither the employee nor the project may be archived.
     # (placeholder assignments have no employee, so skip the employee check)
     if assignment.employee_id is not None:
         emp = await db.execute(
-            select(Employee).where(
-                Employee.id == assignment.employee_id, Employee.is_deleted == False
-            )
+            select(Employee).where(Employee.id == assignment.employee_id)
         )
-        if not emp.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Cannot duplicate: employee has been deleted")
+        employee = emp.scalar_one_or_none()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        if employee.is_archived:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Nie można przypisać zarchiwizowanego pracownika",
+            )
 
     proj = await db.execute(
         select(Project).where(Project.id == assignment.project_id)
