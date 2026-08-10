@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
-/** Gap kept between the panel and the viewport edge, matching collisionPadding. */
+/** Gap kept between the panel and the viewport edge when picking which side
+ * to open on (slightly larger than Radix's collisionPadding of 8). */
 const EDGE_PADDING = 12;
 
 /**

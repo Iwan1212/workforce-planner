@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { usePopoverPanel } from "@/hooks/usePopoverPanel";
+import { normalizeForSearch } from "@/lib/normalizeForSearch";
 import { cn } from "@/lib/utils";
 
 /** Row height in px; rows are single-line, so the list height is predictable. */
@@ -67,8 +68,10 @@ export function MultiSelectField({
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options;
+    const q = normalizeForSearch(search.trim());
+    return q
+      ? options.filter((o) => normalizeForSearch(o.name).includes(q))
+      : options;
   }, [options, search]);
 
   const toggle = (id: number) =>

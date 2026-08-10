@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { usePopoverPanel } from "@/hooks/usePopoverPanel";
+import { normalizeForSearch } from "@/lib/normalizeForSearch";
 import { cn } from "@/lib/utils";
 
 /** Row height in px; rows are single-line, so the list height is predictable. */
@@ -80,9 +81,9 @@ export function SearchableSelect({
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeForSearch(search.trim());
     return q
-      ? options.filter((o) => o.label.toLowerCase().includes(q))
+      ? options.filter((o) => normalizeForSearch(o.label).includes(q))
       : options;
   }, [options, search]);
 
@@ -197,7 +198,7 @@ export function SearchableSelect({
               <button
                 key={option.value}
                 type="button"
-                data-highlighted={index === highlight}
+                data-highlighted={index === activeIndex}
                 onMouseEnter={() => setHighlight(index)}
                 onClick={() => select(option.value)}
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm data-[highlighted=true]:bg-accent data-[highlighted=true]:text-accent-foreground"
