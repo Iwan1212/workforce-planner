@@ -1,5 +1,11 @@
 import { apiFetch } from "./client";
-import type { Employee, EmployeeCreateData, ImportResult } from "@/types/employee";
+import type {
+  CapacityInput,
+  Employee,
+  EmployeeCapacity,
+  EmployeeCreateData,
+  ImportResult,
+} from "@/types/employee";
 import type { DeleteResponse } from "@/types/common";
 
 export function fetchEmployees(
@@ -52,6 +58,46 @@ export function unarchiveEmployee(id: number): Promise<Employee> {
   return apiFetch<Employee>(`/api/employees/${id}/unarchive`, {
     method: "POST",
   });
+}
+
+// Capacity periods are a sub-resource: every call returns the employee's full
+// list afterwards, so the caller never has to merge changes by hand.
+
+export function fetchCapacities(
+  employeeId: number,
+): Promise<EmployeeCapacity[]> {
+  return apiFetch<EmployeeCapacity[]>(`/api/employees/${employeeId}/capacities`);
+}
+
+export function createCapacity(
+  employeeId: number,
+  data: CapacityInput,
+): Promise<EmployeeCapacity[]> {
+  return apiFetch<EmployeeCapacity[]>(
+    `/api/employees/${employeeId}/capacities`,
+    { method: "POST", body: JSON.stringify(data) },
+  );
+}
+
+export function updateCapacity(
+  employeeId: number,
+  capacityId: number,
+  data: CapacityInput,
+): Promise<EmployeeCapacity[]> {
+  return apiFetch<EmployeeCapacity[]>(
+    `/api/employees/${employeeId}/capacities/${capacityId}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
+}
+
+export function deleteCapacity(
+  employeeId: number,
+  capacityId: number,
+): Promise<EmployeeCapacity[]> {
+  return apiFetch<EmployeeCapacity[]>(
+    `/api/employees/${employeeId}/capacities/${capacityId}`,
+    { method: "DELETE" },
+  );
 }
 
 export function importEmployeesCsv(file: File): Promise<ImportResult> {

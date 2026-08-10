@@ -9,6 +9,7 @@ import { useTechnologies } from "@/hooks/useTechnologies";
 import {
   Archive,
   ArchiveRestore,
+  CalendarClock,
   Pencil,
   Plus,
   Trash2,
@@ -35,8 +36,10 @@ import {
   unarchiveEmployee,
   updateEmployee,
 } from "@/api/employees";
+import { formatCapacity } from "@/lib/capacity";
 import type { Employee, EmployeeCreateData } from "@/types/employee";
 import { EmployeeForm } from "./EmployeeForm";
+import { CapacityDialog } from "./CapacityDialog";
 
 type StatusFilter = "active" | "archived" | "all";
 
@@ -54,6 +57,24 @@ const EMPLOYEE_COLUMNS: DataTableColumn<Employee>[] = [
         )}
       </span>
     ),
+  },
+  {
+    id: "capacity",
+    header: "Etat",
+    // Fixed width: the cell holds anything from an em dash to "Niezatrudniony",
+    // and letting it size itself makes the neighbouring columns shift per row.
+    className: "w-36",
+    // Full time is the norm, so only the exceptions are worth a badge.
+    cell: (emp) =>
+      !emp.current_capacity ? (
+        <Badge variant="outline" className="text-muted-foreground">
+          Niezatrudniony
+        </Badge>
+      ) : emp.current_capacity.is_full_time ? (
+        <span className="text-muted-foreground">—</span>
+      ) : (
+        <Badge>{formatCapacity(emp.current_capacity)}</Badge>
+      ),
   },
   {
     id: "email",
@@ -94,6 +115,7 @@ export function EmployeeList() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [archiveTarget, setArchiveTarget] = useState<Employee | null>(null);
+  const [capacityTarget, setCapacityTarget] = useState<Employee | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
   const [selectedTechnologyIds, setSelectedTechnologyIds] = useState<number[]>(
     [],
@@ -312,6 +334,15 @@ export function EmployeeList() {
             >
               <Pencil className="h-4 w-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCapacityTarget(emp)}
+              aria-label={`Wymiar etatu: ${emp.last_name} ${emp.first_name}`}
+              title="Wymiar etatu"
+            >
+              <CalendarClock className="h-4 w-4" />
+            </Button>
             {emp.is_archived ? (
               <Button
                 variant="ghost"
@@ -355,6 +386,12 @@ export function EmployeeList() {
         isSubmitting={
           crud.createMutation.isPending || crud.updateMutation.isPending
         }
+      />
+
+      <CapacityDialog
+        open={capacityTarget !== null}
+        onClose={() => setCapacityTarget(null)}
+        employee={capacityTarget}
       />
 
       <ConfirmDialog

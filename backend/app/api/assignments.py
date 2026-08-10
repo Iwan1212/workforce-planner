@@ -100,7 +100,7 @@ async def create_assignment(
         )
         employee = emp.scalar_one_or_none()
         if not employee:
-            raise HTTPException(status_code=404, detail="Employee not found")
+            raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
         if employee.is_archived:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -111,7 +111,7 @@ async def create_assignment(
     proj = await db.execute(select(Project).where(Project.id == body.project_id))
     project = proj.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
     if project.is_archived:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -144,7 +144,7 @@ async def update_assignment(
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono assignmentu")
 
     if "employee_id" in body.model_fields_set:
         if body.employee_id is None:
@@ -156,7 +156,7 @@ async def update_assignment(
             )
             employee = emp.scalar_one_or_none()
             if not employee:
-                raise HTTPException(status_code=404, detail="Employee not found")
+                raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
             if employee.is_archived:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -168,7 +168,7 @@ async def update_assignment(
         proj = await db.execute(select(Project).where(Project.id == body.project_id))
         project = proj.scalar_one_or_none()
         if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
         if project.is_archived:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -216,7 +216,7 @@ async def split_assignment(
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono assignmentu")
 
     if split_date <= assignment.start_date or split_date > assignment.end_date:
         raise HTTPException(
@@ -267,7 +267,7 @@ async def duplicate_assignment(
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono assignmentu")
 
     # Duplicating creates a new assignment, so it is subject to the same guards
     # as create: neither the employee nor the project may be archived.
@@ -278,7 +278,7 @@ async def duplicate_assignment(
         )
         employee = emp.scalar_one_or_none()
         if not employee:
-            raise HTTPException(status_code=404, detail="Employee not found")
+            raise HTTPException(status_code=404, detail="Nie znaleziono pracownika")
         if employee.is_archived:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -290,7 +290,7 @@ async def duplicate_assignment(
     )
     project = proj.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono projektu")
     if project.is_archived:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -322,7 +322,7 @@ async def delete_assignment(
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono assignmentu")
 
     await db.delete(assignment)
     await db.commit()

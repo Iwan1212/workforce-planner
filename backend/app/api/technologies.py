@@ -62,7 +62,7 @@ async def update_technology(
     )
     technology = result.scalar_one_or_none()
     if not technology:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono technologii")
 
     existing = await db.execute(
         select(Technology).where(
@@ -93,7 +93,7 @@ async def delete_technology(
     )
     technology = result.scalar_one_or_none()
     if not technology:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail="Nie znaleziono technologii")
 
     # Hard delete: removing the row cascades to employee_technologies
     # (ON DELETE CASCADE), so the tag disappears from every employee.

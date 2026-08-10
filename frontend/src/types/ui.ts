@@ -42,6 +42,8 @@ export interface DataTableColumn<T> {
   id: string;
   header: string;
   align?: "left" | "right";
+  /** Applied to both the header and body cells, e.g. a fixed width. */
+  className?: string;
   cell: (row: T) => ReactNode;
 }
 

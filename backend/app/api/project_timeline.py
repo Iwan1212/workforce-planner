@@ -13,6 +13,7 @@ from app.models.employee import Employee
 from app.models.project import Project
 from app.models.user import User
 from app.services.assignment_service import calculate_daily_hours
+from app.services.capacity_service import assignment_base_daily_hours
 from app.utils.polish_holidays import get_holiday_name, get_polish_holidays
 from app.utils.working_days import get_working_days_in_month
 
@@ -88,6 +89,10 @@ async def get_project_timeline(
         assignment_list = []
         for a in assignments_by_project[proj.id]:
             first_month_date = max(a.start_date, start_date)
+            emp = a.employee
+            # A percentage is a share of the assignee's own time, so the same
+            # 50% is fewer hours for a part-timer. Placeholders have no
+            # assignee and fall back to the full-time norm.
             daily = calculate_daily_hours(
                 a.allocation_type.value,
                 a.allocation_value,
@@ -95,8 +100,10 @@ async def get_project_timeline(
                 first_month_date.month,
                 start_date=a.start_date,
                 end_date=a.end_date,
+                base_daily_hours=assignment_base_daily_hours(
+                    emp.capacities if emp else None, first_month_date
+                ),
             )
-            emp = a.employee
             assignment_list.append(
                 {
                     "id": a.id,

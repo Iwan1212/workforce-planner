@@ -1,12 +1,66 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.schemas.team import TeamResponse
 from app.schemas.technology import TechnologyResponse
+
+CapacityTypeLiteral = Literal["percentage", "monthly_hours"]
+
+
+class CapacityBase(BaseModel):
+    valid_from: date
+    capacity_type: CapacityTypeLiteral
+    capacity_value: float
+
+    @field_validator("capacity_type", mode="before")
+    @classmethod
+    def enum_to_value(cls, v: object) -> object:
+        """Accept the SQLAlchemy enum as well as its wire value."""
+        return v.value if hasattr(v, "value") else v
+
+    @field_validator("capacity_value")
+    @classmethod
+    def value_must_be_positive(cls, v: float) -> float:
+        """Zero capacity is expressed by the absence of an entry, not by 0.
+
+        Leaving a stretch of time uncovered is what marks somebody as not
+        employed yet; an entry worth nothing would be a second way to say the
+        same thing, and one that silently swallows any work booked against it.
+        """
+        if v <= 0:
+            raise ValueError("must be greater than 0")
+        return round(v, 2)
+
+    @model_validator(mode="after")
+    def value_within_type_bounds(self) -> "CapacityBase":
+        """Catch order-of-magnitude typos: capacity scales the occupancy
+        denominator for every assignment the person has, so a stray zero
+        distorts the whole timeline, not one entry."""
+        if self.capacity_type == "percentage" and self.capacity_value > 100:
+            raise ValueError("percentage capacity cannot exceed 100")
+        if self.capacity_type == "monthly_hours" and self.capacity_value > 744:
+            raise ValueError("monthly hours cannot exceed 744")
+        return self
+
+
+class CapacityCreate(CapacityBase):
+    pass
+
+
+class CapacityUpdate(CapacityBase):
+    pass
+
+
+class CapacityResponse(CapacityBase):
+    id: int
+    is_full_time: bool
+
+    model_config = {"from_attributes": True}
 
 
 class EmployeeCreate(BaseModel):
@@ -48,5 +102,9 @@ class EmployeeResponse(BaseModel):
     email: Optional[str] = None
     is_archived: bool
     created_at: datetime
+    capacities: list[CapacityResponse] = []
+    # None means no contract covers today, i.e. the employee has not started yet
+    # (or their entries end before today).
+    current_capacity: Optional[CapacityResponse] = None
 
     model_config = {"from_attributes": True}

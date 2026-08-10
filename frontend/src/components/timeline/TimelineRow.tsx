@@ -13,6 +13,7 @@ import {
   getUtilColor,
   TIMELINE_LEFT_PANEL_WIDTH,
 } from "@/lib/constants";
+import { formatCapacity } from "@/lib/capacity";
 import {
   getDateFromMonthlyPixelPosition,
   computeBarPositionMonthly,
@@ -28,6 +29,7 @@ export function TimelineRow({
   employeeId,
   name,
   team,
+  capacity,
   assignments,
   vacations = [],
   occupancy,
@@ -192,11 +194,23 @@ export function TimelineRow({
         >
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{name}</div>
-            {team && (
-              <Badge variant="secondary" className="mt-0.5 text-[10px]">
-                {team}
-              </Badge>
-            )}
+            <div className="mt-0.5 flex flex-wrap items-center gap-1">
+              {team && (
+                <Badge variant="secondary" className="text-[10px]">
+                  {team}
+                </Badge>
+              )}
+              {/* Only for part-timers: the percentages in this row are shares
+                  of their shorter day, which is worth saying out loud. */}
+              {capacity && !capacity.is_full_time && (
+                <Badge
+                  className="text-[10px]"
+                  title="Wymiar etatu. Obłożenie liczy się względem tej wartości."
+                >
+                  {formatCapacity(capacity)}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       )}

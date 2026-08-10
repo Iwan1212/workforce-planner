@@ -32,6 +32,10 @@ PATCH  /api/employees/{id}                  # Update employee (200)
 POST   /api/employees/{id}/archive          # Archive + wind down assignments (200, see below)
 POST   /api/employees/{id}/unarchive        # Re-enable for new assignments (200)
 DELETE /api/employees/{id}                  # Permanent delete with all assignments (200, see below)
+GET    /api/employees/{id}/capacities       # List contracted capacity periods, oldest first
+POST   /api/employees/{id}/capacities       # Add a period (201); 409 if one already starts that day
+PATCH  /api/employees/{id}/capacities/{cid} # Edit a period, start date included
+DELETE /api/employees/{id}/capacities/{cid} # Remove a period; 409 on the last remaining one
 ```
 
 An employee is either **active**, **archived**, or gone. There is no soft-deleted state. The lifecycle mirrors projects exactly; see the Projects section for the wind-down table, which is shared logic.
@@ -41,6 +45,8 @@ An employee is either **active**, **archived**, or gone. There is no soft-delete
 The visibility is deliberately the mirror image of projects: an archived **project** leaves the project timeline and stays in the employee one; an archived **employee** leaves the employee timeline and stays in the project one.
 
 **Unarchive** re-enables the employee for new assignments without restoring what the wind-down removed.
+
+**Capacity periods** carry a start date only; each stays in force until the next one begins, and every mutation returns the employee's full list afterwards. Time before the earliest period is uncovered and means zero availability, which is how an employment start is recorded. See [Data Models](data-models.md) for how capacity feeds occupancy. `EmployeeResponse` also carries `capacities` (the full list) and `current_capacity` (in force today, null when uncovered).
 
 **Delete** is permanent: the employee row and **all** of their assignments. Two-step confirmation — without `?confirm=true`, an employee with any assignments returns:
 
@@ -191,6 +197,16 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
           "available_hours": 152,
           "is_overbooked": true
         }
+      },
+      "capacity_periods": [
+        { "from": "2026-01-01", "daily_hours": 8.0 }
+      ],
+      "capacity": {
+        "id": 3,
+        "valid_from": "1900-01-01",
+        "capacity_type": "percentage",
+        "capacity_value": 100,
+        "is_full_time": true
       }
     }
   ],
@@ -237,6 +253,8 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `assignments` | array | Assignments within requested date range |
 | `vacations` | array | Vacations within requested date range |
 | `occupancy` | object | Per-period occupancy keyed by "YYYY-MM" (monthly) or "w-YYYY-WW" (weekly) |
+| `capacity_periods` | array | Contracted hours per working day across the requested range, run-length encoded: `{from, daily_hours}` entries, each in force until the next one. A full-timer collapses to a single entry; `daily_hours: 0` marks time outside employment |
+| `capacity` | object\|null | Capacity in force **today**, for badging. Null when no period covers today |
 
 **Placeholders:**
 
@@ -256,16 +274,16 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 | `allocation_value` | decimal | The raw allocation value |
 | `note` | string\|null | Optional note |
 | `is_tentative` | bool | Whether assignment is tentative |
-| `daily_hours` | float | Computed daily hours |
+| `daily_hours` | float | Computed daily hours. For `percentage`, a share of the **assignee's** contracted day, so the same 50% is fewer hours for a part-timer; placeholders use the full-time norm |
 
 **Occupancy object (per period — month or week):**
 
 | Field | Type | Description |
 |---|---|---|
-| `percentage` | float | Allocated hours / net available hours x 100 |
+| `percentage` | float | Allocated hours / net available hours x 100. Always 0 when `available_hours` is 0 |
 | `hours` | float | Total allocated hours in the period |
-| `available_hours` | float | Net available hours: (working days − vacation days) x 8h |
-| `is_overbooked` | bool | True if percentage > 100 |
+| `available_hours` | float | Net available hours: the employee's contracted hours summed over working days minus vacation days. 8h/day for full-timers, less for part-timers, 0 outside employment |
+| `is_overbooked` | bool | True if percentage > 100, **or** if hours are booked against zero availability (work planned before someone joins) |
 
 **Vacation sync status:**
 

@@ -4,6 +4,7 @@ import type {
   PeriodOccupancy,
   VacationInfo,
 } from "./assignment";
+import type { EmployeeCapacity } from "./employee";
 
 export type ViewMode = "monthly" | "weekly";
 
@@ -82,6 +83,8 @@ export interface TimelineRowProps {
   employeeId: number;
   name: string;
   team: string | null;
+  /** Capacity in force today; drives the part-time badge in the left panel. */
+  capacity?: EmployeeCapacity | null;
   assignments: TimelineAssignment[];
   vacations?: VacationInfo[];
   occupancy: Record<string, PeriodOccupancy>;

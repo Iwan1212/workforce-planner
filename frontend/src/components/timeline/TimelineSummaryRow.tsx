@@ -9,6 +9,7 @@ import {
 } from "date-fns";
 import type { TimelineSummaryRowProps, DaySummary } from "@/types/timeline";
 import { getUtilColor } from "@/lib/constants";
+import { dailyCapacityHours } from "@/lib/capacity";
 import { MONTH_WIDTH, DAY_WIDTH } from "./TimelineHeader";
 
 export function TimelineSummaryRow({
@@ -31,9 +32,13 @@ export function TimelineSummaryRow({
 
       let totalHours = 0;
       let activeEmployees = 0;
+      // Availability is the sum of contracted days, not one flat day each:
+      // part-timers bring less, and people who have not started bring nothing.
+      let availableHours = 0;
 
       for (const emp of employees) {
         activeEmployees++;
+        availableHours += dailyCapacityHours(emp.capacity_periods, day.key);
         for (const a of emp.assignments) {
           const aStart = parseISO(a.start_date);
           const aEnd = parseISO(a.end_date);
@@ -43,7 +48,6 @@ export function TimelineSummaryRow({
         }
       }
 
-      const availableHours = activeEmployees * 8;
       const ftePct =
         availableHours > 0
           ? Math.round((totalHours / availableHours) * 100)
@@ -70,15 +74,18 @@ export function TimelineSummaryRow({
       const days = eachDayOfInterval({ start: mStart, end: mEnd });
 
       let totalHours = 0;
-      let workingDayCount = 0;
+      // Summed per employee per day rather than headcount * days * 8, so
+      // part-timers and people who have not started contribute what they
+      // really can. The gap between the two is the unallocated capacity.
+      let availableHours = 0;
 
       for (const day of days) {
         const dayKey = format(day, "yyyy-MM-dd");
         const dow = day.getDay();
         if (dow === 0 || dow === 6 || holidayMap[dayKey]) continue;
-        workingDayCount++;
 
         for (const emp of employees) {
+          availableHours += dailyCapacityHours(emp.capacity_periods, dayKey);
           for (const a of emp.assignments) {
             const aStart = parseISO(a.start_date);
             const aEnd = parseISO(a.end_date);
@@ -89,7 +96,6 @@ export function TimelineSummaryRow({
         }
       }
 
-      const availableHours = employees.length * workingDayCount * 8;
       const ftePct =
         availableHours > 0
           ? Math.round((totalHours / availableHours) * 100)
