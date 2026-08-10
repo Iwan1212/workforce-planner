@@ -431,6 +431,9 @@ export function Timeline({ onNavigate }: TimelineProps = {}) {
   const handleNewAssignment = () => {
     setEditingAssignment(null);
     setDefaultEmployeeId(null);
+    // No placeholder intent here: reset it so a prior click in the placeholder
+    // row does not leak "Nieprzypisane" into a plain new assignment.
+    setDefaultUnassigned(false);
     setDefaultStartDate(null);
     setModalOpen(true);
   };
