@@ -66,8 +66,10 @@ function calcOccupancyInRange(
   const rangeEnd = dateTo ? parseISO(dateTo) : visibleEnd;
 
   let totalHours = 0;
-  // Measured against what the person is contracted for, so a part-timer with a
-  // full plate reads as 100% and survives a "busier than 80%" filter.
+  // Measured against what the person is contracted for and actually present
+  // for, so a part-timer with a full plate reads as 100% and survives a
+  // "busier than 80%" filter. Must stay in step with
+  // backend/app/services/occupancy_service.py, whose figure the badges show.
   let availableHours = 0;
 
   let current = rangeStart;
@@ -75,21 +77,26 @@ function calcOccupancyInRange(
     const dow = getDay(current); // 0=Sun, 6=Sat
     const dateKey = format(current, "yyyy-MM-dd");
     if (dow !== 0 && dow !== 6 && !holidayMap[dateKey]) {
-      availableHours += dailyCapacityHours(capacityPeriods, dateKey);
-
       const isOnVacation = vacations.some((v) => {
         const vStart = parseISO(v.start_date);
         const vEnd = parseISO(v.end_date);
         return current >= vStart && current <= vEnd;
       });
 
+      // Vacation leaves the denominator, exactly as in the backend engine, so
+      // the filter agrees with the occupancy badge it filters on.
       if (!isOnVacation) {
-        for (const a of assignments) {
-          const aStart = parseISO(a.start_date);
-          const aEnd = parseISO(a.end_date);
-          if (current >= aStart && current <= aEnd) {
-            totalHours += a.daily_hours;
-          }
+        availableHours += dailyCapacityHours(capacityPeriods, dateKey);
+      }
+
+      for (const a of assignments) {
+        // A percentage is a share of the person's time, so vacation cancels
+        // it; an hours commitment is absolute and survives the vacation.
+        if (isOnVacation && a.allocation_type === "percentage") continue;
+        const aStart = parseISO(a.start_date);
+        const aEnd = parseISO(a.end_date);
+        if (current >= aStart && current <= aEnd) {
+          totalHours += a.daily_hours;
         }
       }
     }
