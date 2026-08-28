@@ -29,6 +29,18 @@ function formatNumber(value: number): string {
 }
 
 /**
+ * An hours figure for display, e.g. "176h" or "-12,5h".
+ *
+ * Rounded to whole hours: aggregate figures run into the thousands, where a
+ * fraction of an hour is noise, and the decimal only survives for the small
+ * figures where it still carries meaning.
+ */
+export function formatHours(value: number): string {
+  const rounded = Math.abs(value) >= 100 ? Math.round(value) : value;
+  return `${formatNumber(rounded).replace(".", ",")}h`;
+}
+
+/**
  * Contracted hours on a given day, from the run-length encoded periods the
  * timeline endpoint returns.
  *

@@ -8,17 +8,30 @@ import { Timeline } from "@/components/timeline/Timeline";
 import { UserManagement } from "@/components/users/UserManagement";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { ProjectTimeline } from "@/components/project-timeline/ProjectTimeline";
+import { Dashboard } from "@/components/dashboard/Dashboard";
+
+const LANDING_PATH = "/dashboard";
+
+/** "/" is an alias for the landing page, never a page of its own. */
+function normalizePath(pathname: string): string {
+  return pathname === "/" ? LANDING_PATH : pathname;
+}
 
 function App() {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
-  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(
+    // The app root has to render something, but no page should be "the one
+    // without a path": "/" is rewritten to the landing page's own address.
+    () => normalizePath(window.location.pathname),
+  );
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () =>
+      setCurrentPath(normalizePath(window.location.pathname));
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -34,8 +47,16 @@ function App() {
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
-    setCurrentPath(path);
+    setCurrentPath(normalizePath(path));
   };
+
+  // Rewrite the bare root without leaving a history entry, so Back still
+  // returns to wherever the user came from.
+  useEffect(() => {
+    if (window.location.pathname === "/") {
+      window.history.replaceState({}, "", LANDING_PATH);
+    }
+  }, [currentPath]);
 
   if (isLoading) {
     return (
@@ -59,13 +80,14 @@ function App() {
   };
 
   if (currentPath in ROUTE_ACCESS && !ROUTE_ACCESS[currentPath]) {
-    navigate("/");
+    navigate(LANDING_PATH);
     return null;
   }
 
   return (
     <Layout currentPath={currentPath} onNavigate={navigate}>
-      {currentPath === "/" && <Timeline onNavigate={navigate} />}
+      {currentPath === "/dashboard" && <Dashboard />}
+      {currentPath === "/timeline" && <Timeline onNavigate={navigate} />}
       {currentPath === "/project-timeline" && <ProjectTimeline />}
       {currentPath === "/employees" && <EmployeeList />}
       {currentPath === "/projects" && <ProjectList />}
