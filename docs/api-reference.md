@@ -377,6 +377,103 @@ Non-deleted projects are always returned (sorted by name), even when they have n
 
 `holidays` and `working_days_per_month` have the same shape as in the employee timeline endpoint. This endpoint does not return `utilization` or `vacation_sync_status`.
 
+## Dashboard Endpoint
+
+Monthly availability and allocation totals with a per-team breakdown. Powers the Podsumowanie view.
+
+Population and filters match the employee timeline endpoint (archived employees excluded), so the two views always describe the same people, and the figures come from the same occupancy engine (`app/services/occupancy_service.py`).
+
+### Request
+
+```
+GET /api/dashboard/monthly?start_date=2026-01-01&end_date=2026-12-31&team_ids=1,2&technology_ids=3
+```
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `start_date` | date | yes | Range start (YYYY-MM-DD); snapped to the start of its month |
+| `end_date` | date | yes | Range end (YYYY-MM-DD) |
+| `team_ids` | string | no | Comma-separated team ids |
+| `technology_ids` | string | no | Comma-separated technology ids (employee has any of them) |
+
+400 when `end_date` precedes `start_date`, or when the range spans more than 24 months.
+
+### Response
+
+```json
+{
+  "months": [
+    {
+      "month": "2026-03",
+      "working_days": 22,
+      "capacity_hours": 2376.0,
+      "workable_hours": 2336.0,
+      "vacation_hours": 40.0,
+      "confirmed_hours": 1313.1,
+      "tentative_hours": 31.6,
+      "allocated_hours": 1344.7,
+      "remaining_hours": 991.3,
+      "utilization_percentage": 57.6,
+      "confirmed_percentage": 56.2,
+      "employee_count": 14,
+      "overbooked_employee_count": 1,
+      "unassigned_demand_hours": 176.0,
+      "unassigned_assignment_count": 2,
+      "teams": [
+        {
+          "team_id": 1,
+          "team_name": "Backend",
+          "capacity_hours": 1408.0,
+          "workable_hours": 1368.0,
+          "vacation_hours": 40.0,
+          "confirmed_hours": 900.0,
+          "tentative_hours": 0.0,
+          "allocated_hours": 900.0,
+          "remaining_hours": 508.0,
+          "utilization_percentage": 63.9,
+          "confirmed_percentage": 63.9,
+          "employee_count": 8,
+          "overbooked_employee_count": 0
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Response Fields
+
+**Month object:**
+
+| Field | Type | Description |
+|---|---|---|
+| `month` | string | `YYYY-MM` |
+| `working_days` | int | Working days in the month (Mon-Fri minus Polish holidays) |
+| `capacity_hours` | float | Every contracted hour on the month's working days across the filtered employees, i.e. full capacity. Vacation is **included**. Deliberately not called "available": only `remaining_hours` is free to plan against |
+| `workable_hours` | float | `capacity_hours` minus vacation: hours somebody could still actually work. This is what the timeline's occupancy badges divide by |
+| `vacation_hours` | float | Contracted hours falling on vacation days |
+| `confirmed_hours` | float | Allocated hours from assignments with `is_tentative: false` |
+| `tentative_hours` | float | Allocated hours from assignments with `is_tentative: true` |
+| `allocated_hours` | float | `confirmed_hours + tentative_hours` |
+| `remaining_hours` | float | `workable_hours - allocated_hours`; **negative when overbooked** (never clamped) |
+| `utilization_percentage` | float | `allocated_hours / workable_hours * 100`, `0.0` when there are no workable hours |
+| `confirmed_percentage` | float | Same ratio for `confirmed_hours` only |
+
+The hour figures form one equation, so a month reads as a whole:
+
+```
+capacity_hours = confirmed_hours + tentative_hours + vacation_hours + remaining_hours
+```
+
+It holds for the totals and for every team row, including the overbooked case: an hours-based commitment kept across vacation days pushes `remaining_hours` negative rather than breaking the identity.
+| `employee_count` | int | Employees in scope |
+| `overbooked_employee_count` | int | Employees over 100% in that month |
+| `unassigned_demand_hours` | float | Hours from placeholder assignments (`employee_id` null); **not** part of `allocated_hours`, never filtered by team, never repeated in `teams` |
+| `unassigned_assignment_count` | int | Placeholder assignments overlapping the month |
+| `teams` | array | Same metric fields grouped by team, alphabetically, with the `team_id: null` bucket ("Bez zespołu") last |
+
+The confirmed/tentative split is exposed only here. The employee timeline endpoint keeps its four occupancy keys (`percentage`, `hours`, `available_hours`, `is_overbooked`) unchanged.
+
 ## HTTP Status Codes
 
 | Code | Usage |

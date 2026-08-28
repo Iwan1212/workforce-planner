@@ -69,6 +69,34 @@ cd frontend && npm run test
 - In confirmation dialogs, split the consequences into a bulleted list rather than one long sentence, and bold the irreversible part.
 - Name the consequence, not just the action: say what happens to existing data, not only that something will be archived or deleted.
 
+#### Reuse the existing wording
+
+Before writing any user-facing string, check whether the product already says
+this. Grep the frontend for the concept, not just the exact word: the nearby
+synonyms are what you are looking for. Look at how the neighbouring screens
+label the same control, since consistency across views matters more than the
+phrasing being optimal in isolation.
+
+Then pick one of three, in this order:
+
+1. **An existing label fits** — use it verbatim, including capitalisation and
+   the trailing ellipsis or full stop.
+2. **An existing label is close but not right** — do not introduce a second
+   word for one concept. Say so and ask, rather than deciding silently: a
+   near-synonym pair is worse than either word alone.
+3. **The concept is genuinely new** — coin the label, and say in the summary
+   that it is new wording, so it gets reviewed as a decision.
+
+If an existing label turns out to be the wrong one, replace **every**
+occurrence in the same change. Two words for one concept must never coexist,
+not even temporarily.
+
+The same rule governs domain nouns that stay English on purpose (e.g.
+`assignment`): match what the product already uses instead of translating.
+
+Section headings inside a page use the same typography as the settings section
+headers: `text-base font-semibold text-foreground`, no description line.
+
 ## Key Business Rules
 
 - 1 FTE = 100% = 8h/day x working days/month
