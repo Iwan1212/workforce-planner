@@ -11,7 +11,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.api.calendar import _compute_occupancy_for_period
 from app.models.assignment import AllocationType
 from app.models.employee import CapacityType, resolve_capacity_at
 from app.services.capacity_service import (
@@ -19,6 +18,7 @@ from app.services.capacity_service import (
     build_capacity_periods,
     daily_capacity_hours,
 )
+from app.services.occupancy_service import compute_occupancy_for_period
 from app.utils.working_days import get_working_days_in_month
 
 WEEK_START = date(2026, 3, 2)  # Monday
@@ -35,12 +35,13 @@ def make_capacity(valid_from, capacity_type, value):
     )
 
 
-def make_assignment(start, end, allocation_type, value):
+def make_assignment(start, end, allocation_type, value, is_tentative=False):
     return SimpleNamespace(
         start_date=start,
         end_date=end,
         allocation_type=allocation_type,
         allocation_value=value,
+        is_tentative=is_tentative,
     )
 
 
@@ -120,7 +121,7 @@ def test_part_timer_full_commitment_reads_as_one_hundred_percent():
     a = make_assignment(
         MARCH_START, MARCH_END, AllocationType.monthly_hours, 40.0
     )
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [], MARCH_START, MARCH_END, set(), FORTY_HOURS
     )
 
@@ -135,7 +136,7 @@ def test_same_assignment_against_a_full_time_contract():
     a = make_assignment(
         MARCH_START, MARCH_END, AllocationType.monthly_hours, 40.0
     )
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [], MARCH_START, MARCH_END, set(), FULL_TIME
     )
 
@@ -147,7 +148,7 @@ def test_same_assignment_against_a_full_time_contract():
 def test_percentage_allocation_is_a_share_of_the_persons_own_time():
     """100% of a half-timer is 4h/day and reads as 100%, not 50%."""
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 100.0)
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [], WEEK_START, WEEK_END, set(), HALF_TIME
     )
 
@@ -162,7 +163,7 @@ def test_vacation_removes_the_part_timers_own_day_not_eight_hours():
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 100.0)
     vac = make_vacation(date(2026, 3, 2), date(2026, 3, 3))  # Mon-Tue
 
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [vac], WEEK_START, WEEK_END, set(), HALF_TIME
     )
 
@@ -177,7 +178,7 @@ def test_hours_commitment_over_a_part_timer_vacation_overbooks():
     )
     vac = make_vacation(date(2026, 3, 2), date(2026, 3, 3))  # Mon-Tue
 
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [vac], WEEK_START, WEEK_END, set(), HALF_TIME
     )
 
@@ -196,10 +197,10 @@ def test_capacity_change_mid_range_only_affects_days_after_it():
         date(2026, 1, 1), date(2026, 12, 31), AllocationType.percentage, 100.0
     )
 
-    february = _compute_occupancy_for_period(
+    february = compute_occupancy_for_period(
         [a], [], date(2026, 2, 1), date(2026, 2, 28), set(), entries
     )
-    march = _compute_occupancy_for_period(
+    march = compute_occupancy_for_period(
         [a], [], MARCH_START, MARCH_END, set(), entries
     )
 
@@ -215,9 +216,9 @@ def test_omitted_capacity_keeps_the_full_time_default():
     keep behaving exactly as before."""
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 50.0)
 
-    assert _compute_occupancy_for_period(
+    assert compute_occupancy_for_period(
         [a], [], WEEK_START, WEEK_END, set()
-    ) == _compute_occupancy_for_period(
+    ) == compute_occupancy_for_period(
         [a], [], WEEK_START, WEEK_END, set(), FULL_TIME
     )
 
@@ -233,7 +234,7 @@ def test_work_planned_before_employment_starts_is_flagged_not_hidden():
         date(2026, 2, 1), date(2026, 2, 28), AllocationType.percentage, 100.0
     )
 
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [], date(2026, 2, 1), date(2026, 2, 28), set(), entries
     )
 
@@ -245,7 +246,7 @@ def test_work_planned_before_employment_starts_is_flagged_not_hidden():
 def test_empty_period_before_employment_is_not_flagged():
     entries = [make_capacity(date(2026, 3, 1), CapacityType.percentage, 100)]
 
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [], [], date(2026, 2, 1), date(2026, 2, 28), set(), entries
     )
 

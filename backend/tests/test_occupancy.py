@@ -1,7 +1,7 @@
 """Unit tests for the occupancy engine in app.api.calendar.
 
 Tests the private helpers directly (no HTTP):
-- _compute_occupancy_for_period
+- compute_occupancy_for_period
 - _get_weeks_in_range
 - _week_key
 
@@ -12,23 +12,21 @@ Fixed dates used below (2026, no Polish holidays unless stated):
 from datetime import date
 from types import SimpleNamespace
 
-from app.api.calendar import (
-    _compute_occupancy_for_period,
-    _get_weeks_in_range,
-    _week_key,
-)
+from app.api.calendar import _get_weeks_in_range, _week_key
 from app.models.assignment import AllocationType
+from app.services.occupancy_service import compute_occupancy_for_period
 
 WEEK_START = date(2026, 3, 2)  # Monday
 WEEK_END = date(2026, 3, 8)  # Sunday
 
 
-def make_assignment(start, end, allocation_type, value):
+def make_assignment(start, end, allocation_type, value, is_tentative=False):
     return SimpleNamespace(
         start_date=start,
         end_date=end,
         allocation_type=allocation_type,
         allocation_value=value,
+        is_tentative=is_tentative,
     )
 
 
@@ -36,13 +34,13 @@ def make_vacation(start, end):
     return SimpleNamespace(start_date=start, end_date=end)
 
 
-# --- _compute_occupancy_for_period ---
+# --- compute_occupancy_for_period ---
 
 
 def test_percentage_allocation_returns_allocation_percentage():
     """A 50% assignment over a full week yields 50% occupancy."""
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 50.0)
-    result = _compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, set())
+    result = compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, set())
 
     assert result["percentage"] == 50.0
     assert result["hours"] == 20.0  # 5 wd * 4h
@@ -55,7 +53,7 @@ def test_percentage_allocation_vacation_excluded_from_both_sides():
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 50.0)
     vac = make_vacation(date(2026, 3, 2), date(2026, 3, 3))  # Mon-Tue
 
-    result = _compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
+    result = compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
 
     assert result["percentage"] == 50.0
     assert result["hours"] == 12.0  # 3 non-vacation wd * 4h
@@ -71,7 +69,7 @@ def test_hours_allocation_vacation_shrinks_denominator():
     )
     vac = make_vacation(date(2026, 3, 2), date(2026, 3, 3))  # Mon-Tue
 
-    result = _compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
+    result = compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
 
     assert result["hours"] == 40.0  # full commitment kept
     assert result["available_hours"] == 24.0  # 3 wd * 8h
@@ -84,7 +82,7 @@ def test_zero_working_days_full_vacation_guard():
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 100.0)
     vac = make_vacation(WEEK_START, WEEK_END)
 
-    result = _compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
+    result = compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
 
     assert result["percentage"] == 0.0
     assert result["available_hours"] == 0.0
@@ -94,7 +92,7 @@ def test_zero_working_days_full_vacation_guard():
 def test_zero_working_days_weekend_only_period():
     """Weekend-only period has zero working days -> everything is zero."""
     a = make_assignment(date(2026, 3, 1), date(2026, 3, 31), AllocationType.percentage, 100.0)
-    result = _compute_occupancy_for_period(
+    result = compute_occupancy_for_period(
         [a], [], date(2026, 3, 7), date(2026, 3, 8), set()  # Sat-Sun
     )
 
@@ -108,7 +106,7 @@ def test_holidays_excluded_from_working_days():
     a = make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 100.0)
     holidays = {date(2026, 3, 4)}  # Wednesday
 
-    result = _compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, holidays)
+    result = compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, holidays)
 
     assert result["available_hours"] == 32.0  # 4 wd * 8h
     assert result["hours"] == 32.0
@@ -121,7 +119,7 @@ def test_assignment_partially_overlapping_period():
     a = make_assignment(
         date(2026, 3, 4), date(2026, 3, 6), AllocationType.percentage, 100.0
     )
-    result = _compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, set())
+    result = compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, set())
 
     assert result["hours"] == 24.0  # 3 wd * 8h
     assert result["available_hours"] == 40.0
@@ -191,14 +189,14 @@ def test_monthly_and_weekly_consistent_for_flat_percentage():
         date(2026, 6, 1), date(2026, 6, 30), AllocationType.percentage, 50.0
     )
 
-    monthly = _compute_occupancy_for_period(
+    monthly = compute_occupancy_for_period(
         [a], [], date(2026, 6, 1), date(2026, 6, 30), set()
     )
     assert monthly["percentage"] == 50.0
 
     # June 2026: weeks Jun 1-7, 8-14, 15-21, 22-28 are fully inside the month
     for week_start, week_end in _get_weeks_in_range(date(2026, 6, 1), date(2026, 6, 28)):
-        weekly = _compute_occupancy_for_period(
+        weekly = compute_occupancy_for_period(
             [a], [], week_start, week_end, set()
         )
         assert weekly["percentage"] == 50.0, f"week {week_start}"
