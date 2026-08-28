@@ -125,7 +125,7 @@ export function TimelineRow({
           width: w.days.length * DAY_WIDTH,
           pct: o?.percentage ?? 0,
           hours: o?.hours ?? 0,
-          available: o?.available_hours ?? 0,
+          available: o?.workable_hours ?? 0,
         };
       })
     : months.map((m) => {
@@ -135,7 +135,7 @@ export function TimelineRow({
           width: MONTH_WIDTH,
           pct: o?.percentage ?? 0,
           hours: o?.hours ?? 0,
-          available: o?.available_hours ?? 0,
+          available: o?.workable_hours ?? 0,
         };
       });
 

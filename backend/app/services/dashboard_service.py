@@ -44,10 +44,10 @@ class _Bucket:
     def add(self, occupancy: dict) -> None:
         # The engine's "available" is net of vacation; here that is the
         # workable figure, and availability is the contract in full.
-        self.workable_hours += occupancy["available_hours"]
+        self.workable_hours += occupancy["workable_hours"]
         self.vacation_hours += occupancy["vacation_hours"]
         self.capacity_hours += (
-            occupancy["available_hours"] + occupancy["vacation_hours"]
+            occupancy["workable_hours"] + occupancy["vacation_hours"]
         )
         self.confirmed_hours += occupancy["confirmed_hours"]
         self.tentative_hours += occupancy["tentative_hours"]

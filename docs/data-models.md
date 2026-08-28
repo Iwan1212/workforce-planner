@@ -224,9 +224,10 @@ capacity = confirmed + tentative + vacation + remaining
   things capacity was spent on, not something quietly missing from the total.
   Deliberately not named "available", in the API or in the UI, where it reads
   "Łącznie": only *remaining* is actually free to plan against.
-- **workable** — capacity minus vacation, the hours somebody could still
-  actually work. **Occupancy is measured against this**, which is what keeps the
-  dashboard percentages equal to the timeline's occupancy badges.
+- **workable** (`workable_hours`) — capacity minus vacation, the hours somebody
+  could still actually work. **Occupancy is measured against this**, which is
+  what keeps the dashboard percentages equal to the timeline's occupancy badges.
+  The timeline exposes the same figure under the same name, per employee.
 - **remaining** — workable minus allocation, **not clamped**: negative is the
   honest report of overbooking, which the system warns about but never blocks.
   The 129% case above lands here as a negative figure, and the equation still

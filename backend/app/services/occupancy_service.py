@@ -13,7 +13,7 @@ from app.services.capacity_service import (
 # Keys the timeline contract exposes. The confirmed/tentative split stays out of
 # it on purpose: certainty is a planning-summary concern, and the timeline marks
 # tentative work on the bars themselves rather than in its numbers.
-TIMELINE_OCCUPANCY_KEYS = ("percentage", "hours", "available_hours", "is_overbooked")
+TIMELINE_OCCUPANCY_KEYS = ("percentage", "hours", "workable_hours", "is_overbooked")
 
 
 def compute_occupancy_for_period(
@@ -26,8 +26,8 @@ def compute_occupancy_for_period(
 ) -> dict:
     """Compute occupancy metrics for a period (week or month).
 
-    Denominator: the employee's contracted hours summed over non-vacation
-    working days. That is a full-time day for the full-time majority, and their
+    Denominator (`workable_hours`): the employee's contracted hours summed over
+    non-vacation working days. That is a full-time day for the full-time majority, and their
     own shorter day for part-timers, so vacation always removes what the person
     would actually have worked rather than a flat eight hours.
 
@@ -101,7 +101,7 @@ def compute_occupancy_for_period(
         "hours": float(round(hours_numerator, 1)),
         "confirmed_hours": float(round(confirmed_hours, 1)),
         "tentative_hours": float(round(tentative_hours, 1)),
-        "available_hours": float(round(net_available, 1)),
+        "workable_hours": float(round(net_available, 1)),
         "vacation_hours": float(round(gross_available - net_available, 1)),
         "is_overbooked": overbooked,
     }

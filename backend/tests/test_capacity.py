@@ -127,7 +127,7 @@ def test_part_timer_full_commitment_reads_as_one_hundred_percent():
 
     assert result["percentage"] == 100.0
     assert result["hours"] == 40.0
-    assert result["available_hours"] == 40.0
+    assert result["workable_hours"] == 40.0
     assert result["is_overbooked"] is False
 
 
@@ -141,7 +141,7 @@ def test_same_assignment_against_a_full_time_contract():
     )
 
     march_hours = get_working_days_in_month(2026, 3) * 8
-    assert result["available_hours"] == float(march_hours)
+    assert result["workable_hours"] == float(march_hours)
     assert result["percentage"] == round(40 / march_hours * 100, 1)
 
 
@@ -154,7 +154,7 @@ def test_percentage_allocation_is_a_share_of_the_persons_own_time():
 
     assert result["percentage"] == 100.0
     assert result["hours"] == 20.0  # 5 wd * 4h
-    assert result["available_hours"] == 20.0
+    assert result["workable_hours"] == 20.0
 
 
 def test_vacation_removes_the_part_timers_own_day_not_eight_hours():
@@ -167,7 +167,7 @@ def test_vacation_removes_the_part_timers_own_day_not_eight_hours():
         [a], [vac], WEEK_START, WEEK_END, set(), HALF_TIME
     )
 
-    assert result["available_hours"] == 12.0  # 3 wd * 4h
+    assert result["workable_hours"] == 12.0  # 3 wd * 4h
     assert result["hours"] == 12.0
     assert result["percentage"] == 100.0
 
@@ -183,7 +183,7 @@ def test_hours_commitment_over_a_part_timer_vacation_overbooks():
     )
 
     assert result["hours"] == 20.0  # commitment untouched
-    assert result["available_hours"] == 12.0  # 3 wd * 4h
+    assert result["workable_hours"] == 12.0  # 3 wd * 4h
     assert result["is_overbooked"] is True
 
 
@@ -204,8 +204,8 @@ def test_capacity_change_mid_range_only_affects_days_after_it():
         [a], [], MARCH_START, MARCH_END, set(), entries
     )
 
-    assert february["available_hours"] == get_working_days_in_month(2026, 2) * 8
-    assert march["available_hours"] == get_working_days_in_month(2026, 3) * 4
+    assert february["workable_hours"] == get_working_days_in_month(2026, 2) * 8
+    assert march["workable_hours"] == get_working_days_in_month(2026, 3) * 4
     # Both read as 100%, because the commitment scales with the contract.
     assert february["percentage"] == 100.0
     assert march["percentage"] == 100.0
@@ -238,7 +238,7 @@ def test_work_planned_before_employment_starts_is_flagged_not_hidden():
         [a], [], date(2026, 2, 1), date(2026, 2, 28), set(), entries
     )
 
-    assert result["available_hours"] == 0.0
+    assert result["workable_hours"] == 0.0
     assert result["hours"] > 0
     assert result["is_overbooked"] is True
 
@@ -250,7 +250,7 @@ def test_empty_period_before_employment_is_not_flagged():
         [], [], date(2026, 2, 1), date(2026, 2, 28), set(), entries
     )
 
-    assert result["available_hours"] == 0.0
+    assert result["workable_hours"] == 0.0
     assert result["hours"] == 0.0
     assert result["is_overbooked"] is False
 

@@ -111,7 +111,7 @@ export function EmployeeOccupancyPanel({
               const u = employee.occupancy[m.key];
               const pct = u ? Math.round(u.percentage) : 0;
               const hours = u ? Math.round(u.hours) : 0;
-              const available = u ? Math.round(u.available_hours) : 0;
+              const available = u ? Math.round(u.workable_hours) : 0;
 
               return (
                 <div key={m.key} className="space-y-1">

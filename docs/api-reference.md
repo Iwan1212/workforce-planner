@@ -188,13 +188,13 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
         "2026-01": {
           "percentage": 75,
           "hours": 126,
-          "available_hours": 168,
+          "workable_hours": 168,
           "is_overbooked": false
         },
         "2026-02": {
           "percentage": 110,
           "hours": 167.2,
-          "available_hours": 152,
+          "workable_hours": 152,
           "is_overbooked": true
         }
       },
@@ -280,9 +280,9 @@ GET /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Fr
 
 | Field | Type | Description |
 |---|---|---|
-| `percentage` | float | Allocated hours / net available hours x 100. Always 0 when `available_hours` is 0 |
+| `percentage` | float | Allocated hours / workable hours x 100. Always 0 when `workable_hours` is 0 |
 | `hours` | float | Total allocated hours in the period |
-| `available_hours` | float | Net available hours: the employee's contracted hours summed over working days minus vacation days. 8h/day for full-timers, less for part-timers, 0 outside employment |
+| `workable_hours` | float | Hours the employee could actually work: their contracted hours summed over working days, minus vacation days. 8h/day for full-timers, less for part-timers, 0 outside employment. The dashboard reports the same figure under the same name |
 | `is_overbooked` | bool | True if percentage > 100, **or** if hours are booked against zero availability (work planned before someone joins) |
 
 **Vacation sync status:**
@@ -472,7 +472,7 @@ It holds for the totals and for every team row, including the overbooked case: a
 | `unassigned_assignment_count` | int | Placeholder assignments overlapping the month |
 | `teams` | array | Same metric fields grouped by team, alphabetically, with the `team_id: null` bucket ("Bez zespołu") last |
 
-The confirmed/tentative split is exposed only here. The employee timeline endpoint keeps its four occupancy keys (`percentage`, `hours`, `available_hours`, `is_overbooked`) unchanged.
+The confirmed/tentative split is exposed only here; the employee timeline keeps its four occupancy keys (`percentage`, `hours`, `workable_hours`, `is_overbooked`). `workable_hours` means the same thing in both endpoints, per-employee there and summed here.
 
 ## HTTP Status Codes
 
