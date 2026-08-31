@@ -69,7 +69,6 @@ Timeline.tsx                      # Main container — orchestrates layout + dat
 ├── TimelineFilters.tsx           # Team multi-select, view mode toggle (monthly/weekly)
 ├── TimelineHeader.tsx            # Date columns (months or weeks), holiday markers
 ├── TimelineEmptyState.tsx        # Empty state when no employees match filters
-├── TimelineSummaryRow.tsx        # Aggregated summary row
 ├── EmployeeOccupancyPanel.tsx    # Detailed occupancy breakdown panel
 ├── VacationDialog.tsx            # Vacation details dialog
 └── TimelineRow.tsx               # One row per employee — sticky name column

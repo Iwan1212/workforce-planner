@@ -69,7 +69,11 @@ function calcOccupancyInRange(
   // Measured against what the person is contracted for and actually present
   // for, so a part-timer with a full plate reads as 100% and survives a
   // "busier than 80%" filter. Must stay in step with
-  // backend/app/services/occupancy_service.py, whose figure the badges show.
+  // _compute_occupancy_for_period in backend/app/api/calendar.py, whose
+  // figure the badges show. Known gap: a.daily_hours is a single server-side
+  // snapshot (the assignment's first visible month), while the backend
+  // recomputes the rate per day — so monthly_hours allocations spanning
+  // months and mid-assignment capacity changes can still diverge slightly.
   let availableHours = 0;
 
   let current = rangeStart;
