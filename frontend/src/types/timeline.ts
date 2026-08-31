@@ -148,20 +148,6 @@ export interface TimelineBarProps {
   isPlaceholder?: boolean;
 }
 
-export interface DaySummary {
-  totalHours: number;
-  employeeCount: number;
-  ftePct: number;
-}
-
-export interface TimelineSummaryRowProps {
-  employees: TimelineEmployee[];
-  viewMode: ViewMode;
-  months: MonthDef[];
-  allDays: DayInfo[];
-  holidayMap: Record<string, string>;
-}
-
 export interface EmployeeOccupancyPanelProps {
   employee: TimelineEmployee;
   months: MonthDef[];
