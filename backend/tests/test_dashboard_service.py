@@ -408,3 +408,22 @@ def test_only_placeholders_overlapping_the_month_are_counted():
 
 def test_placeholder_count_is_zero_without_placeholders():
     assert march([make_snapshot()])["unassigned_assignment_count"] == 0
+
+
+def test_fetch_bounds_cover_the_reported_months_in_full():
+    from app.api.dashboard import _fetch_bounds, _months_in_range
+
+    # A mid-month range still reports whole months, so the fetch has to
+    # reach back to the 1st and forward to the month's last day — otherwise
+    # an assignment ending before the raw start_date silently drops out.
+    months = _months_in_range(date(2026, 3, 15), date(2026, 4, 20))
+    assert months == [(2026, 3), (2026, 4)]
+    assert _fetch_bounds(months) == (date(2026, 3, 1), date(2026, 4, 30))
+
+    # Month-aligned input is unchanged, leap February included.
+    months = _months_in_range(date(2028, 1, 1), date(2028, 2, 29))
+    assert _fetch_bounds(months) == (date(2028, 1, 1), date(2028, 2, 29))
+
+    # December rollover.
+    months = _months_in_range(date(2026, 12, 10), date(2027, 1, 5))
+    assert _fetch_bounds(months) == (date(2026, 12, 1), date(2027, 1, 31))

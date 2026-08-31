@@ -392,7 +392,7 @@ GET /api/dashboard/monthly?start_date=2026-01-01&end_date=2026-12-31&team_ids=1,
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `start_date` | date | yes | Range start (YYYY-MM-DD); snapped to the start of its month |
-| `end_date` | date | yes | Range end (YYYY-MM-DD) |
+| `end_date` | date | yes | Range end (YYYY-MM-DD); snapped to the end of its month |
 | `team_ids` | string | no | Comma-separated team ids |
 | `technology_ids` | string | no | Comma-separated technology ids (employee has any of them) |
 

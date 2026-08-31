@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import date
 from typing import Optional
 
@@ -35,6 +36,18 @@ def _months_in_range(start_date: date, end_date: date) -> list[tuple[int, int]]:
     return months
 
 
+def _fetch_bounds(months: list[tuple[int, int]]) -> tuple[date, date]:
+    # The response reports whole months, so the fetch must cover them in
+    # full: an assignment that ends before a mid-month start_date still
+    # belongs in that month's totals.
+    first_year, first_month = months[0]
+    last_year, last_month = months[-1]
+    return (
+        date(first_year, first_month, 1),
+        date(last_year, last_month, monthrange(last_year, last_month)[1]),
+    )
+
+
 @router.get("/monthly")
 async def get_monthly_summary(
     start_date: date = Query(...),
@@ -57,6 +70,7 @@ async def get_monthly_summary(
         raise HTTPException(
             status_code=400, detail=f"Range must not exceed {MAX_MONTHS} months"
         )
+    fetch_start, fetch_end = _fetch_bounds(months)
 
     # Archived employees leave this view, matching the employee timeline.
     emp_query = select(Employee).where(Employee.is_archived == False)
@@ -81,8 +95,8 @@ async def get_monthly_summary(
         a_result = await db.execute(
             select(Assignment).where(
                 Assignment.employee_id.in_(emp_ids),
-                Assignment.start_date <= end_date,
-                Assignment.end_date >= start_date,
+                Assignment.start_date <= fetch_end,
+                Assignment.end_date >= fetch_start,
             )
         )
         for a in a_result.scalars().all():
@@ -90,8 +104,8 @@ async def get_monthly_summary(
 
     vac_result = await db.execute(
         select(Vacation).where(
-            Vacation.start_date <= end_date,
-            Vacation.end_date >= start_date,
+            Vacation.start_date <= fetch_end,
+            Vacation.end_date >= fetch_start,
         )
     )
     vacations_by_employee: dict[int, list] = {}
@@ -104,8 +118,8 @@ async def get_monthly_summary(
     ph_result = await db.execute(
         select(Assignment).where(
             Assignment.employee_id.is_(None),
-            Assignment.start_date <= end_date,
-            Assignment.end_date >= start_date,
+            Assignment.start_date <= fetch_end,
+            Assignment.end_date >= fetch_start,
         )
     )
     placeholder_assignments = ph_result.scalars().all()
