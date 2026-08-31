@@ -42,8 +42,8 @@ class _Bucket:
     overbooked_employee_count: int = 0
 
     def add(self, occupancy: dict) -> None:
-        # The engine's "available" is net of vacation; here that is the
-        # workable figure, and availability is the contract in full.
+        # Workable is net of vacation; capacity is the contract in full,
+        # so it is rebuilt here as workable + vacation.
         self.workable_hours += occupancy["workable_hours"]
         self.vacation_hours += occupancy["vacation_hours"]
         self.capacity_hours += (
