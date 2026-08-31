@@ -12,30 +12,37 @@ export function DataTable<T>({
   skeletonRowCount = DEFAULT_SKELETON_ROWS,
   emptyContent,
   className,
+  footer,
 }: DataTableProps<T>) {
+  const hasActions = renderActions !== undefined;
+
+  const head = (
+    <thead>
+      <tr className="border-b bg-muted">
+        {columns.map((col) => (
+          <th
+            key={col.id}
+            className={cn(
+              "px-4 py-3 text-sm font-medium",
+              col.align === "right" ? "text-right" : "text-left",
+              col.className,
+            )}
+          >
+            {col.header}
+          </th>
+        ))}
+        {hasActions && (
+          <th className="px-4 py-3 text-right text-sm font-medium">Akcje</th>
+        )}
+      </tr>
+    </thead>
+  );
+
   if (isLoading) {
     return (
       <div className={cn("rounded-md border", className)}>
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted">
-              {columns.map((col) => (
-                <th
-                  key={col.id}
-                  className={cn(
-                    "px-4 py-3 text-sm font-medium",
-                    col.align === "right" ? "text-right" : "text-left",
-                    col.className,
-                  )}
-                >
-                  {col.header}
-                </th>
-              ))}
-              <th className="px-4 py-3 text-right text-sm font-medium">
-                Akcje
-              </th>
-            </tr>
-          </thead>
+          {head}
           <tbody>
             {Array.from({ length: skeletonRowCount }).map((_, i) => (
               <tr key={i} className="border-b last:border-0">
@@ -56,9 +63,11 @@ export function DataTable<T>({
                     />
                   </td>
                 ))}
-                <td className="px-4 py-3 text-right">
-                  <div className="ml-auto h-4 w-8 animate-pulse rounded bg-muted" />
-                </td>
+                {hasActions && (
+                  <td className="px-4 py-3 text-right">
+                    <div className="ml-auto h-4 w-8 animate-pulse rounded bg-muted" />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -83,22 +92,7 @@ export function DataTable<T>({
   return (
     <div className={cn("rounded-md border", className)}>
       <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b bg-muted">
-            {columns.map((col) => (
-              <th
-                key={col.id}
-                className={cn(
-                  "px-4 py-3 text-sm font-medium",
-                  col.align === "right" ? "text-right" : "text-left",
-                )}
-              >
-                {col.header}
-              </th>
-            ))}
-            <th className="px-4 py-3 text-right text-sm font-medium">Akcje</th>
-          </tr>
-        </thead>
+        {head}
         <tbody>
           {data.map((row) => (
             <tr key={getRowKey(row)} className="border-b last:border-0">
@@ -114,10 +108,13 @@ export function DataTable<T>({
                   {col.cell(row)}
                 </td>
               ))}
-              <td className="px-4 py-3 text-right">{renderActions(row)}</td>
+              {hasActions && (
+                <td className="px-4 py-3 text-right">{renderActions(row)}</td>
+              )}
             </tr>
           ))}
         </tbody>
+        {footer && <tfoot className="border-t bg-muted/40">{footer}</tfoot>}
       </table>
     </div>
   );

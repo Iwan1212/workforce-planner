@@ -51,11 +51,14 @@ export interface DataTableProps<T> {
   data: T[];
   columns: DataTableColumn<T>[];
   getRowKey: (row: T) => string | number;
-  renderActions: (row: T) => ReactNode;
+  /** Omit on read-only tables: the "Akcje" column is then not rendered at all. */
+  renderActions?: (row: T) => ReactNode;
   isLoading?: boolean;
   skeletonRowCount?: number;
   emptyContent?: ReactNode;
   className?: string;
+  /** Rendered as a <tfoot> row, e.g. a totals row. Must supply its own cells. */
+  footer?: ReactNode;
 }
 
 export interface DialogWrapperFormProps {

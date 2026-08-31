@@ -168,7 +168,75 @@ consequences worth knowing:
 ### Tentative Assignments
 
 - Assignments can be marked as `is_tentative` for planning purposes
-- Visually distinguished on timeline
+- Visually distinguished on timeline (outlined bar) — the timeline's *numbers* never split by certainty
+- The confirmed/tentative split of allocated hours exists only in the dashboard aggregate
+
+### Vacations in the numbers
+
+One engine decides this for every view: `app/services/occupancy_service.py`. It
+walks the period day by day and asks three questions per day.
+
+1. **Is it a working day?** Weekends and Polish holidays are skipped outright, so
+   a vacation falling on one costs nothing.
+2. **Is the person on vacation?** If not, their contracted hours for that day
+   join the workable total. If they are, the hours join `vacation_hours`
+   instead. Deducted are *that person's* hours, so a part-timer's vacation week
+   costs 5 x 4 h, not 5 x 8 h.
+3. **Does an assignment cover the day?** Its hours join the allocation, with one
+   exception below.
+
+**Percentage vs hours-based allocations behave differently on vacation days, on
+purpose:**
+
+| Allocation type | On a vacation day | Why |
+|---|---|---|
+| `percentage` | contributes nothing | a percentage is a share of the person's time; no time, no share |
+| `monthly_hours`, `total_hours` | contributes in full | an hours figure is a debt to be delivered; vacation does not cancel it, it compresses it into the remaining days |
+
+The second row is why occupancy can exceed 100% purely because of a vacation. A
+full-timer in March 2026 (22 working days) committed to 176 h/month who takes one
+week off has 136 h workable against 176 h committed, i.e. 129%. **That is
+correct and must not be "fixed":** the person really can make those hours up on
+the other days, and the red figure is the warning that they will have to.
+
+**All absence types count the same.** `Vacation.leave_type` distinguishes
+`urlop`, `chorobowe` and `inne` for display only. None of them is treated
+differently in the maths: absent is absent.
+
+**An employee without an email address has no vacations at all.** The Calamari
+sync only asks about the addresses it already has
+(`app/services/vacation_sync_service.py`), so a person with `email = NULL` is
+never queried and no `Vacation` row is ever created for them. This is accepted
+behaviour: connecting the address is the operator's job, and an unconnected
+person is treated as one whose absences are not tracked.
+
+### Dashboard Aggregate
+
+`app/services/dashboard_service.py` rolls the engine's output up per month and
+per team. Its hour figures form one equation, so a month reads as a whole:
+
+```
+capacity = confirmed + tentative + vacation + remaining
+```
+
+- **capacity** (`capacity_hours`) — every contracted hour on the month's working
+  days, i.e. full headcount capacity. Vacation is *included*: it is one of the
+  things capacity was spent on, not something quietly missing from the total.
+  Deliberately not named "available", in the API or in the UI, where it reads
+  "Łącznie": only *remaining* is actually free to plan against.
+- **workable** — capacity minus vacation, the hours somebody could still
+  actually work. **Occupancy is measured against this**, which is what keeps the
+  dashboard percentages equal to the timeline's occupancy badges.
+- **remaining** — workable minus allocation, **not clamped**: negative is the
+  honest report of overbooking, which the system warns about but never blocks.
+  The 129% case above lands here as a negative figure, and the equation still
+  holds.
+- **unassigned demand** — hours from placeholder assignments. Reported
+  separately, outside the equation and never attributed to a team, because
+  placeholders belong to no employee and would otherwise vanish the moment a
+  team filter was applied.
+- Assignments on archived **projects** still count as allocated, matching the
+  timeline.
 
 ### Polish Holidays
 
@@ -176,10 +244,10 @@ consequences worth knowing:
 
 ### Vacation Integration
 
-- Vacations synced from Calamari API (manual or scheduled sync)
-- Vacation days reduce net available hours in occupancy calculations, by the
-  employee's own contracted hours rather than a flat 8h
-- Percentage allocations skip vacation days entirely; hours-based commitments stay fixed, so vacations can push occupancy above 100%
+- Vacations synced from Calamari API (manual or scheduled sync), matched to
+  employees by email address
+- How they enter the numbers is specified under [Vacations in the
+  numbers](#vacations-in-the-numbers); do not restate the rules here
 
 ### Lifecycle Rules
 

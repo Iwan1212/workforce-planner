@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from functools import lru_cache
 
 
 def _easter_date(year: int) -> date:
@@ -18,8 +19,9 @@ def _easter_date(year: int) -> date:
     return date(year, month, day + 1)
 
 
-def get_polish_holidays(year: int) -> list[date]:
-    """Return all Polish public holidays for a given year."""
+@lru_cache(maxsize=None)
+def _holidays_for_year(year: int) -> tuple[date, ...]:
+    """Cached holiday set for a year. A tuple, so no caller can mutate the cache."""
     easter = _easter_date(year)
 
     holidays = [
@@ -40,7 +42,12 @@ def get_polish_holidays(year: int) -> list[date]:
         easter + timedelta(days=60),   # Boże Ciało
     ]
 
-    return sorted(holidays)
+    return tuple(sorted(holidays))
+
+
+def get_polish_holidays(year: int) -> list[date]:
+    """Return all Polish public holidays for a given year."""
+    return list(_holidays_for_year(year))
 
 
 HOLIDAY_NAMES: dict[tuple[int, int], str] = {

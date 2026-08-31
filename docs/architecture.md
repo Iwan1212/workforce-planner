@@ -55,9 +55,10 @@ frontend/src/
 │   ├── users/        # UserManagement, UserFormDialog
 │   ├── settings/     # SettingsPage
 │   ├── assignments/  # AssignmentModal + form sub-components
+│   ├── dashboard/    # Podsumowanie tab — monthly totals + per-team breakdown
 │   └── timeline/     # Core timeline components (see below)
 ├── hooks/            # Custom hooks (useTimeline, useCrudList, useTeamSelection, useUserCrud, useDebouncedValue)
-├── stores/           # Zustand stores (authStore, timelineStore)
+├── stores/           # Zustand stores (authStore, timelineStore, projectTimelineStore, dashboardStore)
 ├── lib/              # Utilities (workingDays.ts mirrors backend logic, utils.ts)
 └── types/            # Shared TypeScript types (index.ts)
 ```
@@ -104,10 +105,13 @@ backend/app/
 ├── database.py         # Async engine + session factory
 ├── models/             # SQLAlchemy ORM models (User, Employee, Project, Assignment, Vacation, AppSettings)
 ├── schemas/            # Pydantic v2 request/response schemas
-├── api/                # FastAPI routers (auth, employees, projects, assignments, calendar, users, settings)
+├── api/                # FastAPI routers (auth, employees, projects, assignments, calendar, dashboard, users, settings)
 ├── services/           # Business logic layer
 │   ├── auth_service.py
 │   ├── assignment_service.py       # FTE/hours calculation engine
+│   ├── capacity_service.py         # Effective-dated contracted capacity
+│   ├── occupancy_service.py        # Per-period occupancy (shared by timeline + dashboard)
+│   ├── dashboard_service.py        # Monthly roll-up per team, confirmed vs tentative
 │   ├── calamari_service.py         # External Calamari API integration
 │   └── vacation_sync_service.py    # Vacation sync logic
 ├── core/

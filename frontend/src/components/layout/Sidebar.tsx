@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Calendar, GanttChart, LogOut, Settings, UserCog, Users, FolderKanban } from "lucide-react";
+import { Calendar, GanttChart, LayoutDashboard, LogOut, Settings, UserCog, Users, FolderKanban } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuthStore } from "@/stores/authStore";
 import type { SidebarProps } from "@/types/layout";
 
 const NAV_ITEMS = [
-  { path: "/", label: "Kalendarz – pracownicy", icon: Calendar, viewerAllowed: true },
+  { path: "/dashboard", label: "Podsumowanie", icon: LayoutDashboard, viewerAllowed: true },
+  { path: "/timeline", label: "Kalendarz – pracownicy", icon: Calendar, viewerAllowed: true },
   { path: "/project-timeline", label: "Kalendarz – projekty", icon: GanttChart, viewerAllowed: true },
   { path: "/employees", label: "Pracownicy", icon: Users, viewerAllowed: false },
   { path: "/projects", label: "Projekty", icon: FolderKanban, viewerAllowed: false },
