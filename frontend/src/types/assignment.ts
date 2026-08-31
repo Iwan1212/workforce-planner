@@ -17,7 +17,7 @@ export interface TimelineAssignment {
 export interface PeriodOccupancy {
   percentage: number;
   hours: number;
-  available_hours: number;
+  workable_hours: number;
   is_overbooked: boolean;
 }
 

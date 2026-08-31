@@ -44,7 +44,7 @@ def test_percentage_allocation_returns_allocation_percentage():
 
     assert result["percentage"] == 50.0
     assert result["hours"] == 20.0  # 5 wd * 4h
-    assert result["available_hours"] == 40.0  # 5 wd * 8h
+    assert result["workable_hours"] == 40.0  # 5 wd * 8h
     assert result["is_overbooked"] is False
 
 
@@ -57,7 +57,7 @@ def test_percentage_allocation_vacation_excluded_from_both_sides():
 
     assert result["percentage"] == 50.0
     assert result["hours"] == 12.0  # 3 non-vacation wd * 4h
-    assert result["available_hours"] == 24.0  # 3 wd * 8h
+    assert result["workable_hours"] == 24.0  # 3 wd * 8h
 
 
 def test_hours_allocation_vacation_shrinks_denominator():
@@ -72,7 +72,7 @@ def test_hours_allocation_vacation_shrinks_denominator():
     result = compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
 
     assert result["hours"] == 40.0  # full commitment kept
-    assert result["available_hours"] == 24.0  # 3 wd * 8h
+    assert result["workable_hours"] == 24.0  # 3 wd * 8h
     assert result["percentage"] == 166.7  # round(40/24*100, 1)
     assert result["is_overbooked"] is True
 
@@ -85,7 +85,7 @@ def test_zero_working_days_full_vacation_guard():
     result = compute_occupancy_for_period([a], [vac], WEEK_START, WEEK_END, set())
 
     assert result["percentage"] == 0.0
-    assert result["available_hours"] == 0.0
+    assert result["workable_hours"] == 0.0
     assert result["is_overbooked"] is False
 
 
@@ -98,7 +98,7 @@ def test_zero_working_days_weekend_only_period():
 
     assert result["percentage"] == 0.0
     assert result["hours"] == 0.0
-    assert result["available_hours"] == 0.0
+    assert result["workable_hours"] == 0.0
 
 
 def test_holidays_excluded_from_working_days():
@@ -108,7 +108,7 @@ def test_holidays_excluded_from_working_days():
 
     result = compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, holidays)
 
-    assert result["available_hours"] == 32.0  # 4 wd * 8h
+    assert result["workable_hours"] == 32.0  # 4 wd * 8h
     assert result["hours"] == 32.0
     assert result["percentage"] == 100.0
 
@@ -122,7 +122,7 @@ def test_assignment_partially_overlapping_period():
     result = compute_occupancy_for_period([a], [], WEEK_START, WEEK_END, set())
 
     assert result["hours"] == 24.0  # 3 wd * 8h
-    assert result["available_hours"] == 40.0
+    assert result["workable_hours"] == 40.0
     assert result["percentage"] == 60.0
 
 
