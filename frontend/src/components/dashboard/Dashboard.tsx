@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { format, parse } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { MonthTabs } from "./MonthTabs";
 import { TeamBreakdownTable } from "./TeamBreakdownTable";
 import { useDashboard } from "@/hooks/useDashboard";
 import { monthKey, useDashboardStore } from "@/stores/dashboardStore";
+import { useTimelineStore } from "@/stores/timelineStore";
+import type { DashboardProps } from "@/types/dashboard";
 
 function monthTitle(month: string): string {
   // date-fns yields a lowercase Polish month name; capitalised in JS rather
@@ -23,10 +26,21 @@ function SectionHeading({ title }: { title: string }) {
   return <p className="text-base font-semibold text-foreground">{title}</p>;
 }
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const { setSelectedMonth, goToToday } = useDashboardStore();
+  const focusTeam = useTimelineStore((state) => state.focusTeam);
   const { months, selectedSummary, selectedMonth, isLoading, error } =
     useDashboard();
+
+  // Follow a team row into the calendar, landing on the month whose figures
+  // were just read rather than on the calendar's own default window.
+  const handleTeamClick = useCallback(
+    (teamId: number) => {
+      focusTeam(teamId, parse(selectedMonth, "yyyy-MM", new Date()));
+      onNavigate?.("/timeline");
+    },
+    [focusTeam, onNavigate, selectedMonth],
+  );
 
   // "Dzisiaj" resets both the year and the month, so it is only redundant
   // when both already point at today.
@@ -78,6 +92,7 @@ export function Dashboard() {
             <TeamBreakdownTable
               summary={selectedSummary}
               isLoading={isLoading}
+              onTeamClick={onNavigate ? handleTeamClick : undefined}
             />
           </section>
         </div>

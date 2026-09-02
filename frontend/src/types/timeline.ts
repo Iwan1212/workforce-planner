@@ -28,6 +28,13 @@ export interface TimelineState {
   setSelectedTechnologyIds: (ids: number[]) => void;
   setSearchQuery: (query: string) => void;
   setOccupancyFilter: (filter: OccupancyFilter | null) => void;
+  /**
+   * Show one team, from `from` onwards, with every other filter cleared.
+   * Arriving from the team breakdown means "let me see this whole team", so a
+   * leftover search or occupancy filter would hide the very people the drill
+   * down is meant to expose.
+   */
+  focusTeam: (teamId: number, from: Date) => void;
   scrollForward: () => void;
   scrollBack: () => void;
   goToToday: () => void;

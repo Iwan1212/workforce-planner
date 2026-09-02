@@ -35,6 +35,15 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   occupancyFilter: null,
   setOccupancyFilter: (filter) => set({ occupancyFilter: filter }),
 
+  focusTeam: (teamId, from) =>
+    set((state) => ({
+      selectedTeamIds: [teamId],
+      selectedTechnologyIds: [],
+      searchQuery: "",
+      occupancyFilter: null,
+      startDate: snapToMode(from, state.viewMode),
+    })),
+
   scrollForward: () =>
     set((state) => ({
       startDate:
