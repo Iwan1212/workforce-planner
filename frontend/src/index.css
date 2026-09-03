@@ -33,6 +33,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
+  --color-info: var(--info);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
@@ -69,6 +70,12 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: #7C3AED;
+  /* The dark theme defines a whole semantic palette (success, warning, danger,
+     info) that light never got. Only --info is completed here, since that is
+     the one in use; the rest belongs to the dark-mode consistency pass.
+     A darker step than the dark theme's #3B82F6, which on white would sit
+     under the 4.5:1 contrast needed for small text. */
+  --info: #2563EB;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);

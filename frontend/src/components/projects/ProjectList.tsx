@@ -37,6 +37,11 @@ const PROJECT_COLUMNS: DataTableColumn<Project>[] = [
           style={{ backgroundColor: proj.color }}
         />
         {proj.name}
+        {proj.is_internal && (
+          <Badge variant="outline" className="text-xs">
+            Wewnętrzny
+          </Badge>
+        )}
         {proj.is_archived && (
           <Badge variant="secondary" className="text-xs">
             Zarchiwizowany
@@ -90,7 +95,7 @@ export function ProjectList() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleFormSubmit = (data: { name: string; color: string }) => {
+  const handleFormSubmit = (data: ProjectCreateData) => {
     if (crud.editingItem) {
       crud.updateMutation.mutate({ id: crud.editingItem.id, data });
     } else {

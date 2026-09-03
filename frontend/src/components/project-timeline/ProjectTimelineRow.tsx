@@ -13,6 +13,7 @@ import {
   getResizeHandleVisibility,
   assignRow,
 } from "@/lib/timelineLayout";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectTimelineRowProps {
   project: ProjectTimelineProject;
@@ -128,14 +129,28 @@ export function ProjectTimelineRow({
     >
       {/* Sticky left panel */}
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-r bg-background px-3 py-2"
+        className="sticky left-0 z-10 flex shrink-0 items-center border-r bg-background px-3 py-2"
         style={{ width: TIMELINE_LEFT_PANEL_WIDTH, minHeight: rowHeight }}
       >
-        <span
-          className="inline-block h-3 w-3 shrink-0 rounded-sm"
-          style={{ backgroundColor: project.color }}
-        />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{project.name}</span>
+        {/* Name over its badges, exactly as the employee calendar stacks a
+            person's name over their team and capacity. The colour swatch sits
+            on the name's own line, so a second line cannot pull it away. */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-3 w-3 shrink-0 rounded-sm"
+              style={{ backgroundColor: project.color }}
+            />
+            <span className="truncate text-sm font-medium">{project.name}</span>
+          </div>
+          {project.is_internal && (
+            <div className="mt-0.5 pl-5">
+              <Badge variant="secondary" className="text-[10px]">
+                Wewnętrzny
+              </Badge>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Timeline area */}

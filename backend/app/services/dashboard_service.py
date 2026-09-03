@@ -38,6 +38,8 @@ class _Bucket:
     vacation_hours: float = 0.0
     confirmed_hours: float = 0.0
     tentative_hours: float = 0.0
+    internal_confirmed_hours: float = 0.0
+    internal_tentative_hours: float = 0.0
     employee_count: int = 0
     overbooked_employee_count: int = 0
 
@@ -51,6 +53,8 @@ class _Bucket:
         )
         self.confirmed_hours += occupancy["confirmed_hours"]
         self.tentative_hours += occupancy["tentative_hours"]
+        self.internal_confirmed_hours += occupancy["internal_confirmed_hours"]
+        self.internal_tentative_hours += occupancy["internal_tentative_hours"]
         self.employee_count += 1
         if occupancy["is_overbooked"]:
             self.overbooked_employee_count += 1
@@ -71,6 +75,17 @@ class _Bucket:
         `workable` is capacity minus vacation: the hours somebody could still
         actually work. Occupancy is measured against it, which is what keeps
         the percentages equal to the timeline's occupancy badges.
+
+        Internal work is a second, independent cut through `allocated`, not
+        part of the equation above:
+
+            allocated = client + internal
+
+        Both cuts are reported per certainty, so a summary can answer "how much
+        of our planned time never reaches a client, and how much of that is
+        still only tentative". The client figures are subtractions of the
+        rounded internal ones, which keeps the two halves adding up to exactly
+        the total that is displayed beside them.
         """
         capacity = round(self.capacity_hours, 1)
         workable = round(self.workable_hours, 1)
@@ -78,6 +93,9 @@ class _Bucket:
         confirmed = round(self.confirmed_hours, 1)
         tentative = round(self.tentative_hours, 1)
         allocated = round(confirmed + tentative, 1)
+        internal_confirmed = round(self.internal_confirmed_hours, 1)
+        internal_tentative = round(self.internal_tentative_hours, 1)
+        internal = round(internal_confirmed + internal_tentative, 1)
         return {
             "capacity_hours": capacity,
             "workable_hours": workable,
@@ -85,6 +103,16 @@ class _Bucket:
             "confirmed_hours": confirmed,
             "tentative_hours": tentative,
             "allocated_hours": allocated,
+            "internal_confirmed_hours": internal_confirmed,
+            "internal_tentative_hours": internal_tentative,
+            "internal_hours": internal,
+            "client_confirmed_hours": round(confirmed - internal_confirmed, 1),
+            "client_tentative_hours": round(tentative - internal_tentative, 1),
+            "client_hours": round(allocated - internal, 1),
+            # Share of planned time that never reaches a client. The figure the
+            # whole feature exists for, so it is computed here rather than left
+            # to each caller to divide.
+            "internal_percentage": _ratio(internal, allocated),
             # Deliberately not clamped at zero: overbooking is a warning, never
             # a block, so a negative figure is the honest answer. An hours-based
             # commitment kept across vacation days is exactly such a case.
@@ -130,7 +158,9 @@ def compute_month_summary(
     Unassigned demand (placeholder assignments) is reported separately and is
     not part of `allocated_hours` or of any team row: it belongs to no employee,
     so folding it in would make the team filter incoherent and would hide the
-    demand as soon as a team was selected.
+    demand as soon as a team was selected. It is still split by certainty,
+    since a confirmed commitment nobody is staffing reads very differently
+    from a tentative one.
     """
     total = _Bucket()
     teams: dict[int | None, _TeamBucket] = {}
@@ -158,6 +188,7 @@ def compute_month_summary(
         team.bucket.add(occupancy)
 
     unassigned = 0.0
+    unassigned_confirmed = 0.0
     unassigned_count = sum(
         1
         for a in placeholder_assignments
@@ -176,12 +207,18 @@ def compute_month_summary(
             None,
         )
         unassigned = round(placeholder_occupancy["hours"], 1)
+        # Work with no assignee still carries a certainty: a confirmed
+        # placeholder is a commitment somebody has to staff, while a tentative
+        # one may yet evaporate. Worth telling apart before planning around it.
+        unassigned_confirmed = round(placeholder_occupancy["confirmed_hours"], 1)
 
     return {
         "month": f"{year}-{month:02d}",
         "working_days": get_working_days_in_month(year, month),
         **total.as_metrics(),
         "unassigned_demand_hours": unassigned,
+        "unassigned_confirmed_hours": unassigned_confirmed,
+        "unassigned_tentative_hours": round(unassigned - unassigned_confirmed, 1),
         "unassigned_assignment_count": unassigned_count,
         "teams": [
             {"team_id": t.team_id, "team_name": t.team_name, **t.bucket.as_metrics()}

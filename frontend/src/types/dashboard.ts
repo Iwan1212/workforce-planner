@@ -13,6 +13,19 @@ export interface AllocationMetrics {
   confirmed_hours: number;
   tentative_hours: number;
   allocated_hours: number;
+  /**
+   * Internal work is a second cut through `allocated`, independent of the
+   * certainty split: `allocated = client + internal`, and each side is also
+   * reported per certainty.
+   */
+  internal_confirmed_hours: number;
+  internal_tentative_hours: number;
+  internal_hours: number;
+  client_confirmed_hours: number;
+  client_tentative_hours: number;
+  client_hours: number;
+  /** Share of planned time that never reaches a client. */
+  internal_percentage: number;
   /** Workable minus allocation. Negative means the scope is overbooked. */
   remaining_hours: number;
   /** Allocation against workable hours, matching the occupancy badges. */
@@ -34,6 +47,9 @@ export interface MonthSummary extends AllocationMetrics {
   working_days: number;
   /** Demand from assignments with no assignee yet, outside allocated_hours. */
   unassigned_demand_hours: number;
+  /** That demand split by certainty; the two add up to the figure above. */
+  unassigned_confirmed_hours: number;
+  unassigned_tentative_hours: number;
   unassigned_assignment_count: number;
   teams: TeamSummary[];
 }

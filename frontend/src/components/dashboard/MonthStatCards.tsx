@@ -13,20 +13,45 @@ function percentOf(value: number, base: number): number {
   return Math.round((value / base) * 1000) / 10;
 }
 
+/**
+ * `total` is the month's capacity, so it carries the row's only inverted
+ * surface: everything beside it is a part of it. `outside` marks the one tile
+ * that is not a term of the equation at all, by treatment rather than by hue,
+ * since the product's palette has no spare colour to spend on it.
+ */
+type StatCardTone = "default" | "total" | "outside";
+
 function StatCard({
   label,
   value,
   hint,
+  tone = "default",
   valueClassName,
 }: {
   label: string;
   value: string;
   hint: ReactNode;
+  tone?: StatCardTone;
   valueClassName?: string;
 }) {
+  const isTotal = tone === "total";
+  const isOutside = tone === "outside";
   return (
-    <Card className="gap-1 py-4">
-      <div className="px-4 text-xs font-medium text-muted-foreground">
+    <Card
+      className={cn(
+        "gap-1 py-4",
+        isTotal && "border-foreground bg-foreground text-background",
+        isOutside && "border-info/40 bg-info/8",
+      )}
+    >
+      <div
+        className={cn(
+          "px-4 text-xs font-medium",
+          isTotal && "text-background/70",
+          isOutside && "text-info",
+          !isTotal && !isOutside && "text-muted-foreground",
+        )}
+      >
         {label}
       </div>
       <div
@@ -37,7 +62,14 @@ function StatCard({
       >
         {value}
       </div>
-      <div className="px-4 text-xs text-muted-foreground">{hint}</div>
+      <div
+        className={cn(
+          "px-4 text-xs",
+          isTotal ? "text-background/70" : "text-muted-foreground",
+        )}
+      >
+        {hint}
+      </div>
     </Card>
   );
 }
@@ -45,14 +77,17 @@ function StatCard({
 export function MonthStatCards({ summary, isLoading }: MonthStatCardsProps) {
   if (isLoading || !summary) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {Array.from({ length: CARD_COUNT }).map((_, i) => (
-          <Card key={i} className="gap-2 py-4">
-            <div className="mx-4 h-3 w-24 animate-pulse rounded bg-muted" />
-            <div className="mx-4 h-7 w-20 animate-pulse rounded bg-muted" />
-            <div className="mx-4 h-3 w-16 animate-pulse rounded bg-muted" />
-          </Card>
-        ))}
+      <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: CARD_COUNT }).map((_, i) => (
+            <Card key={i} className="gap-2 py-4">
+              <div className="mx-4 h-3 w-24 animate-pulse rounded bg-muted" />
+              <div className="mx-4 h-7 w-20 animate-pulse rounded bg-muted" />
+              <div className="mx-4 h-3 w-16 animate-pulse rounded bg-muted" />
+            </Card>
+          ))}
+        </div>
+        <div className="h-8 animate-pulse rounded-md bg-muted" />
       </div>
     );
   }
@@ -66,10 +101,19 @@ export function MonthStatCards({ summary, isLoading }: MonthStatCardsProps) {
   const shareOfTotal = (hours: number) =>
     `${percentOf(hours, summary.capacity_hours)}% całości`;
 
+  // The accent marks the second cut through these hours wherever it appears,
+  // here and on the strip below the row, so the two read as one idea.
+  const internalShareLine = (hours: number) =>
+    hours > 0 ? (
+      <div className="text-primary">w tym wewnętrzne {formatHours(hours)}</div>
+    ) : null;
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <StatCard
         label="Łącznie"
+        tone="total"
         value={formatHours(summary.capacity_hours)}
         hint={
           <>
@@ -87,13 +131,23 @@ export function MonthStatCards({ summary, isLoading }: MonthStatCardsProps) {
       <StatCard
         label="Potwierdzone"
         value={formatHours(summary.confirmed_hours)}
-        hint={shareOfTotal(summary.confirmed_hours)}
+        hint={
+          <>
+            <div>{shareOfTotal(summary.confirmed_hours)}</div>
+            {internalShareLine(summary.internal_confirmed_hours)}
+          </>
+        }
       />
 
       <StatCard
         label="Niepotwierdzone"
         value={formatHours(summary.tentative_hours)}
-        hint={shareOfTotal(summary.tentative_hours)}
+        hint={
+          <>
+            <div>{shareOfTotal(summary.tentative_hours)}</div>
+            {internalShareLine(summary.internal_tentative_hours)}
+          </>
+        }
       />
 
       <StatCard
@@ -129,13 +183,52 @@ export function MonthStatCards({ summary, isLoading }: MonthStatCardsProps) {
 
       <StatCard
         label="Bez przypisania"
+        tone="outside"
         value={formatHours(summary.unassigned_demand_hours)}
-        hint={`${unassignedCount} ${pluralizePl(unassignedCount, [
-          "assignment",
-          "assignmenty",
-          "assignmentów",
-        ])}`}
+        hint={
+          <>
+            <div>
+              {unassignedCount}{" "}
+              {pluralizePl(unassignedCount, [
+                "assignment",
+                "assignmenty",
+                "assignmentów",
+              ])}
+            </div>
+            {summary.unassigned_demand_hours > 0 && (
+              <div className="text-info">
+                w tym potwierdzone{" "}
+                {formatHours(summary.unassigned_confirmed_hours)}
+              </div>
+            )}
+          </>
+        }
       />
+
+     </div>
+
+      {/* One line rather than a second row of tiles: the client/internal cut
+          is a different question about the same hours, and the row above is
+          where the month's attention belongs. */}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-md bg-primary/8 px-4 py-3 text-sm tabular-nums">
+        <span className="text-muted-foreground">Zaplanowane</span>
+        <span className="font-semibold">
+          {formatHours(summary.allocated_hours)}
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">Klienckie</span>
+        <span className="font-semibold">
+          {formatHours(summary.client_hours)}
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">Wewnętrzne</span>
+        <span className="font-semibold">
+          {formatHours(summary.internal_hours)}
+        </span>
+        <span className="text-muted-foreground">
+          ({summary.internal_percentage}% zaplanowanego czasu)
+        </span>
+      </div>
     </div>
   );
 }

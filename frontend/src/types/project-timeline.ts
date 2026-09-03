@@ -19,6 +19,7 @@ export interface ProjectTimelineProject {
   id: number;
   name: string;
   color: string;
+  is_internal: boolean;
   assignments: ProjectTimelineAssignment[];
 }
 

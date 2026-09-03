@@ -36,13 +36,17 @@ def make_capacity(valid_from, capacity_type, value):
     )
 
 
-def make_assignment(start, end, allocation_type, value, is_tentative=False):
+def make_assignment(
+    start, end, allocation_type, value, is_tentative=False, is_internal=False
+):
+    """An assignment stub, always carrying a project like a real row does."""
     return SimpleNamespace(
         start_date=start,
         end_date=end,
         allocation_type=allocation_type,
         allocation_value=value,
         is_tentative=is_tentative,
+        project=SimpleNamespace(is_internal=is_internal),
     )
 
 
@@ -427,3 +431,200 @@ def test_fetch_bounds_cover_the_reported_months_in_full():
     # December rollover.
     months = _months_in_range(date(2026, 12, 10), date(2027, 1, 5))
     assert _fetch_bounds(months) == (date(2026, 12, 1), date(2027, 1, 31))
+
+
+# --- internal vs client split ---
+
+
+def _march(snapshots, placeholders=()):
+    return compute_month_summary(snapshots, placeholders, 2026, 3, set())
+
+
+def _full_month(is_internal, is_tentative=False, percent=100):
+    """One full-time person booked for all of March at `percent`."""
+    return make_snapshot(
+        assignments=[
+            make_assignment(
+                MARCH_START,
+                MARCH_END,
+                AllocationType.percentage,
+                percent,
+                is_tentative=is_tentative,
+                is_internal=is_internal,
+            )
+        ]
+    )
+
+
+def test_internal_hours_are_split_out_of_allocated():
+    summary = _march([_full_month(is_internal=True)])
+
+    assert summary["allocated_hours"] == FULL_TIME_MARCH_HOURS
+    assert summary["internal_hours"] == FULL_TIME_MARCH_HOURS
+    assert summary["client_hours"] == 0.0
+    assert summary["internal_percentage"] == 100.0
+
+
+def test_client_hours_are_the_remainder_of_allocated():
+    summary = _march([_full_month(is_internal=False)])
+
+    assert summary["client_hours"] == FULL_TIME_MARCH_HOURS
+    assert summary["internal_hours"] == 0.0
+    assert summary["internal_percentage"] == 0.0
+
+
+def test_both_cuts_are_reported_per_certainty():
+    """The 2x2 the summary shows: internal/client against confirmed/tentative."""
+    summary = _march(
+        [
+            make_snapshot(
+                employee_id=1,
+                assignments=[
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 25,
+                        is_internal=False, is_tentative=False,
+                    ),
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 25,
+                        is_internal=False, is_tentative=True,
+                    ),
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 25,
+                        is_internal=True, is_tentative=False,
+                    ),
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 25,
+                        is_internal=True, is_tentative=True,
+                    ),
+                ],
+            )
+        ]
+    )
+
+    quarter = FULL_TIME_MARCH_HOURS / 4
+    assert summary["client_confirmed_hours"] == quarter
+    assert summary["client_tentative_hours"] == quarter
+    assert summary["internal_confirmed_hours"] == quarter
+    assert summary["internal_tentative_hours"] == quarter
+    assert summary["internal_percentage"] == 50.0
+
+
+def test_the_two_cuts_always_add_up_to_the_same_total():
+    """Both partitions of allocated must reconcile, or the cards contradict."""
+    summary = _march(
+        [
+            _full_month(is_internal=True, percent=30),
+            make_snapshot(
+                employee_id=2,
+                assignments=[
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 70,
+                        is_internal=False, is_tentative=True,
+                    )
+                ],
+            ),
+        ]
+    )
+
+    assert (
+        summary["client_hours"] + summary["internal_hours"]
+        == summary["allocated_hours"]
+    )
+    assert (
+        summary["confirmed_hours"] + summary["tentative_hours"]
+        == summary["allocated_hours"]
+    )
+    assert (
+        summary["client_confirmed_hours"] + summary["internal_confirmed_hours"]
+        == summary["confirmed_hours"]
+    )
+    assert (
+        summary["client_tentative_hours"] + summary["internal_tentative_hours"]
+        == summary["tentative_hours"]
+    )
+
+
+def test_team_rows_carry_the_internal_split():
+    summary = _march(
+        [
+            make_snapshot(
+                employee_id=1,
+                team_id=1,
+                team_name="Backend",
+                assignments=[
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 100,
+                        is_internal=True,
+                    )
+                ],
+            ),
+            make_snapshot(
+                employee_id=2,
+                team_id=2,
+                team_name="Frontend",
+                assignments=[
+                    make_assignment(
+                        MARCH_START, MARCH_END, AllocationType.percentage, 100,
+                        is_internal=False,
+                    )
+                ],
+            ),
+        ]
+    )
+
+    by_name = {t["team_name"]: t for t in summary["teams"]}
+    assert by_name["Backend"]["internal_hours"] == FULL_TIME_MARCH_HOURS
+    assert by_name["Backend"]["client_hours"] == 0.0
+    assert by_name["Frontend"]["internal_hours"] == 0.0
+    assert by_name["Frontend"]["client_hours"] == FULL_TIME_MARCH_HOURS
+
+
+def test_unassigned_demand_is_split_by_certainty():
+    """Work nobody is staffing yet still has a certainty worth reading."""
+    summary = _march(
+        [],
+        placeholders=[
+            make_assignment(
+                MARCH_START, MARCH_END, AllocationType.percentage, 50,
+                is_tentative=False,
+            ),
+            make_assignment(
+                MARCH_START, MARCH_END, AllocationType.percentage, 25,
+                is_tentative=True,
+            ),
+        ],
+    )
+
+    half = FULL_TIME_MARCH_HOURS / 2
+    quarter = FULL_TIME_MARCH_HOURS / 4
+    assert summary["unassigned_demand_hours"] == half + quarter
+    assert summary["unassigned_confirmed_hours"] == half
+    assert summary["unassigned_tentative_hours"] == quarter
+    # Still outside the month's allocation, split or not.
+    assert summary["allocated_hours"] == 0.0
+
+
+def test_unassigned_demand_reports_zero_certainty_when_there_is_none():
+    summary = _march([])
+
+    assert summary["unassigned_demand_hours"] == 0.0
+    assert summary["unassigned_confirmed_hours"] == 0.0
+    assert summary["unassigned_tentative_hours"] == 0.0
+
+
+def test_unassigned_demand_stays_outside_the_client_internal_cut():
+    """Placeholder work is demand, not allocation: it is not part of either cut."""
+    summary = _march(
+        [],
+        placeholders=[
+            make_assignment(
+                MARCH_START, MARCH_END, AllocationType.percentage, 100,
+                is_internal=True,
+            )
+        ],
+    )
+
+    assert summary["unassigned_demand_hours"] == FULL_TIME_MARCH_HOURS
+    assert summary["internal_hours"] == 0.0
+    assert summary["client_hours"] == 0.0
+    assert summary["allocated_hours"] == 0.0

@@ -14,19 +14,27 @@ from types import SimpleNamespace
 
 from app.api.calendar import _get_weeks_in_range, _week_key
 from app.models.assignment import AllocationType
-from app.services.occupancy_service import compute_occupancy_for_period
+from app.services.occupancy_service import (
+    TIMELINE_OCCUPANCY_KEYS,
+    compute_occupancy_for_period,
+    timeline_occupancy,
+)
 
 WEEK_START = date(2026, 3, 2)  # Monday
 WEEK_END = date(2026, 3, 8)  # Sunday
 
 
-def make_assignment(start, end, allocation_type, value, is_tentative=False):
+def make_assignment(
+    start, end, allocation_type, value, is_tentative=False, is_internal=False
+):
+    """An assignment stub, always carrying a project like a real row does."""
     return SimpleNamespace(
         start_date=start,
         end_date=end,
         allocation_type=allocation_type,
         allocation_value=value,
         is_tentative=is_tentative,
+        project=SimpleNamespace(is_internal=is_internal),
     )
 
 
@@ -200,3 +208,102 @@ def test_monthly_and_weekly_consistent_for_flat_percentage():
             [a], [], week_start, week_end, set()
         )
         assert weekly["percentage"] == 50.0, f"week {week_start}"
+
+
+# --- internal vs client split ---
+
+
+def _occupancy(assignments):
+    return compute_occupancy_for_period(
+        assignments, [], WEEK_START, WEEK_END, set()
+    )
+
+
+def test_internal_project_hours_are_reported_separately():
+    occ = _occupancy(
+        [
+            make_assignment(
+                WEEK_START,
+                WEEK_END,
+                AllocationType.percentage,
+                50,
+                is_internal=True,
+            )
+        ]
+    )
+    # 5 working days x 8 h x 50% = 20 h, all of it internal and confirmed.
+    assert occ["confirmed_hours"] == 20.0
+    assert occ["internal_confirmed_hours"] == 20.0
+    assert occ["internal_tentative_hours"] == 0.0
+
+
+def test_client_project_hours_are_not_counted_as_internal():
+    occ = _occupancy(
+        [
+            make_assignment(
+                WEEK_START,
+                WEEK_END,
+                AllocationType.percentage,
+                50,
+                is_internal=False,
+            )
+        ]
+    )
+    assert occ["confirmed_hours"] == 20.0
+    assert occ["internal_confirmed_hours"] == 0.0
+
+
+def test_a_project_is_client_work_unless_it_is_marked_internal():
+    """The default: nothing is internal until somebody ticks the box."""
+    occ = _occupancy(
+        [make_assignment(WEEK_START, WEEK_END, AllocationType.percentage, 50)]
+    )
+    assert occ["confirmed_hours"] == 20.0
+    assert occ["internal_confirmed_hours"] == 0.0
+    assert occ["internal_tentative_hours"] == 0.0
+
+
+def test_internal_split_is_independent_of_the_certainty_split():
+    """All four combinations land in their own bucket."""
+    occ = _occupancy(
+        [
+            make_assignment(
+                WEEK_START, WEEK_END, AllocationType.percentage, 10,
+                is_internal=False, is_tentative=False,
+            ),
+            make_assignment(
+                WEEK_START, WEEK_END, AllocationType.percentage, 20,
+                is_internal=False, is_tentative=True,
+            ),
+            make_assignment(
+                WEEK_START, WEEK_END, AllocationType.percentage, 30,
+                is_internal=True, is_tentative=False,
+            ),
+            make_assignment(
+                WEEK_START, WEEK_END, AllocationType.percentage, 40,
+                is_internal=True, is_tentative=True,
+            ),
+        ]
+    )
+    # 40 h in the week, so each percent is 0.4 h.
+    assert occ["confirmed_hours"] == 16.0  # 10% + 30%
+    assert occ["tentative_hours"] == 24.0  # 20% + 40%
+    assert occ["internal_confirmed_hours"] == 12.0  # 30%
+    assert occ["internal_tentative_hours"] == 16.0  # 40%
+
+
+def test_internal_keys_stay_out_of_the_timeline_contract():
+    """The timeline must not learn about internal work through this engine."""
+    projected = timeline_occupancy(
+        [
+            make_assignment(
+                WEEK_START, WEEK_END, AllocationType.percentage, 50,
+                is_internal=True,
+            )
+        ],
+        [],
+        WEEK_START,
+        WEEK_END,
+        set(),
+    )
+    assert set(projected) == set(TIMELINE_OCCUPANCY_KEYS)

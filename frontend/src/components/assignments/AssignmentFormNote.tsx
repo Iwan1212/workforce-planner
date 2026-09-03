@@ -16,7 +16,7 @@ export function AssignmentFormNote({
           type="checkbox"
           checked={isTentative}
           onChange={(e) => onTentativeChange(e.target.checked)}
-          className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-primary"
+          className="h-4 w-4 cursor-pointer rounded border-input accent-primary"
         />
         <Label
           htmlFor="assignment-tentative"
