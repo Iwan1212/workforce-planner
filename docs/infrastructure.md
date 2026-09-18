@@ -137,4 +137,4 @@ Two GitHub Actions workflows in `.github/workflows/`:
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | PRs + pushes to main | Runs tests, type checking, linting, builds (Python 3.12, Node 20) |
-| `deploy.yml` | Pushes to main | Deploys to staging server |
+| `deploy.yml` | Pushes to main | Deploys over SSH to the server named by the `DEPLOY_HOST` / `DEPLOY_USER` / `SSH_PRIVATE_KEY` repository secrets |

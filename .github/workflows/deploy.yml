@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  DEPLOY_HOST: employee-engagement.staging.mntm.dev
-  DEPLOY_USER: employee-engagement
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
   DEPLOY_PATH: ~/workforce-planner
 
 jobs:

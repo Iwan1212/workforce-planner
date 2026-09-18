@@ -4,13 +4,13 @@
 
 **Open-source workforce allocation tool for IT companies.**
 
-Replace your Excel spreadsheets with an interactive timeline that shows who works on what project, at what capacity, and for how long.
+Replace spreadsheets with an interactive timeline that shows who works on which project, at what capacity, and for how long, plus a monthly summary of where the planned hours go.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
 
 </div>
@@ -19,59 +19,59 @@ Replace your Excel spreadsheets with an interactive timeline that shows who work
 
 ## Overview
 
-Workforce Planner is a full-stack web application designed for IT companies managing teams of 80+ people across multiple projects. It provides a visual timeline to plan and track employee allocation, detect overbooking, and manage resources efficiently.
+Workforce Planner is a self-hosted web application for companies that staff tens of people across many projects at once. It keeps one source of truth for allocation, shows overbooking and free capacity per person and per team, and reports how the month's hours split between confirmed and tentative work and between client and internal projects.
 
-### Key Features
+The UI is in Polish. Working-day logic is built around the Polish public holiday calendar.
 
-- **Interactive Timeline** — Monthly and weekly views with drag & drop assignment management
-- **Drag & Drop** — Move assignments between employees by dragging bars across rows
-- **Resize to Reschedule** — Drag assignment edges to change start/end dates in real time
-- **Overbooking Detection** — Per-period occupancy with color-coded indicators (green / yellow / red)
-- **Polish Holidays** — Built-in calendar with all Polish public holidays (fixed + Easter-based)
-- **Flexible Allocation** — Assign by percentage (e.g. 50% FTE) or monthly hours (e.g. 120h/month)
-- **Team Filtering** — Filter timeline by team: Frontend, Backend, QA, PM, Mobile, UX/UI, DevOps
-- **Soft Delete** — Employees and projects are archived, not permanently removed
-- **JWT Authentication** — Secure login with account lockout and password reset
+### Features
 
-## Screenshots
+**Planning**
+- **Employee timeline**: monthly and weekly views, one row per person, assignments as colour-coded bars.
+- **Project timeline**: the same data grouped by project.
+- **Drag & drop and resize**: move an assignment to another person or change its dates directly on the bars.
+- **Split and duplicate**: cut an assignment at a date or copy it to another period.
+- **Percentage or hours**: allocate as a share of FTE (e.g. 50%) or as monthly hours (e.g. 120 h).
+- **Confirmed vs tentative**: every assignment carries a certainty flag that flows through all occupancy figures.
+- **Unassigned demand**: placeholder assignments record work a project needs before anyone is staffed on it.
 
-> To add screenshots, run the app locally and capture the timeline view, then place images in a `docs/` folder.
+**Capacity**
+- **Per-employee capacity history**: full-time, part-time or fixed weekly hours, valid from a given date.
+- **Occupancy per period** measured against workable hours (capacity minus vacation), with green / yellow / red indicators. Overbooking is highlighted, never blocked.
+- **Vacations** synced from Calamari (optional) and shown on the timeline.
+- **Polish public holidays**: 13 per year, fixed and Easter-based, excluded from working days.
+
+**Summary**
+- **Monthly dashboard** per team and for the whole company: capacity, workable, confirmed, tentative, remaining hours and utilisation.
+- **Client vs internal split**: projects can be marked internal (recruitment, own product, sales, PM time), and the summary reports how much planned time never reaches a client.
+- **Team drill-down**: click a team in the summary to open the employee timeline filtered to it.
+
+**Organisation**
+- **Teams and technologies** as managed dictionaries, used to filter every view.
+- **Employee lifecycle**: archive with wind-down of future assignments, unarchive, or hard delete.
+- **Project archive** with the same soft-delete semantics.
+
+**Accounts**
+- **JWT authentication** with refresh tokens, login rate limiting and password reset.
+- **Roles**: admin, user, viewer.
+- **User management** screen for admins.
+- **Light and dark theme**, stored per user.
 
 ## Tech Stack
 
-### Backend
-
-| Technology | Purpose |
+| Layer | Technology |
 |---|---|
-| **FastAPI** | Async REST API framework |
-| **SQLAlchemy 2.0** | Async ORM with relationship loading |
-| **PostgreSQL 16** | Primary database |
-| **Alembic** | Database migrations |
-| **Pydantic v2** | Request/response validation |
-| **python-jose** | JWT token handling |
-| **passlib + bcrypt** | Password hashing |
-
-### Frontend
-
-| Technology | Purpose |
-|---|---|
-| **React 19** | UI framework |
-| **TypeScript 5.9** | Type safety |
-| **Vite 7** | Build tool & dev server |
-| **Tailwind CSS 4** | Utility-first styling |
-| **shadcn/ui** | Accessible component library |
-| **TanStack Query v5** | Server state & caching |
-| **dnd-kit** | Drag & drop interactions |
-| **Zustand** | Client state management |
-| **date-fns** | Date manipulation with PL locale |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async), asyncpg, Alembic, Pydantic v2, PyJWT, passlib + bcrypt |
+| Database | PostgreSQL 16 |
+| Frontend | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, shadcn/ui, TanStack Query v5, TanStack Router, dnd-kit, Zustand, date-fns |
+| Infrastructure | Docker Compose (dev and prod), Traefik with Let's Encrypt (prod), Nginx (frontend prod image), GitHub Actions |
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Docker** & **Docker Compose**
+Docker and Docker Compose.
 
-### 1. Clone and run
+### Run with Docker
 
 ```bash
 git clone https://github.com/Iwan1212/workforce-planner.git
@@ -79,34 +79,33 @@ cd workforce-planner
 docker compose up -d
 ```
 
-This starts all three services:
+| Service | URL |
+|---|---|
+| Frontend (Vite dev server, hot reload) | http://localhost:5173 |
+| Backend (FastAPI, auto-reload) | http://localhost:8001 |
+| API docs (Swagger) | http://localhost:8001/docs |
+| PostgreSQL | localhost:5433 |
 
-| Service | URL | Description |
-|---|---|---|
-| **Frontend** | http://localhost:5173 | React dev server with hot reload |
-| **Backend** | http://localhost:8001 | FastAPI with auto-reload |
-| **Database** | localhost:5433 | PostgreSQL 16 |
+Migrations and the initial admin account are created automatically when the backend starts.
 
-Database migrations and admin user creation happen automatically on backend startup.
-
-### 2. Open the app
-
-Navigate to **http://localhost:5173** and log in:
+### Log in
 
 | Field | Value |
 |---|---|
 | Email | `admin@workforce.local` |
 | Password | `Admin123!` |
 
+Change the password after the first login.
+
 ### Manual setup (without Docker)
 
 <details>
 <summary>Click to expand</summary>
 
-**Prerequisites:** Python 3.9+, Node.js 18+, Docker (for PostgreSQL only)
+**Prerequisites:** Python 3.12+, Node.js 20+, Docker for PostgreSQL only.
 
 ```bash
-# Start database
+# Database
 docker compose up -d db
 
 # Backend
@@ -124,7 +123,7 @@ npm install
 npm run dev
 ```
 
-Optionally, seed demo data (15 employees, 5 projects, 20 assignments):
+Optional demo data (15 employees, 5 projects, 20 assignments):
 
 ```bash
 cd backend
@@ -133,110 +132,98 @@ python scripts/seed_demo_data.py
 
 </details>
 
+## Documentation
+
+Detailed documentation lives in [`docs/`](docs/):
+
+| Document | Contents |
+|---|---|
+| [Architecture](docs/architecture.md) | System design, component tree, auth flow |
+| [API Reference](docs/api-reference.md) | Every endpoint, the timeline contract, response formats |
+| [Data Models](docs/data-models.md) | SQLAlchemy models, relationships, allocation and occupancy rules |
+| [Infrastructure](docs/infrastructure.md) | Docker setup for dev and prod, environment variables, deployment, scripts |
+| [PRD](PRD.md) | Product requirements, user stories, success metrics (Polish) |
+
 ## Project Structure
 
 ```
 workforce-planner/
 ├── backend/
 │   ├── app/
-│   │   ├── api/                # FastAPI routers
-│   │   │   ├── auth.py         # Login, password reset
-│   │   │   ├── employees.py    # Employee CRUD
-│   │   │   ├── projects.py     # Project CRUD
-│   │   │   ├── assignments.py  # Assignment CRUD
-│   │   │   └── calendar.py     # Timeline data, holidays
-│   │   ├── models/             # SQLAlchemy models
-│   │   ├── schemas/            # Pydantic schemas
-│   │   ├── services/           # Business logic
-│   │   │   ├── assignment_service.py
-│   │   │   ├── auth_service.py
-│   │   │   └── calamari_service.py  # Vacation integration (mock)
-│   │   ├── utils/
-│   │   │   ├── polish_holidays.py   # 13 holidays with Easter algorithm
-│   │   │   └── working_days.py      # Working day calculations
-│   │   ├── core/               # Security, dependencies
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   └── main.py
-│   ├── alembic/                # Database migrations
-│   ├── tests/                  # 22 unit tests
-│   └── scripts/
-│       ├── create_admin.py
-│       └── seed_demo_data.py
+│   │   ├── api/                 # FastAPI routers
+│   │   │   ├── auth.py          # Login, refresh, password reset, theme
+│   │   │   ├── users.py         # User management (admin)
+│   │   │   ├── employees.py     # Employees, capacities, archive
+│   │   │   ├── teams.py         # Team dictionary
+│   │   │   ├── technologies.py  # Technology dictionary
+│   │   │   ├── projects.py      # Projects, archive
+│   │   │   ├── assignments.py   # Assignments, split, duplicate
+│   │   │   ├── calendar.py      # Timeline, vacations, holidays, working days
+│   │   │   ├── project_timeline.py
+│   │   │   ├── dashboard.py     # Monthly summary
+│   │   │   └── settings.py      # Calamari configuration
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic schemas
+│   │   ├── services/            # Occupancy engine, capacity, dashboard, lifecycle, vacation sync
+│   │   ├── utils/               # Polish holidays, working days
+│   │   └── core/                # Security, dependencies
+│   ├── alembic/                 # Database migrations
+│   ├── tests/                   # pytest suite
+│   └── scripts/                 # create_admin.py, seed_demo_data.py
 ├── frontend/
 │   └── src/
-│       ├── api/                # API client with JWT interceptor
-│       ├── components/
-│       │   ├── timeline/       # Timeline, TimelineRow, TimelineBar, etc.
-│       │   ├── assignments/    # AssignmentModal
-│       │   ├── employees/      # EmployeeList, EmployeeForm
-│       │   ├── projects/       # ProjectList, ProjectForm
-│       │   ├── auth/           # LoginForm with password reset
-│       │   ├── layout/         # Sidebar, Layout
-│       │   └── ui/             # shadcn/ui components
-│       ├── hooks/              # useTimeline
-│       └── stores/             # Zustand stores
-├── docker-compose.yml
-└── LICENSE
+│       ├── api/                 # API client with JWT refresh
+│       ├── components/          # timeline, project-timeline, dashboard, assignments,
+│       │                        # employees, projects, settings, users, auth, layout, ui
+│       ├── hooks/               # TanStack Query hooks
+│       ├── stores/              # Zustand stores
+│       ├── lib/                 # Capacity maths, layout, formatting
+│       └── types/
+├── docs/
+├── docker-compose.yml           # Development
+├── docker-compose.prod.yml      # Production (Traefik + Let's Encrypt)
+└── deploy.sh                    # Manual deploy over SSH
 ```
 
-## API Reference
+## API Overview
 
-### Authentication
-
-```
-POST   /api/auth/login                  # Returns JWT access token
-GET    /api/auth/me                     # Current user info
-POST   /api/auth/reset-password-request # Request password reset (token logged to console)
-POST   /api/auth/reset-password         # Reset password with token
-```
-
-### Resources
+All endpoints are under `/api` and require a bearer token except the auth routes. Full contract in [docs/api-reference.md](docs/api-reference.md); interactive docs at `/docs` when the backend is running.
 
 ```
-GET    /api/employees                   # List employees (filter: ?team=Frontend)
-POST   /api/employees                   # Create employee
-PATCH  /api/employees/{id}              # Update employee
-DELETE /api/employees/{id}              # Soft delete (with active assignment check)
-
-GET    /api/projects                    # List projects
-POST   /api/projects                    # Create project (unique name)
-PATCH  /api/projects/{id}              # Update project
-DELETE /api/projects/{id}              # Delete with cascade
-
-GET    /api/assignments                 # List assignments
-POST   /api/assignments                 # Create assignment
-PATCH  /api/assignments/{id}            # Update (dates, allocation, employee)
-DELETE /api/assignments/{id}            # Delete assignment
-```
-
-### Timeline
-
-```
-GET    /api/assignments/timeline?start_date=2026-01-01&end_date=2026-06-30&teams=Frontend,Backend
-```
-
-Returns employees with assignments, vacations, per-period occupancy (monthly or weekly), holidays, and working days per month.
-
-### Calendar
-
-```
-GET    /api/calendar/holidays/{year}    # Polish holidays [{date, name}]
-GET    /api/calendar/working-days       # Working days in date range
+Auth          POST /auth/login · POST /auth/refresh · GET /auth/me · PATCH /auth/me/theme
+              POST /auth/reset-password-request · POST /auth/reset-password
+Users         GET/POST /users · PATCH/DELETE /users/{id}
+Employees     GET/POST /employees · PATCH/DELETE /employees/{id}
+              POST /employees/{id}/archive · POST /employees/{id}/unarchive
+              GET/POST /employees/{id}/capacities · PATCH/DELETE /employees/{id}/capacities/{cid}
+Teams         GET/POST /teams · PATCH/DELETE /teams/{id}
+Technologies  GET/POST /technologies · PATCH/DELETE /technologies/{id}
+Projects      GET/POST /projects · PATCH/DELETE /projects/{id}
+              POST /projects/{id}/archive · POST /projects/{id}/unarchive
+              GET /projects/timeline
+Assignments   GET/POST /assignments · PATCH/DELETE /assignments/{id}
+              POST /assignments/{id}/split · POST /assignments/{id}/duplicate
+              GET /assignments/timeline?start_date&end_date&team_ids&technology_ids
+Calendar      GET /calendar/holidays/{year} · GET /calendar/working-days
+              GET /calendar/vacations · POST /calendar/vacations/sync
+Dashboard     GET /dashboard/monthly
+Settings      GET/PUT/DELETE /settings/calamari
 ```
 
 ## Business Rules
 
 | Rule | Details |
 |---|---|
-| **1 FTE** | 100% = 8 hours/day x working days/month |
-| **Allocation types** | Percentage (e.g. 50%) or monthly hours (e.g. 120h) |
-| **Overbooking** | Allowed but highlighted in red (>100% FTE) |
-| **Working days** | Monday-Friday, excluding Polish public holidays |
-| **Week start** | Monday (ISO standard) |
-| **Minimum unit** | 1 hour |
-| **Polish holidays** | 13 per year: 9 fixed + 4 Easter-based movable |
-| **Soft delete** | Employees/projects archived; future assignments removed |
+| 1 FTE | 100% = 8 h/day × working days in the month |
+| Allocation types | Percentage of FTE, or fixed monthly hours spread over working days |
+| Capacity | Per employee, with history: full-time, part-time percentage or fixed weekly hours |
+| Occupancy | Allocated hours / workable hours, where workable = capacity minus vacation |
+| Overbooking | Allowed, highlighted in red above 100% |
+| Certainty | Each assignment is confirmed or tentative; both are reported separately |
+| Internal work | A project flag; internal hours are a second cut through allocated hours, independent of certainty |
+| Unassigned demand | Placeholder assignments count as demand, not as allocation |
+| Working days | Monday to Friday minus Polish public holidays, week starts Monday |
+| Soft delete | Employees and projects are archived; assignments are hard-deleted |
 
 ## Running Tests
 
@@ -246,51 +233,55 @@ source venv/bin/activate
 pytest tests/ -v
 ```
 
+Frontend checks:
+
+```bash
+cd frontend
+npx tsc -b && npx eslint . && npm run build
 ```
-22 passed — holidays, working days, assignment calculations
-```
+
+CI runs both on every pull request and push to `main`.
 
 ## Configuration
 
-Environment variables (with defaults):
+Backend environment variables (see `backend/.env.example`):
 
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://workforce:workforce_dev@localhost:5433/workforce_planner` | Database connection |
-| `SECRET_KEY` | `change-me-in-production` | JWT signing key |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT token lifetime |
-| `CALAMARI_API_KEY` | — | Optional: Calamari API key for vacation sync |
+| `SECRET_KEY` | `dev-secret-key-change-in-production` | JWT signing key. The app refuses to start with the default outside development. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Access token lifetime |
+| `REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | Refresh token lifetime |
+| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins |
+| `ENVIRONMENT` | `development` | `development` or `production` |
 
-## Roadmap
+Calamari credentials are not environment variables. They are entered in the Settings screen and stored in the database.
 
-- [ ] Calamari API integration for vacation sync
-- [ ] Email notifications for password reset
-- [ ] Export timeline to PDF/PNG
-- [ ] Role-based access control (viewer / editor / admin)
-- [ ] Employee availability calendar
-- [ ] Project budget tracking
-- [ ] Dark mode
+## Deployment
+
+`docker-compose.prod.yml` runs the stack behind Traefik with automatic Let's Encrypt certificates. Set `DOMAIN`, `ACME_EMAIL`, `POSTGRES_*`, `SECRET_KEY` and `CORS_ORIGINS` in a `.env` file on the server, then:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The frontend is served at `app.${DOMAIN}` and the API at `api.${DOMAIN}`.
+
+Two ways to ship a new version:
+
+- **GitHub Actions**: `.github/workflows/deploy.yml` runs on every push to `main`. It needs three repository secrets: `DEPLOY_HOST`, `DEPLOY_USER` and `SSH_PRIVATE_KEY`.
+- **Manually**: `DEPLOY_HOST=... DEPLOY_USER=... ./deploy.sh` syncs the repo over SSH and rebuilds the containers.
+
+Details in [docs/infrastructure.md](docs/infrastructure.md).
 
 ## Contributing
 
-Contributions are welcome! Feel free to:
+1. Fork the repository and create a branch (`git checkout -b feat/your-feature`).
+2. Keep the backend tests green and the frontend type-check, lint and build passing.
+3. Open a pull request against `main`. CI runs on every PR.
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-Please make sure your code passes the existing tests and follows the project conventions.
+Conventions for both codebases are described in [CLAUDE.md](CLAUDE.md).
 
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-Built with [FastAPI](https://fastapi.tiangolo.com) + [React](https://react.dev) + [Claude Code](https://claude.ai/claude-code)
-
-</div>
+MIT. See [LICENSE](LICENSE).

@@ -216,7 +216,7 @@ function CalamariSection() {
             <Label htmlFor="calamari-subdomain">Subdomena</Label>
             <Input
               id="calamari-subdomain"
-              placeholder="np. momentum"
+              placeholder="np. mojafirma"
               value={subdomain}
               onChange={(e) => {
               // Extract subdomain if user pastes full URL like https://foo.calamari.io/...
