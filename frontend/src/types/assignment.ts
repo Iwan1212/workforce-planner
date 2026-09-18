@@ -100,6 +100,7 @@ export interface AssignmentProjectOption {
   id: number;
   name: string;
   color: string;
+  is_internal: boolean;
 }
 
 export interface AssignmentFormEmployeeProjectProps {

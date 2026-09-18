@@ -123,6 +123,13 @@ const METRIC_COLUMNS: DataTableColumn<TeamSummary>[] = [
     ),
   },
   {
+    id: "internal",
+    header: "Wewnętrzne",
+    align: "right",
+    className: "tabular-nums",
+    cell: (row) => formatHours(row.internal_hours),
+  },
+  {
     id: "utilization",
     header: "Obłożenie",
     align: "right",
@@ -177,6 +184,9 @@ export function TeamBreakdownTable({
               )}
             >
               {formatHours(summary.remaining_hours)}
+            </td>
+            <td className="px-4 py-3 text-right tabular-nums">
+              {formatHours(summary.internal_hours)}
             </td>
             <td className="px-4 py-3 text-right tabular-nums">
               <span className={getUtilColor(summary.utilization_percentage)}>

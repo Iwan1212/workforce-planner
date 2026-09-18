@@ -124,6 +124,7 @@ async def get_project_timeline(
                 "id": proj.id,
                 "name": proj.name,
                 "color": proj.color,
+                "is_internal": proj.is_internal,
                 "assignments": assignment_list,
             }
         )

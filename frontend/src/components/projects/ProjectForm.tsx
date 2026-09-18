@@ -50,6 +50,7 @@ export function ProjectForm({
   isSubmitting,
 }: ProjectFormProps) {
   const [name, setName] = useState("");
+  const [isInternal, setIsInternal] = useState(false);
   const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [hexInput, setHexInput] = useState(COLOR_PALETTE[0]);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
@@ -57,11 +58,13 @@ export function ProjectForm({
   useEffect(() => {
     if (project) {
       setName(project.name);
+      setIsInternal(project.is_internal);
       setColor(project.color);
       setHexInput(project.color);
       setShowCustomPicker(!COLOR_PALETTE.includes(project.color));
     } else {
       setName("");
+      setIsInternal(false);
       setColor(COLOR_PALETTE[0]);
       setHexInput(COLOR_PALETTE[0]);
       setShowCustomPicker(false);
@@ -73,7 +76,7 @@ export function ProjectForm({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), color });
+    onSubmit({ name: name.trim(), color, is_internal: isInternal });
   };
 
   return (
@@ -95,6 +98,18 @@ export function ProjectForm({
           onChange={(e) => setName(e.target.value)}
           required
         />
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="projectInternal"
+          type="checkbox"
+          checked={isInternal}
+          onChange={(e) => setIsInternal(e.target.checked)}
+          className="h-4 w-4 cursor-pointer rounded border-input accent-primary"
+        />
+        <Label htmlFor="projectInternal" className="cursor-pointer font-normal">
+          Projekt wewnętrzny
+        </Label>
       </div>
       <div className="space-y-2">
         <Label>Kolor</Label>

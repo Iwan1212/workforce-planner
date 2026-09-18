@@ -48,6 +48,8 @@ def compute_occupancy_for_period(
     net_available = Decimal("0")
     confirmed_hours = Decimal("0")
     tentative_hours = Decimal("0")
+    internal_confirmed_hours = Decimal("0")
+    internal_tentative_hours = Decimal("0")
 
     d = period_start
     while d <= period_end:
@@ -80,10 +82,20 @@ def compute_occupancy_for_period(
                 end_date=a.end_date,
                 base_daily_hours=assignment_base_daily_hours(capacities, d),
             )
+            # Internal work is a second cut through the same hours, not a
+            # third bucket: it is tracked alongside the certainty split rather
+            # than instead of it, so a summary can report both at once. A
+            # project is either internal or client work, never unset, so the
+            # flag is read directly.
+            internal = a.project.is_internal
             if a.is_tentative:
                 tentative_hours += daily
+                if internal:
+                    internal_tentative_hours += daily
             else:
                 confirmed_hours += daily
+                if internal:
+                    internal_confirmed_hours += daily
 
         d += timedelta(days=1)
 
@@ -101,6 +113,11 @@ def compute_occupancy_for_period(
         "hours": float(round(hours_numerator, 1)),
         "confirmed_hours": float(round(confirmed_hours, 1)),
         "tentative_hours": float(round(tentative_hours, 1)),
+        # Only the internal share is reported; the client share is whatever is
+        # left of each certainty bucket. Deriving it by subtraction is what
+        # makes "client + internal = the whole" true by construction.
+        "internal_confirmed_hours": float(round(internal_confirmed_hours, 1)),
+        "internal_tentative_hours": float(round(internal_tentative_hours, 1)),
         "workable_hours": float(round(net_available, 1)),
         "vacation_hours": float(round(gross_available - net_available, 1)),
         "is_overbooked": overbooked,

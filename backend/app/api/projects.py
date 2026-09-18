@@ -57,7 +57,9 @@ async def create_project(
             detail="Projekt o tej nazwie już istnieje",
         )
 
-    project = Project(name=body.name, color=body.color)
+    project = Project(
+        name=body.name, color=body.color, is_internal=body.is_internal
+    )
     db.add(project)
     await db.commit()
     await db.refresh(project)
@@ -93,6 +95,9 @@ async def update_project(
 
     if body.color is not None:
         project.color = body.color
+
+    if body.is_internal is not None:
+        project.is_internal = body.is_internal
 
     await db.commit()
     await db.refresh(project)

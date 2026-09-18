@@ -42,6 +42,7 @@ def make_assignment(start, end, allocation_type, value, is_tentative=False):
         allocation_type=allocation_type,
         allocation_value=value,
         is_tentative=is_tentative,
+        project=SimpleNamespace(is_internal=False),
     )
 
 

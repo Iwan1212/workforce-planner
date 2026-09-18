@@ -29,6 +29,10 @@ export function AssignmentFormEmployeeProject({
       projects.map((proj) => ({
         value: String(proj.id),
         label: proj.name,
+        // The muted suffix this select documents for project state, rather
+        // than a badge: the rows are scanned, not read. One capitalised word
+        // everywhere the flag appears, so the product never spells it two ways.
+        hint: proj.is_internal ? "Wewnętrzny" : undefined,
         content: (
           <span className="flex items-center gap-2 truncate">
             <span

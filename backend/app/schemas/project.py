@@ -12,6 +12,7 @@ HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 class ProjectCreate(BaseModel):
     name: str
     color: str
+    is_internal: bool = False
 
     @field_validator("color")
     @classmethod
@@ -24,6 +25,7 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     color: Optional[str] = None
+    is_internal: Optional[bool] = None
 
     @field_validator("color")
     @classmethod
@@ -38,6 +40,7 @@ class ProjectResponse(BaseModel):
     name: str
     color: str
     is_archived: bool
+    is_internal: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
