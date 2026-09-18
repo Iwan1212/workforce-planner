@@ -71,4 +71,13 @@ export interface MonthStatCardsProps {
 export interface TeamBreakdownTableProps {
   summary: MonthSummary | undefined;
   isLoading: boolean;
+  /**
+   * Drill down into one team. Omit it to render the team names as plain text;
+   * the no-team row is never clickable either way, having no team to pass.
+   */
+  onTeamClick?: (teamId: number) => void;
+}
+
+export interface DashboardProps {
+  onNavigate?: (path: string) => void;
 }
