@@ -6,9 +6,10 @@ alembic
 pydantic[email]
 pydantic-settings
 PyJWT
-passlib[bcrypt]
-bcrypt==4.0.1
+google-auth
+requests
 python-multipart
 httpx
+aiosqlite
 pytest
 pytest-asyncio

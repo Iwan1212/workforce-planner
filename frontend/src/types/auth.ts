@@ -1,3 +1,7 @@
+export interface AuthConfig {
+  google_client_id: string | null;
+}
+
 export interface TokenResponse {
   access_token: string;
   refresh_token: string;
@@ -17,7 +21,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
   setUser: (user: UserResponse) => void;

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel
 
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
+
+class AuthConfigResponse(BaseModel):
+    google_client_id: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -30,12 +35,3 @@ class UserResponse(BaseModel):
 
 class ThemeUpdate(BaseModel):
     theme: str
-
-
-class ResetPasswordRequest(BaseModel):
-    email: str
-
-
-class ResetPasswordConfirm(BaseModel):
-    token: str
-    new_password: str
