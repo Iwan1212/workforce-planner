@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, require_admin
-from app.core.security import hash_password
 from app.models.user import User, UserRole
 from app.schemas.users import UserCreateRequest, UserListItem, UserUpdateRequest
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+async def _email_taken(db: AsyncSession, email: str) -> bool:
+    # Google sign-in matches emails ignoring case, so two users differing only
+    # in case would be ambiguous.
+    result = await db.execute(
+        select(User.id).where(func.lower(User.email) == email.lower())
+    )
+    return result.first() is not None
 
 
 @router.get("", response_model=list[UserListItem])
@@ -27,17 +35,11 @@ async def create_user(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    existing = await db.execute(select(User).where(User.email == body.email))
-    if existing.scalar_one_or_none():
+    email = body.email.lower()
+    if await _email_taken(db, email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Użytkownik z tym adresem email już istnieje",
-        )
-
-    if len(body.password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Hasło musi mieć minimum 8 znaków",
         )
 
     try:
@@ -49,8 +51,7 @@ async def create_user(
         )
 
     user = User(
-        email=body.email,
-        password_hash=hash_password(body.password),
+        email=email,
         full_name=body.full_name,
         role=role,
         is_active=True,
@@ -76,14 +77,14 @@ async def update_user(
             detail="Użytkownik nie istnieje",
         )
 
-    if body.email is not None and body.email != user.email:
-        conflict = await db.execute(select(User).where(User.email == body.email))
-        if conflict.scalar_one_or_none():
+    if body.email is not None and body.email.lower() != user.email.lower():
+        email = body.email.lower()
+        if await _email_taken(db, email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Użytkownik z tym adresem email już istnieje",
             )
-        user.email = body.email
+        user.email = email
 
     if body.full_name is not None:
         user.full_name = body.full_name
@@ -101,14 +102,6 @@ async def update_user(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Nieprawidłowa rola. Dozwolone wartości: admin, user, viewer",
             )
-
-    if body.password is not None:
-        if len(body.password) < 8:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Hasło musi mieć minimum 8 znaków",
-            )
-        user.password_hash = hash_password(body.password)
 
     await db.commit()
     await db.refresh(user)

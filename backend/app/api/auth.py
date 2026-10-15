@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -14,35 +13,62 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_access_token,
-    hash_password,
 )
 from app.models.user import User
 from app.schemas.auth import (
-    LoginRequest,
+    AuthConfigResponse,
+    GoogleLoginRequest,
     RefreshRequest,
-    ResetPasswordConfirm,
-    ResetPasswordRequest,
     ThemeUpdate,
     TokenResponse,
     UserResponse,
 )
-from app.services.auth_service import authenticate_user
+from app.services.auth_service import (
+    AccountNotAllowed,
+    GoogleUnavailable,
+    InvalidGoogleCredential,
+    authenticate_google,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+@router.get("/config", response_model=AuthConfigResponse)
+async def get_auth_config():
+    """Public settings the login screen needs before anyone is signed in."""
+    return AuthConfigResponse(google_client_id=settings.GOOGLE_CLIENT_ID or None)
+
+
 @router.post(
-    "/login", response_model=TokenResponse, dependencies=[Depends(login_rate_limit)]
+    "/google", response_model=TokenResponse, dependencies=[Depends(login_rate_limit)]
 )
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
-    user = await authenticate_user(db, body.email, body.password)
-    if user is None:
+async def login_with_google(
+    body: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
+):
+    """Exchange a Google ID token for this app's access and refresh tokens."""
+    try:
+        user = await authenticate_google(db, body.credential)
+    except AccountNotAllowed as exc:
+        logger.info("Google sign-in refused: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="To konto Google nie ma dostępu do aplikacji. Skontaktuj się z administratorem.",
+        )
+    except InvalidGoogleCredential as exc:
+        logger.info("Invalid Google credential: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Nieprawidłowy email lub hasło",
+            detail="Logowanie przez Google nie powiodło się. Spróbuj ponownie.",
         )
+    except GoogleUnavailable as exc:
+        logger.warning("Could not reach Google to verify sign-in: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Nie udało się połączyć z Google. Spróbuj ponownie za chwilę.",
+        )
+
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
@@ -93,71 +119,3 @@ async def update_theme(
     await db.commit()
     await db.refresh(user)
     return user
-
-
-@router.post("/reset-password-request")
-async def reset_password_request(
-    body: ResetPasswordRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    """Generate a password reset token. In MVP, logged to console instead of emailed."""
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
-
-    # Always return success to prevent email enumeration
-    if not user:
-        return {"message": "Jeśli konto istnieje, link do resetu został wysłany."}
-
-    # Create a short-lived token (15 min) with purpose claim
-    token = create_access_token(
-        {"sub": str(user.id), "purpose": "password_reset"},
-        expires_delta=timedelta(minutes=15),
-    )
-
-    # In development, log the token to console (no email service in MVP)
-    if settings.ENVIRONMENT == "development":
-        logger.info(
-            "PASSWORD RESET TOKEN for %s: %s",
-            user.email,
-            token,
-        )
-    else:
-        logger.info("Password reset token generated for %s", user.email)
-
-    return {"message": "Jeśli konto istnieje, link do resetu został wysłany."}
-
-
-@router.post("/reset-password")
-async def reset_password(
-    body: ResetPasswordConfirm,
-    db: AsyncSession = Depends(get_db),
-):
-    """Reset password using the token from reset-password-request."""
-    payload = decode_access_token(body.token)
-    if not payload or payload.get("purpose") != "password_reset":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token jest nieprawidłowy lub wygasł.",
-        )
-
-    user_id = payload.get("sub")
-    result = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token jest nieprawidłowy.",
-        )
-
-    if len(body.new_password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Hasło musi mieć minimum 8 znaków.",
-        )
-
-    user.password_hash = hash_password(body.new_password)
-    user.failed_login_attempts = 0
-    user.locked_until = None
-    await db.commit()
-
-    return {"message": "Hasło zostało zmienione."}

@@ -2,7 +2,7 @@
 
 Base URL: `/api`
 
-All endpoints (except login and health) require `Authorization: Bearer <jwt_token>` header.
+All endpoints (except `/api/auth/config`, `/api/auth/google`, `/api/auth/refresh` and health) require `Authorization: Bearer <jwt_token>` header.
 
 ## Health
 
@@ -13,15 +13,20 @@ GET    /api/health                          # Health check
 ## Authentication
 
 ```
-POST   /api/auth/login                      # Returns JWT access + refresh token (201)
-POST   /api/auth/refresh                    # Refresh access token using refresh token (201)
+GET    /api/auth/config                     # Public: {"google_client_id": string | null} (200)
+POST   /api/auth/google                     # {"credential": <Google ID token>} → JWT access + refresh token (200)
+POST   /api/auth/refresh                    # Refresh access token using refresh token (200)
 GET    /api/auth/me                         # Current user info (200)
 PATCH  /api/auth/me/theme                   # Update user theme preference (200)
-POST   /api/auth/reset-password-request     # Request password reset (token logged to console in dev)
-POST   /api/auth/reset-password             # Reset password with token
 ```
 
-Login response includes `access_token`, `refresh_token`, and `token_type: "bearer"`.
+`POST /api/auth/google` returns `access_token`, `refresh_token`, and `token_type: "bearer"`. It is rate-limited per IP. Refusals:
+
+| Status | When |
+|---|---|
+| 401 | The credential is not a valid Google ID token for this app (forged, expired, other client), or `GOOGLE_CLIENT_ID` is not set |
+| 403 | Google vouched for the account, but its email is unverified, its domain is not in `GOOGLE_ALLOWED_DOMAINS`, or no active user has that email |
+| 503 | Google could not be reached to fetch its signing keys |
 
 ## Employees
 
@@ -479,7 +484,7 @@ The confirmed/tentative split is exposed only here; the employee timeline keeps 
 | Code | Usage |
 |---|---|
 | 200 | Success (GET, PATCH, DELETE employees/projects) |
-| 201 | Created (POST login, POST create) |
+| 201 | Created (POST create) |
 | 204 | Deleted (DELETE assignments, DELETE users) |
 | 400 | Bad request |
 | 401 | Unauthorized / invalid token |

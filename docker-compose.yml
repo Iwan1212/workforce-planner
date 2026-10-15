@@ -26,6 +26,9 @@ services:
       SECRET_KEY: "dev-secret-key-change-in-production"
       CORS_ORIGINS: "http://localhost:5173"
       RELOAD: "true"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
     depends_on:
       db:
         condition: service_healthy

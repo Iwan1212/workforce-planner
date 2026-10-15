@@ -33,11 +33,6 @@ export interface ConfirmDialogProps {
   contentClassName?: string;
 }
 
-export type PasswordInputProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  "type"
->;
-
 export interface DataTableColumn<T> {
   id: string;
   header: string;

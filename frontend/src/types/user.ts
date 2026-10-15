@@ -8,7 +8,6 @@ export interface UserListItem {
 
 export interface UserCreateData {
   email: string;
-  password: string;
   full_name: string;
   role: string;
 }
@@ -17,7 +16,6 @@ export interface UserUpdateData {
   email?: string;
   full_name?: string;
   role?: string;
-  password?: string;
 }
 
 export type UserFormMode = "add" | "edit";

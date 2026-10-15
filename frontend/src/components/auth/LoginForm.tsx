@@ -1,30 +1,24 @@
-import { type FormEvent, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getAuthConfig } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
-import { requestPasswordReset } from "@/api/auth";
 import { AuthCard } from "./AuthCard";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { loginWithGoogle, error } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, error } = useAuthStore();
 
-  const [showReset, setShowReset] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetSending, setResetSending] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
+  const config = useQuery({
+    queryKey: ["auth-config"],
+    queryFn: getAuthConfig,
+    staleTime: Infinity,
+  });
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!email || !password) return;
-
+  const handleCredential = async (credential: string) => {
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      await loginWithGoogle(credential);
     } catch {
       // error is set in store
     } finally {
@@ -32,61 +26,7 @@ export function LoginForm() {
     }
   };
 
-  const handleResetRequest = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!resetEmail) return;
-
-    setResetSending(true);
-    setResetMessage("");
-    try {
-      const result = await requestPasswordReset(resetEmail);
-      setResetMessage(result.message);
-    } catch {
-      setResetMessage("Wystąpił błąd. Spróbuj ponownie.");
-    } finally {
-      setResetSending(false);
-    }
-  };
-
-  if (showReset) {
-    return (
-      <AuthCard
-        title="Reset hasła"
-        description="Podaj email, aby otrzymać link do resetu"
-      >
-        <form onSubmit={handleResetRequest} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="reset-email">Email</Label>
-            <Input
-              id="reset-email"
-              type="email"
-              placeholder="email@firma.pl"
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              required
-            />
-          </div>
-          {resetMessage && (
-            <p className="text-sm text-muted-foreground">{resetMessage}</p>
-          )}
-          <Button type="submit" className="w-full" disabled={resetSending}>
-            {resetSending ? "Wysyłanie..." : "Wyślij link do resetu"}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            onClick={() => {
-              setShowReset(false);
-              setResetMessage("");
-            }}
-          >
-            Wróć do logowania
-          </Button>
-        </form>
-      </AuthCard>
-    );
-  }
+  const clientId = config.data?.google_client_id;
 
   return (
     <AuthCard
@@ -97,44 +37,34 @@ export function LoginForm() {
       }
       description="Zaloguj się do systemu"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="email@firma.pl"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Hasło</Label>
-          <PasswordInput
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        {error && (
-          <p className="text-sm text-destructive">
-            Nieprawidłowy email lub hasło
+      <div className="space-y-4">
+        {config.isPending ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Ładowanie...
           </p>
+        ) : config.isError ? (
+          <p className="text-sm text-destructive">
+            Wystąpił błąd. Spróbuj ponownie.
+          </p>
+        ) : !clientId ? (
+          <p className="text-sm text-muted-foreground">
+            Logowanie przez Google nie jest jeszcze skonfigurowane. Skontaktuj
+            się z administratorem.
+          </p>
+        ) : isSubmitting ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Logowanie...
+          </p>
+        ) : (
+          <GoogleSignInButton
+            clientId={clientId}
+            onCredential={handleCredential}
+          />
         )}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Logowanie..." : "Zaloguj się"}
-        </Button>
-        <Button
-          variant="ghost"
-          type="button"
-          className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-          onClick={() => setShowReset(true)}
-        >
-          Nie pamiętam hasła
-        </Button>
-      </form>
+        {error && !isSubmitting && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+      </div>
     </AuthCard>
   );
 }

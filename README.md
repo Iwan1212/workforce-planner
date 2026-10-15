@@ -51,7 +51,7 @@ The UI is in Polish. Working-day logic is built around the Polish public holiday
 - **Project archive** with the same soft-delete semantics.
 
 **Accounts**
-- **JWT authentication** with refresh tokens, login rate limiting and password reset.
+- **Google sign-in** (no passwords): only users an admin has added can get in, optionally limited to given Workspace domains. JWT access + refresh tokens after that.
 - **Roles**: admin, user, viewer.
 - **User management** screen for admins.
 - **Light and dark theme**, stored per user.
@@ -90,12 +90,7 @@ Migrations and the initial admin account are created automatically when the back
 
 ### Log in
 
-| Field | Value |
-|---|---|
-| Email | `admin@workforce.local` |
-| Password | `Admin123!` |
-
-Change the password after the first login.
+Sign-in is through Google. Before the first start, create a `.env` next to `docker-compose.yml` with `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_DOMAINS` and `INITIAL_ADMIN_EMAIL` (your Google account), then sign in with that account. See [docs/infrastructure.md](docs/infrastructure.md#signing-in-locally) for the Google Cloud side.
 
 ### Manual setup (without Docker)
 
@@ -151,7 +146,7 @@ workforce-planner/
 ├── backend/
 │   ├── app/
 │   │   ├── api/                 # FastAPI routers
-│   │   │   ├── auth.py          # Login, refresh, password reset, theme
+│   │   │   ├── auth.py          # Google sign-in, refresh, theme
 │   │   │   ├── users.py         # User management (admin)
 │   │   │   ├── employees.py     # Employees, capacities, archive
 │   │   │   ├── teams.py         # Team dictionary
@@ -190,8 +185,7 @@ workforce-planner/
 All endpoints are under `/api` and require a bearer token except the auth routes. Full contract in [docs/api-reference.md](docs/api-reference.md); interactive docs at `/docs` when the backend is running.
 
 ```
-Auth          POST /auth/login · POST /auth/refresh · GET /auth/me · PATCH /auth/me/theme
-              POST /auth/reset-password-request · POST /auth/reset-password
+Auth          GET /auth/config · POST /auth/google · POST /auth/refresh · GET /auth/me · PATCH /auth/me/theme
 Users         GET/POST /users · PATCH/DELETE /users/{id}
 Employees     GET/POST /employees · PATCH/DELETE /employees/{id}
               POST /employees/{id}/archive · POST /employees/{id}/unarchive

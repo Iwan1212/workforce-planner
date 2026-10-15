@@ -5,7 +5,7 @@ import {
   setToken,
   setRefreshToken,
 } from "@/api/client";
-import { getMe, login as loginApi } from "@/api/auth";
+import { getMe, loginWithGoogle as loginWithGoogleApi } from "@/api/auth";
 import type { AuthState } from "@/types/auth";
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -14,10 +14,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   error: null,
 
-  login: async (email: string, password: string) => {
+  loginWithGoogle: async (credential: string) => {
     set({ error: null });
     try {
-      const response = await loginApi(email, password);
+      const response = await loginWithGoogleApi(credential);
       setToken(response.access_token);
       setRefreshToken(response.refresh_token);
       const user = await getMe();

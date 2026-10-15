@@ -48,7 +48,7 @@ frontend/src/
 ├── components/
 │   ├── ui/           # shadcn/ui primitives (Button, Dialog, Select, etc.)
 │   ├── layout/       # Sidebar + Layout shell
-│   ├── auth/         # LoginForm with password reset
+│   ├── auth/         # LoginForm + GoogleSignInButton
 │   ├── common/       # Shared components (TeamFilterChips)
 │   ├── employees/    # EmployeeList, EmployeeForm
 │   ├── projects/     # ProjectList, ProjectForm
@@ -115,7 +115,7 @@ backend/app/
 │   ├── calamari_service.py         # External Calamari API integration
 │   └── vacation_sync_service.py    # Vacation sync logic
 ├── core/
-│   ├── security.py     # JWT creation/verification, password hashing (bcrypt)
+│   ├── security.py     # JWT creation/verification
 │   ├── rate_limit.py   # Rate limiting
 │   └── dependencies.py # FastAPI Depends() — get_db session, get_current_user
 └── utils/
@@ -142,10 +142,18 @@ cd backend && alembic revision --autogenerate -m "description"  # Create migrati
 
 ## Authentication Flow
 
-1. `POST /api/auth/login` — validates credentials, returns JWT access token + refresh token
-2. Frontend stores tokens in memory, attaches access token as `Authorization: Bearer <token>` via `client.ts` interceptor
-3. On 401, client automatically attempts `POST /api/auth/refresh` with refresh token; on failure, redirects to login
-4. Backend validates token via `get_current_user` dependency on every protected route
-5. Account lockout after 5 failed attempts (15 min cooldown)
-6. Password reset via token (logged to console in dev, email in prod)
-7. User roles: `admin`, `user`, `viewer`
+Sign-in is Google only; there are no passwords. Google proves who the person is, the app decides whether they may come in.
+
+1. The login screen reads `GET /api/auth/config` for the Google OAuth client ID and renders Google's own button (Google Identity Services script, loaded on the login screen only).
+2. Google hands the browser an ID token, which goes to `POST /api/auth/google`.
+3. The backend verifies the token with `google-auth` (signature, issuer, audience = `GOOGLE_CLIENT_ID`, expiry), then requires:
+   - `email_verified` is true,
+   - the `hd` (Workspace domain) claim is in `GOOGLE_ALLOWED_DOMAINS`, when that is set,
+   - an **active user an admin already created** has that email, compared ignoring case. Nobody is created on first sign-in.
+4. On success it returns the app's own JWT access + refresh tokens; from here on Google is not involved.
+5. Frontend keeps the tokens in `localStorage` and attaches the access token as `Authorization: Bearer <token>` via the `client.ts` interceptor
+6. On 401, client automatically attempts `POST /api/auth/refresh` with refresh token; on failure, redirects to login
+7. Backend validates token via `get_current_user` dependency on every protected route
+8. User roles: `admin`, `user`, `viewer`
+
+Deactivating someone in Google Workspace does not end their session here: their tokens stay valid until they expire (access 24h, refresh 7 days by default). Deactivate the user in the app as well.

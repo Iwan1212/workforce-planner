@@ -7,13 +7,10 @@
 | Column | Type | Constraints |
 |---|---|---|
 | id | Integer | PK |
-| email | String | unique, not null |
-| password_hash | String | not null |
+| email | String | unique, not null; stored lowercased, matched ignoring case against the Google account |
 | full_name | String | not null |
 | role | Enum | `admin` \| `user` \| `viewer` |
-| is_active | Boolean | default true |
-| failed_login_attempts | Integer | default 0 |
-| locked_until | DateTime | nullable |
+| is_active | Boolean | default true; inactive users cannot sign in |
 | theme | String | default "light" |
 | created_at | DateTime | auto |
 

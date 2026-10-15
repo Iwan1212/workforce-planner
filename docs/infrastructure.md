@@ -33,12 +33,17 @@ docker compose logs -f backend  # Follow backend logs
 | User | `workforce` |
 | Password | `workforce_dev` |
 
-### Default Login
+### Signing in locally
 
-| Field | Value |
-|---|---|
-| Email | `admin@workforce.local` |
-| Password | `Admin123!` |
+Sign-in is through Google, so local development needs an OAuth client too. Put these in a `.env` next to `docker-compose.yml` (gitignored):
+
+```
+GOOGLE_CLIENT_ID=<client id>.apps.googleusercontent.com
+GOOGLE_ALLOWED_DOMAINS=<your workspace domain>
+INITIAL_ADMIN_EMAIL=<your google account email>
+```
+
+The client's Authorized JavaScript origins must include `http://localhost:5173` (and `http://localhost:5174`, which Vite falls back to when 5173 is taken). One entry covers every developer, since the origin is the address in the browser, not the machine. On startup the backend creates `INITIAL_ADMIN_EMAIL` as an admin if no user has that email yet.
 
 ## Docker Compose — Production
 
@@ -68,6 +73,9 @@ Internet
 | `POSTGRES_PASSWORD` | Database password |
 | `SECRET_KEY` | JWT signing key — **must be changed from default** |
 | `CORS_ORIGINS` | Allowed origins (e.g. `https://app.workforce.example.com`) |
+| `GOOGLE_CLIENT_ID` | OAuth client ID (Web application) from Google Cloud; its Authorized JavaScript origins must include `https://app.${DOMAIN}`. Startup fails without it outside `ENVIRONMENT=development` |
+| `GOOGLE_ALLOWED_DOMAINS` | Comma-separated Google Workspace domains allowed to sign in. Empty allows any Google account (it must still match a user) |
+| `INITIAL_ADMIN_EMAIL` | Email of the first admin, created on startup if no user has it. Can be left set; existing users are never changed |
 
 ### Optional Environment Variables
 
